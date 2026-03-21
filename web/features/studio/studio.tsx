@@ -266,14 +266,8 @@ export function StudioPage() {
     onInvalidateProjectDesigns: invalidateProjectDesigns,
     onDesignSucceeded: (payload) => {
       if (!payload.designId) return;
-      if (payload.projectId !== projectId) return;
-      handleSelectDesign(payload.designId, payload.title ?? 'Untitled', payload.traceId);
-      setRightPanelMode('edit');
     },
-    onDesignFailed: (payload) => {
-      if (payload.designId && payload.projectId === projectId) {
-        handleSelectDesign(payload.designId, payload.title ?? 'Untitled', payload.traceId);
-      }
+    onDesignFailed: (_payload) => {
       setDesignErrorMessage(DESIGN_FAILED_MESSAGE);
       setDesignErrorDialogOpen(true);
     },
@@ -616,6 +610,20 @@ export function StudioPage() {
   }, [status, projects.length, projectId, projectName, setProjects, clearProject, clearSelectedDesign]);
 
   useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (pathname !== paths.studio) return;
+    if (routeProjectId) return;
+    if (!projectsQuery.isSuccess) return;
+    if (projectItems.length === 0) return;
+
+    const fallbackProject =
+      projectItems.find((project) => project.id === projectId) ?? projectItems[0] ?? null;
+    if (!fallbackProject) return;
+
+    router.replace(buildStudioPath(fallbackProject.id));
+  }, [status, pathname, routeProjectId, projectsQuery.isSuccess, projectItems, projectId, router]);
+
+  useEffect(() => {
     if (!isMobile) {
       setMobileProjectOpen(false);
       setMobileChatOpen(false);
@@ -683,6 +691,7 @@ export function StudioPage() {
     routeProjectId,
     routeDesignId,
     projectId,
+    selectedDesignId,
     hasSelectedDesignState,
     clearSelectedDesign,
   ]);

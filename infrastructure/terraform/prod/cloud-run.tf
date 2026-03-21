@@ -72,6 +72,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
+        name  = "AI_AGENT_TIMEOUT_MS"
+        value = "550000"
+      }
+
+      env {
         name  = "DESIGN_TASKS_PROJECT_ID"
         value = local.project_id
       }
@@ -204,7 +209,7 @@ resource "google_cloud_run_v2_service" "ai_agent" {
 
   template {
     service_account                  = google_service_account.cloud_run_ai_agent.email
-    timeout                          = "300s"
+    timeout                          = "540s"
     max_instance_request_concurrency = 8
 
     containers {
@@ -309,6 +314,11 @@ resource "google_cloud_run_v2_service" "worker" {
       env {
         name  = "AI_AGENT_BASE_URL"
         value = google_cloud_run_v2_service.ai_agent.uri
+      }
+
+      env {
+        name  = "AI_AGENT_TIMEOUT_MS"
+        value = "550000"
       }
 
       env {

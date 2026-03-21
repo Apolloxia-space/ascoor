@@ -68,3 +68,15 @@ test('loadAiAgentConfig explicit AI_AGENT_USE_ID_TOKEN overrides inferred defaul
     },
   );
 });
+
+test('loadAiAgentConfig reads explicit timeout from env', () => {
+  withEnv(
+    {
+      AI_AGENT_TIMEOUT_MS: '550000',
+    },
+    () => {
+      const config = loadAiAgentConfig();
+      assert.equal(config.timeoutMs, 550_000);
+    },
+  );
+});
