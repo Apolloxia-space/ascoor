@@ -1,0 +1,21 @@
+steps:
+  - id: ai-agent
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/ai-agent:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/ai-agent:latest \
+          -f ai-agents/Dockerfile \
+          -t ${_REGISTRY_URL}/ai-agent:${_AI_AGENT_VERSION} \
+          -t ${_REGISTRY_URL}/ai-agent:latest \
+          .
+images:
+  - '${_REGISTRY_URL}/ai-agent:${_AI_AGENT_VERSION}'
+  - '${_REGISTRY_URL}/ai-agent:latest'
+substitutions:
+  _REGISTRY_URL: 'REGISTRY_URL_REQUIRED'
+  _AI_AGENT_VERSION: 'AI_AGENT_VERSION_REQUIRED'

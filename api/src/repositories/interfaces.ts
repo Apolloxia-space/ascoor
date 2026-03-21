@@ -1,0 +1,62 @@
+import type { AssetStatus, Design } from '../generated/prisma/client';
+import type { GeneratedDesignInfo } from '../entities/designs';
+import type { UploadedObjectInfo } from '../entities/storage';
+
+export interface IDesignRepository {
+  get(id: string): Promise<Design | null>;
+  getOwned(userId: string, id: string): Promise<Design | null>;
+  getOwnedByIds(params: { userId: string; ids: Array<string> }): Promise<Array<Design>>;
+  list(projectId: string): Promise<Array<Design>>;
+  update(params: {
+    designId: string;
+    assetUriTs: string;
+    assetStatus?: AssetStatus;
+  }): Promise<Design>;
+  updateDisplayName(params: { designId: string; displayName: string }): Promise<Design>;
+  create(params: { projectId: string; displayName: string; type: 'studio_ts' }): Promise<Design>;
+  updateAsset(params: {
+    designId: string;
+    assetUriTs?: string | null;
+    assetStatus: AssetStatus;
+    assetError?: string | null;
+  }): Promise<Design>;
+  updateEditedAsset(params: {
+    designId: string;
+    editedAssetUriGlb: string | null;
+    editedAssetUpdatedAt: Date | null;
+  }): Promise<Design>;
+  delete(designId: string): Promise<Design>;
+}
+
+export interface IGcsRepository {
+  upload(params: {
+    content: string;
+    contentType: string;
+    metadata?: Record<string, string>;
+    objectPath?: string;
+    userId?: string;
+    filename?: string;
+    ext?: string;
+  }): Promise<GeneratedDesignInfo>;
+  uploadBinary(params: {
+    content: Uint8Array;
+    contentType: string;
+    metadata?: Record<string, string>;
+    objectPath: string;
+  }): Promise<UploadedObjectInfo>;
+  download(params: {
+    objectPath?: string;
+    uri?: string;
+    userId?: string;
+    filename?: string;
+    ext?: string;
+  }): Promise<string | null>;
+  downloadBinary(params: {
+    objectPath?: string;
+    uri?: string;
+    userId?: string;
+    filename?: string;
+    ext?: string;
+  }): Promise<Uint8Array | null>;
+  deleteByPrefix(params: { prefix: string }): Promise<void>;
+}

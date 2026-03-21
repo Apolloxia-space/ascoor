@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Pro",
+    "stripePriceId": "price_1SrpAnEnM7tUG4Iyc9MQX54S",
+    "amount": 1700,
+    "currency": "usd",
+    "interval": "month",
+    "intervalCount": 1,
+    "isActive": true
+  }
+]

@@ -1,0 +1,21 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/web:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/web:latest \
+          --build-arg APP_ENV=${_APP_ENV} \
+          -f web/Dockerfile \
+          -t ${_REGISTRY_URL}/web:${_WEB_VERSION} \
+          -t ${_REGISTRY_URL}/web:latest \
+          .
+images:
+  - '${_REGISTRY_URL}/web:${_WEB_VERSION}'
+  - '${_REGISTRY_URL}/web:latest'
+substitutions:
+  _REGISTRY_URL: 'REGISTRY_URL_REQUIRED'
+  _WEB_VERSION: 'WEB_VERSION_REQUIRED'

@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.6
+
+FROM node:24-alpine AS base
+
+RUN apk add --no-cache bash libc6-compat openssl
+
+WORKDIR /app
+
+FROM base AS dev
+
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+CMD ["npm", "run", "dev"]
+
+FROM base AS deps
+
+COPY api/package.json ./package.json
+COPY api/package-lock.json ./package-lock.json
+COPY api/prisma ./prisma
+RUN npm ci
+
+FROM base AS builder
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY api/. .
+RUN npm run prepare && npm run build
+
+FROM node:24-alpine AS production
+
+RUN apk add --no-cache bash libc6-compat openssl \
+  && addgroup -g 1001 -S nodejs \
+  && adduser -S nodejs -u 1001
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY api/package.json ./package.json
+COPY api/package-lock.json ./package-lock.json
+COPY api/prisma ./prisma
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+
+USER nodejs
+
+CMD ["node", "dist/index.js"]

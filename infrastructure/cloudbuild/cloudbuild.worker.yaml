@@ -1,0 +1,20 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/worker:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/worker:latest \
+          -f api/Dockerfile.worker \
+          -t ${_REGISTRY_URL}/worker:${_WORKER_VERSION} \
+          -t ${_REGISTRY_URL}/worker:latest \
+          .
+images:
+  - '${_REGISTRY_URL}/worker:${_WORKER_VERSION}'
+  - '${_REGISTRY_URL}/worker:latest'
+substitutions:
+  _REGISTRY_URL: 'REGISTRY_URL_REQUIRED'
+  _WORKER_VERSION: 'WORKER_VERSION_REQUIRED'

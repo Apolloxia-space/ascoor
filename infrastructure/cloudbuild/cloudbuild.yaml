@@ -1,0 +1,78 @@
+steps:
+  - id: api
+    name: 'gcr.io/cloud-builders/docker'
+    waitFor: ['-']
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/api:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/api:latest \
+          -f api/Dockerfile \
+          -t ${_REGISTRY_URL}/api:${_API_VERSION} \
+          -t ${_REGISTRY_URL}/api:latest \
+          .
+  - id: worker
+    name: 'gcr.io/cloud-builders/docker'
+    waitFor: ['-']
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/worker:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/worker:latest \
+          -f api/Dockerfile.worker \
+          -t ${_REGISTRY_URL}/worker:${_WORKER_VERSION} \
+          -t ${_REGISTRY_URL}/worker:latest \
+          .
+  - id: web
+    name: 'gcr.io/cloud-builders/docker'
+    waitFor: ['-']
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/web:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/web:latest \
+          --build-arg APP_ENV=${_APP_ENV} \
+          -f web/Dockerfile \
+          -t ${_REGISTRY_URL}/web:${_WEB_VERSION} \
+          -t ${_REGISTRY_URL}/web:latest \
+          .
+  - id: ai-agent
+    name: 'gcr.io/cloud-builders/docker'
+    waitFor: ['-']
+    entrypoint: 'bash'
+    args:
+      - '-ceu'
+      - |
+        docker pull ${_REGISTRY_URL}/ai-agent:latest || true
+        docker build \
+          --platform=linux/amd64 \
+          --cache-from=${_REGISTRY_URL}/ai-agent:latest \
+          -f ai-agents/Dockerfile \
+          -t ${_REGISTRY_URL}/ai-agent:${_AI_AGENT_VERSION} \
+          -t ${_REGISTRY_URL}/ai-agent:latest \
+          .
+images:
+  - '${_REGISTRY_URL}/api:${_API_VERSION}'
+  - '${_REGISTRY_URL}/api:latest'
+  - '${_REGISTRY_URL}/worker:${_WORKER_VERSION}'
+  - '${_REGISTRY_URL}/worker:latest'
+  - '${_REGISTRY_URL}/web:${_WEB_VERSION}'
+  - '${_REGISTRY_URL}/web:latest'
+  - '${_REGISTRY_URL}/ai-agent:${_AI_AGENT_VERSION}'
+  - '${_REGISTRY_URL}/ai-agent:latest'
+substitutions:
+  _REGISTRY_URL: 'REGISTRY_URL_REQUIRED'
+  _API_VERSION: 'API_VERSION_REQUIRED'
+  _WORKER_VERSION: 'WORKER_VERSION_REQUIRED'
+  _WEB_VERSION: 'WEB_VERSION_REQUIRED'
+  _APP_ENV: 'APP_ENV_REQUIRED'
+  _AI_AGENT_VERSION: 'AI_AGENT_VERSION_REQUIRED'

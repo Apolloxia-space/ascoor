@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ascoor
+      POSTGRES_PASSWORD: ascoor
+      POSTGRES_DB: ascoor
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ascoor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: dev
+    init: true
+    command: >
+      sh -c "npm install &&
+             npm run dev"
+    env_file:
+      - api/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./api:/app
+      - api-node-modules:/app/node_modules
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: dev
+    init: true
+    command: >
+      sh -c "npm install &&
+             npm run dev"
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      USE_POLLING: "1"
+      POLL_INTERVAL: "100"
+      HMR_HOST: localhost
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - web-node-modules:/app/node_modules
+
+#  ai-agent:
+#    build:
+#      context: .
+#      dockerfile: ai-agents/Dockerfile
+#      target: dev
+#    init: true
+#    command: >
+#      sh -c "npm install &&
+#             npm run dev"
+#    environment:
+#      AI_AGENT_PRIMARY_MODEL: "gpt-5.2"
+#      AI_AGENT_PRIMARY_MODEL_TEMPERATURE: "0.2"
+#      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+#      AI_AGENT_LOG_FULL_PAYLOADS: "true"
+#    ports:
+#      - "8080:8080"
+#    volumes:
+#      - ./ai-agents:/app
+
+volumes:
+  postgres-data:
+  api-node-modules:
+  web-node-modules:

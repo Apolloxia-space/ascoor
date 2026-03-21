@@ -1,0 +1,29 @@
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+
+# Exclude local/editor/cache artifacts from source upload.
+.vscode
+.idea
+.gcloud
+.gcloud-tmp
+node_modules
+**/node_modules
+web/.next
+web/out
+api/dist
+api/build
+api/coverage
+web/coverage
+.venv
+ai-agents/.venv
+**/__pycache__
+**/*.pyc
+**/*.log
+*.tsbuildinfo
+
+# Include local env files for Cloud Build
+!api/.env
+!web/.env
+!cq-bot/.env

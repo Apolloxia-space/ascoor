@@ -1,0 +1,2 @@
+export const CREATE_FORM_MAX_CHARS = 3_000;
+export const DEFAULT_FORM_MAX_CHARS = 300;

@@ -1,0 +1,44 @@
+{
+  "name": "@ascoor/api",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "start:worker": "node dist/worker.js",
+    "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "prisma generate",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "generate:hono": "orval --config orval.config.ts",
+    "generate": "npm run generate:hono",
+    "audit": "npm audit"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
+    "@hono/node-server": "^1.19.9",
+    "@hono/zod-validator": "^0.7.6",
+    "@prisma/adapter-pg": "^7.4.2",
+    "@prisma/client": "^7.4.2",
+    "firebase-admin": "^13.7.0",
+    "hono": "^4.12.3",
+    "lru-cache": "^11.2.6",
+    "pg": "^8.19.0",
+    "stripe": "^20.4.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@types/node": "^24.11.0",
+    "orval": "^8.5.1",
+    "prisma": "^7.4.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

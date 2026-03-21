@@ -1,0 +1,119 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+.npm
+
+# Testing
+coverage
+*.lcov
+.nyc_output
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Turborepo
+.turbo
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Production
+build
+dist
+.vercel
+
+# React Router
+.react-router/
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+tsp-output/
+
+# Misc
+.DS_Store
+*.pyc
+__pycache__/
+.venv
+*.egg-info/
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.pnpm-store
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.tfvars.local
+terraform.local.tfvars
+.terraform.env
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# Temporary files
+*.log
+tmp/
+temp/
+
+# Playwright MCP
+.playwright-mcp/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Prisma Client (generated)
+api/src/generated/prisma/
+
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+!terraform.tfvars.example
+infrastructure/terraform/main/tfvars/*/terraform.env
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+tfplan
+
+# AI
+context
+
+ai-agents/.venv312/
+ai-agents/.langgraph_api/
+
+.gcloud/
+.gcloud-tmp/

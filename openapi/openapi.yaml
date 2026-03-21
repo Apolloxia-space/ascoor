@@ -1,0 +1,1483 @@
+openapi: 3.1.0
+info:
+  title: Ascoor API
+  version: 0.1.0
+  description: API contract for the Ascoor 3D Design editor backend.
+servers:
+  - url: http://localhost:3100
+    description: Local development server
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      security: []
+      operationId: getRoot
+      tags:
+        - system
+      summary: Return a friendly placeholder message.
+      responses:
+        '200':
+          description: Root message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RootResponse'
+  /health:
+    get:
+      security: []
+      operationId: getHealth
+      tags:
+        - system
+      summary: Health check endpoint.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /users/me:
+    patch:
+      operationId: updateUser
+      tags:
+        - users
+      summary: Update the authenticated user profile.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '402':
+          description: Active Pro subscription required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: deleteUser
+      tags:
+        - users
+      summary: Delete the authenticated user account and all associated data.
+      responses:
+        '204':
+          description: User deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/bootstrap:
+    post:
+      operationId: bootstrapUser
+      tags:
+        - users
+      summary: Bootstrap the authenticated user and create the default project.
+      responses:
+        '204':
+          description: User bootstrap completed
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /design-jobs:
+    post:
+      operationId: createDesignJob
+      tags:
+        - design-jobs
+      summary: Queue a design generation job from a raw user prompt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDesignJobRequest'
+      responses:
+        '202':
+          description: Design job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignJobResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /design-jobs/{designJobId}:
+    get:
+      operationId: getDesignJob
+      tags:
+        - design-jobs
+      summary: Get design job status.
+      parameters:
+        - name: designJobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Design job status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignJobResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Design job failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /designs:
+    post:
+      operationId: createDesign
+      tags:
+        - designs
+      summary: Create a new project design.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDesignRequest'
+      responses:
+        '201':
+          description: Design created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /designs/{designId}/assets/content:
+    get:
+      operationId: getDesignAssetContent
+      tags:
+        - designs
+      summary: Get render asset content for a design.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [ts]
+      responses:
+        '200':
+          description: Asset content retrieved
+          content:
+            text/javascript:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /designs/{designId}/edited-model:
+    get:
+      operationId: getEditedModel
+      tags:
+        - designs
+      summary: Get the saved edited GLB model for a design.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Edited model retrieved
+          content:
+            model/gltf-binary:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      operationId: saveEditedModel
+      tags:
+        - designs
+      summary: Save the edited GLB model for a design.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          model/gltf-binary:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Edited model saved
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: clearEditedModel
+      tags:
+        - designs
+      summary: Delete the saved edited GLB model for a design.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Edited model deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /designs/{designId}:
+    get:
+      operationId: getDesign
+      tags:
+        - designs
+      summary: Get design details and the latest linked design job.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Design detail retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignDetailResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      operationId: updateDesign
+      tags:
+        - designs
+      summary: Update design metadata.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDesignRequest'
+      responses:
+        '200':
+          description: Design updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: deleteDesign
+      tags:
+        - designs
+      summary: Delete a design.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Design deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /projects:
+    post:
+      operationId: createProject
+      tags:
+        - projects
+      summary: Create a new project.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: listProjects
+      tags:
+        - projects
+      summary: List projects for the authenticated user.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of projects to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor returned by the previous paginated response.
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search text for project names.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: Projects retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /projects/{projectId}:
+    patch:
+      operationId: updateProject
+      tags:
+        - projects
+      summary: Update a project.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: deleteProject
+      tags:
+        - projects
+      summary: Delete a project.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Project deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /projects/{projectId}/design-jobs:
+    get:
+      operationId: listProjectDesignJobs
+      tags:
+        - projects
+      summary: List design jobs for a project.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Filter by one or more design job statuses.
+          schema:
+            oneOf:
+              - type: string
+                enum: [queued, running, succeeded, failed]
+              - type: array
+                items:
+                  type: string
+                  enum: [queued, running, succeeded, failed]
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of design jobs to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Cursor returned by the previous paginated response.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Design jobs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDesignJobsResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /projects/{projectId}/designs:
+    get:
+      operationId: listProjectDesigns
+      tags:
+        - projects
+      summary: List designs for a project.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Designs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDesignsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags:
+        - billing
+      summary: Get billing status for the authenticated user.
+      responses:
+        '200':
+          description: Billing status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingStatusResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/usage:
+    get:
+      operationId: getBillingUsage
+      tags:
+        - billing
+      summary: Get usage and limits for the authenticated user.
+      responses:
+        '200':
+          description: Billing usage retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingUsageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/portal-session:
+    post:
+      operationId: createBillingPortalSession
+      tags:
+        - billing
+      summary: Create a Stripe Billing Portal session.
+      responses:
+        '200':
+          description: Portal session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingPortalSessionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '501':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/checkout-session:
+    post:
+      operationId: createCheckoutSession
+      tags:
+        - billing
+      summary: Create a Stripe checkout session for a subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutSessionRequest'
+      responses:
+        '200':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCheckoutSessionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Subscription already active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '501':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/cancel:
+    post:
+      operationId: cancelSubscription
+      tags:
+        - billing
+      summary: Cancel a subscription at period end.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSubscriptionRequest'
+      responses:
+        '204':
+          description: Cancellation accepted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '501':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/cancel-immediately:
+    post:
+      operationId: cancelSubscriptionImmediately
+      tags:
+        - billing
+      summary: Cancel a subscription immediately.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSubscriptionRequest'
+      responses:
+        '204':
+          description: Immediate cancellation accepted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '501':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/resume-cancel:
+    post:
+      operationId: resumeSubscriptionCancellation
+      tags:
+        - billing
+      summary: Resume an active subscription by removing period-end cancellation.
+      responses:
+        '204':
+          description: Cancellation schedule removed
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '501':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /billing/webhook:
+    post:
+      security: []
+      operationId: handleStripeWebhook
+      tags:
+        - billing
+      summary: Stripe webhook endpoint.
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingWebhookResponse'
+        '400':
+          description: Missing signature or invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '501':
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RootResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: ascoor API placeholder
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    BillingPlan:
+      type: object
+      required:
+        - id
+        - name
+        - stripePriceId
+        - amount
+        - currency
+        - interval
+        - intervalCount
+        - isActive
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        stripePriceId:
+          type: string
+        amount:
+          type: integer
+          format: int32
+        currency:
+          type: string
+          example: usd
+        interval:
+          type: string
+          enum: [month, year]
+        intervalCount:
+          type: integer
+          format: int32
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BillingStatus:
+      type: object
+      required:
+        - status
+        - plan
+        - currentPeriodEnd
+        - cancelAtPeriodEnd
+      properties:
+        status:
+          type: string
+          enum: [none, incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid, paused]
+        plan:
+          $ref: '#/components/schemas/BillingPlan'
+          nullable: true
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          nullable: true
+        cancelAtPeriodEnd:
+          type: boolean
+    BillingStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/BillingStatus'
+    BillingUsage:
+      type: object
+      required:
+        - used
+        - limit
+        - periodStart
+        - periodEnd
+      properties:
+        used:
+          type: integer
+          format: int32
+        limit:
+          type: integer
+          format: int32
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+    BillingUsageResponse:
+      allOf:
+        - $ref: '#/components/schemas/BillingUsage'
+    CreateCheckoutSessionRequest:
+      type: object
+      properties:
+        planId:
+          type: string
+          format: uuid
+    CreateCheckoutSessionResponse:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+    CancelSubscriptionRequest:
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/CancellationReason'
+        details:
+          type: string
+          maxLength: 300
+    CancellationReason:
+      type: string
+      enum:
+        - pricing
+        - features
+        - complex
+        - switch
+        - other
+    BillingWebhookResponse:
+      type: object
+      additionalProperties: true
+    BillingPortalSessionResponse:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+    CreateDesignJobRequest:
+      type: object
+      required:
+        - projectId
+        - userPrompt
+      properties:
+        projectId:
+          type: string
+          description: Project ID that will own the generated design.
+        userPrompt:
+          type: string
+          minLength: 1
+          maxLength: 3000
+          description: Raw user input prompt before AI template compilation.
+    DesignJobResponse:
+      type: object
+      required:
+        - designJobId
+        - status
+        - userPrompt
+      properties:
+        designJobId:
+          type: string
+          description: Design job ID.
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        userPrompt:
+          type: string
+          nullable: true
+          description: Raw user input prompt.
+        message:
+          type: string
+          nullable: true
+          description: Assistant message for the user when completed.
+        title:
+          type: string
+          nullable: true
+          description: Suggested display name for the generated design.
+        designId:
+          type: string
+          nullable: true
+          description: ID of the created design when code is generated.
+        errorMessage:
+          type: string
+          nullable: true
+        errorCode:
+          type: string
+          nullable: true
+          description: Machine-readable failure code.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DesignDetailResponse:
+      type: object
+      required:
+        - design
+        - latestDesignJob
+      properties:
+        design:
+          $ref: '#/components/schemas/ProjectDesignSummary'
+        latestDesignJob:
+          type: object
+          nullable: true
+          required:
+            - designJobId
+            - status
+            - userPrompt
+            - createdAt
+            - updatedAt
+          properties:
+            designJobId:
+              type: string
+            status:
+              type: string
+              enum: [queued, running, succeeded, failed]
+            userPrompt:
+              type: string
+            message:
+              type: string
+              nullable: true
+            title:
+              type: string
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+    UpdateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+    ProjectResponse:
+      allOf:
+        - $ref: '#/components/schemas/ProjectResponseData'
+    ProjectResponseData:
+      type: object
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProjectsResponse:
+      type: object
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectResponseData'
+        nextCursor:
+          type: string
+          nullable: true
+    ProjectDesignsResponse:
+      allOf:
+        - $ref: '#/components/schemas/ProjectDesignsResponseData'
+    ProjectDesignsResponseData:
+      type: object
+      required:
+        - projectId
+        - designs
+      properties:
+        projectId:
+          type: string
+        designs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectDesignSummary'
+    ProjectDesignJobsResponse:
+      type: object
+      required:
+        - projectId
+        - items
+        - nextCursor
+      properties:
+        projectId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectDesignJobSummary'
+        nextCursor:
+          type: string
+          nullable: true
+    ProjectDesignJobSummary:
+      type: object
+      required:
+        - designJobId
+        - projectId
+        - status
+        - promptPreview
+        - createdAt
+        - updatedAt
+      properties:
+        designJobId:
+          type: string
+        projectId:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        message:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        designId:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        errorCode:
+          type: string
+          nullable: true
+        promptPreview:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProjectDesignSummary:
+      type: object
+      required:
+        - id
+        - projectId
+        - displayName
+        - type
+        - assetStatus
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        displayName:
+          type: string
+        type:
+          type: string
+          enum: [studio_ts]
+        assetUriTs:
+          type: string
+          nullable: true
+        assetStatus:
+          type: string
+          enum: [queued, processing, succeeded, failed]
+        assetError:
+          type: string
+          nullable: true
+        editedAssetUriGlb:
+          type: string
+          nullable: true
+        editedAssetUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateDesignRequest:
+      type: object
+      required:
+        - projectId
+        - displayName
+        - type
+      properties:
+        projectId:
+          type: string
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 300
+        type:
+          type: string
+          enum: [studio_ts]
+    DesignResponse:
+      type: object
+      required:
+        - id
+        - projectId
+        - displayName
+        - type
+        - assetStatus
+        - updatedAt
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        displayName:
+          type: string
+        type:
+          type: string
+          enum: [studio_ts]
+        assetUriTs:
+          type: string
+          nullable: true
+        assetStatus:
+          type: string
+          enum: [queued, processing, succeeded, failed]
+        assetError:
+          type: string
+          nullable: true
+        editedAssetUriGlb:
+          type: string
+          nullable: true
+        editedAssetUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UpdateDesignRequest:
+      type: object
+      required:
+        - displayName
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 300
+    UpdateUserRequest:
+      type: object
+      required:
+        - displayName
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 300
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/UserResponseData'
+    UserResponseData:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

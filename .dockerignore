@@ -1,0 +1,45 @@
+# General
+.git
+.gitignore
+.vscode
+.idea
+.npmrc
+.pnpm-store
+.turbo
+.turbo-cache
+.venv
+__pycache__
+*.pyc
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build artifacts
+api/dist
+api/build
+api/coverage
+web/.next
+web/out
+web/coverage
+packages/**/dist
+packages/**/build
+coverage
+
+# Logs and caches
+**/*.log
+*.tsbuildinfo
+**/.venv
+**/.venv*
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
+**/*.pyc
+
+# ai-agent non-runtime assets
+ai-agents/.env
+ai-agents/.langgraph_api
+ai-agents/tests
+ai-agents/scripts
+ai-agents/mypy.ini

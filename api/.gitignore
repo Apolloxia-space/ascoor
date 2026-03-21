@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Build output
+dist/
+build/
+
+# Generated files
+src/generated/
+
+# Logs
+logs/
+*.log
+
+# Dependencies
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
