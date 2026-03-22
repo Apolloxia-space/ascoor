@@ -3,7 +3,7 @@ import { getAdditionalUserInfo, onIdTokenChanged, signOut, signInWithPopup } fro
 import { firebaseAuth, googleProvider } from '@/shared/firebase/client';
 import { useAuthStore } from './use-auth-store';
 import { setAuthTokenGetter } from '@/shared/api/fetcher';
-import { getAuthToken, getFreshAuthToken, setAuthToken } from './token-store';
+import { getFreshAuthToken } from './token-store';
 import { bootstrapUser } from '@/shared/api/generated/client';
 
 export function useAuthInit() {
@@ -11,18 +11,15 @@ export function useAuthInit() {
 
   useEffect(() => {
     // expose current token to the API fetcher (Authorization header)
-    setAuthTokenGetter(() => getAuthToken() ?? getFreshAuthToken());
+    setAuthTokenGetter(() => getFreshAuthToken());
     setStatus('loading');
 
     const unsub = onIdTokenChanged(firebaseAuth, async (user) => {
       if (!user) {
         setUser(null);
         setStatus('unauthenticated');
-        setAuthToken(null);
         return;
       }
-      const token = await user.getIdToken();
-      setAuthToken(token);
       setUser({
         uid: user.uid,
         email: user.email ?? undefined,
@@ -39,7 +36,6 @@ export function useAuthInit() {
 export async function signInWithGoogle() {
   const credential = await signInWithPopup(firebaseAuth, googleProvider);
   const token = await credential.user.getIdToken();
-  setAuthToken(token);
 
   const additionalUserInfo = getAdditionalUserInfo(credential);
   if (additionalUserInfo?.isNewUser) {

@@ -371,7 +371,14 @@ const findStructureTreeNode = (
   return null;
 };
 
-const createEditedModelExportObject = (source: THREE.Object3D) => {
+const createEditedModelExportObject = (
+  source: THREE.Object3D,
+  options?: { onlyVisible?: boolean },
+) => {
+  if (options?.onlyVisible && !source.visible) {
+    return new THREE.Group();
+  }
+
   const clone = source.clone(true);
   const stack: Array<{ source: THREE.Object3D; target: THREE.Object3D }> = [
     { source, target: clone },
@@ -379,6 +386,12 @@ const createEditedModelExportObject = (source: THREE.Object3D) => {
 
   while (stack.length > 0) {
     const current = stack.pop() as { source: THREE.Object3D; target: THREE.Object3D };
+
+    if (options?.onlyVisible && !current.source.visible) {
+      current.target.parent?.remove(current.target);
+      continue;
+    }
+
     current.target.visible = current.source.visible;
     delete current.target.userData.originalMaterial;
 
@@ -718,7 +731,12 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       exportStl: () => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
-        return exportObjectToStl(source);
+        const object = createEditedModelExportObject(source, { onlyVisible: true });
+        try {
+          return exportObjectToStl(object);
+        } finally {
+          disposeObject(object);
+        }
       },
     }),
     [],

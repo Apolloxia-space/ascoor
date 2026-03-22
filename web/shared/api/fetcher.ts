@@ -45,6 +45,7 @@ export async function apiFetcher<TResponse>(
     ...rest,
     headers: requestHeaders,
   });
+
   const parsed = await parseBody(response, responseType);
 
   if (!response.ok) {
