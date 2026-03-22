@@ -101,7 +101,7 @@ const formatBillingAmount = (amount?: number, currency?: string) => {
     });
     const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 0;
     const normalizedAmount = amount / 10 ** fractionDigits;
-    return formatter.format(normalizedAmount);
+    return `${formatter.format(normalizedAmount)} excl. tax`;
   } catch {
     return null;
   }

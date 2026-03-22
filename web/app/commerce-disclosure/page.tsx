@@ -39,7 +39,7 @@ const disclosures = [
   },
   {
     label: '販売価格 / Price',
-    value: 'USD 17 / month',
+    value: 'USD 17 / month（税別 / excl. tax）',
   },
   {
     label: '消費税 / Taxes',

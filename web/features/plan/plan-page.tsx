@@ -54,7 +54,7 @@ type PlanCard = {
 
 const planGroup: { subtitle: string; plans: Array<PlanCard>; footnote?: string } = {
   subtitle: 'Subscribe to Pro to unlock Ascoor design generation.',
-  footnote: 'Subscriptions renew monthly. Cancel anytime from Billing settings.',
+  footnote: 'Subscriptions renew monthly. Excl. tax.',
   plans: [
     {
       ...planDefinitions.pro,

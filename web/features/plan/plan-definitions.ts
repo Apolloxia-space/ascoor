@@ -3,6 +3,7 @@ type SharedPlanDefinition = {
   description: string;
   price: string;
   billing: string;
+  priceNote: string;
   features: Array<string>;
   limitResetNote: string;
 };
@@ -13,6 +14,7 @@ export const planDefinitions = {
     description: '',
     price: '$17',
     billing: 'per month',
+    priceNote: 'Excl. tax',
     features: [
       'Generate designs from prompts in Create mode',
       'Edit models with structure tree and transform controls',

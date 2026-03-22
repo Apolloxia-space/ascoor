@@ -109,6 +109,7 @@ type LandingPlan = {
   name: string;
   price: string;
   billing: string;
+  priceNote: string;
   description: string;
   features: Array<string>;
   limitResetNote: string;
@@ -329,6 +330,7 @@ export default function HomePage() {
                     <span className="text-sm text-muted-foreground">{plan.billing}</span>
                   )}
                 </div>
+                <p className="mt-1 text-xs text-muted-foreground">{plan.priceNote}</p>
                 {plan.description ? (
                   <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                 ) : null}
@@ -355,7 +357,7 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            Monthly subscriptions. Cancel anytime from Billing settings.
+            Monthly subscriptions. Excl. tax.
           </p>
         </div>
       </section>

@@ -37,24 +37,38 @@ export class StripeRepositoryStripe implements StripeRepository {
     customerId?: string | null;
     customerEmail?: string | null;
   }): Promise<{ url: string; customerId?: string | null }> {
-    const session = await this.stripe.checkout.sessions.create(
-      {
-        mode: 'subscription',
-        line_items: [{ price: params.priceId, quantity: 1 }],
-        success_url: params.successUrl,
-        cancel_url: params.cancelUrl,
-        customer: params.customerId ?? undefined,
-        customer_email: params.customerId ? undefined : (params.customerEmail ?? undefined),
-        client_reference_id: params.userId,
-        subscription_data: {
-          metadata: {
-            userId: params.userId,
-          },
-        },
+    const createParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'subscription',
+      line_items: [{ price: params.priceId, quantity: 1 }],
+      automatic_tax: {
+        enabled: true,
+      },
+      billing_address_collection: 'required',
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      client_reference_id: params.userId,
+      subscription_data: {
         metadata: {
           userId: params.userId,
         },
       },
+      metadata: {
+        userId: params.userId,
+      },
+    };
+
+    if (params.customerId) {
+      createParams.customer = params.customerId;
+      createParams.customer_update = {
+        address: 'auto',
+        name: 'auto',
+      };
+    } else if (params.customerEmail) {
+      createParams.customer_email = params.customerEmail;
+    }
+
+    const session = await this.stripe.checkout.sessions.create(
+      createParams,
       {
         idempotencyKey: params.idempotencyKey,
       },
