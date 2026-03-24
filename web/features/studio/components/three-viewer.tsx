@@ -17,6 +17,7 @@ import {
 import { cn } from '@shared/lib/utils';
 
 const VIEW_HELPER_DRAG_THRESHOLD = 4;
+const WORLD_AXES_HELPER_SIZE = 1.5;
 
 type ThreeViewerProps = {
   modelData: ArrayBuffer | null;
@@ -33,9 +34,17 @@ type ThreeViewerProps = {
 type ViewHelperInstance = THREE.Object3D & {
   animating: boolean;
   center: THREE.Vector3;
+  location: {
+    top: number | null;
+    right: number;
+    bottom: number;
+    left: number | null;
+  };
   update: (delta: number) => void;
   render: (renderer: THREE.WebGLRenderer) => void;
   handleClick: (event: PointerEvent) => boolean;
+  setLabels: (labelX?: string, labelY?: string, labelZ?: string) => void;
+  setLabelStyle: (font?: string, color?: string, radius?: number) => void;
   dispose: () => void;
 };
 
@@ -780,14 +789,27 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
 
     const viewHelper = new ViewHelper(camera, renderer.domElement) as unknown as ViewHelperInstance;
     viewHelper.center.copy(controls.target);
+    viewHelper.location.right = 12;
+    viewHelper.location.bottom = 12;
+    viewHelper.setLabels('X', 'Y', 'Z');
+    viewHelper.setLabelStyle('bold 24px Arial', '#ffffff', 14);
 
     const hemi = new THREE.HemisphereLight(0xf8fafc, 0x111827, 1.1);
     const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
     keyLight.position.set(6, 8, 6);
     const rimLight = new THREE.DirectionalLight(0x94a3b8, 0.35);
     rimLight.position.set(-5, 4, -4);
+    const worldAxesHelper = new THREE.AxesHelper(WORLD_AXES_HELPER_SIZE);
+    worldAxesHelper.renderOrder = 3;
+    if (Array.isArray(worldAxesHelper.material)) {
+      worldAxesHelper.material.forEach((material) => {
+        material.depthTest = false;
+      });
+    } else {
+      worldAxesHelper.material.depthTest = false;
+    }
 
-    scene.add(hemi, keyLight, rimLight);
+    scene.add(hemi, keyLight, rimLight, worldAxesHelper);
 
     container.appendChild(renderer.domElement);
 
@@ -913,6 +935,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       timer.dispose();
       controls.dispose();
       viewHelper.dispose();
+      worldAxesHelper.geometry.dispose();
+      disposeMaterial(worldAxesHelper.material);
       renderer.dispose();
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
