@@ -59,17 +59,17 @@ export function HeroSignupCard({ className, overlay = false }: HeroSignupCardPro
       {overlay ? (
         <div className="mb-3 text-center text-foreground [text-shadow:0_2px_16px_rgba(255,255,255,0.28),0_10px_30px_rgba(15,23,42,0.18)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-foreground/82">
-            For 3D Printing
+            Browser-Based 3D Workflow
           </p>
           <h1 className="mt-2 text-2xl font-semibold leading-tight md:text-3xl">
-            Turn prompts into <span className="text-primary">printable drafts.</span>
+            Generate, fix, and <span className="text-primary">export 3D in the browser.</span>
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-foreground/84">
-            Generate a first model, fix the surfaces that matter, and export STL without
-            leaving the browser.
+            Start with a draft, refine the parts that matter, and export JavaScript, GLB, or STL for
+            the workflow you are actually running.
           </p>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/72">
-            Prompt - Edit - STL - Print
+            Prompt - Edit - Export
           </p>
         </div>
       ) : null}

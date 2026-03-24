@@ -15,8 +15,11 @@ export function LandingHeader() {
           <a className="transition hover:text-foreground" href={`${paths.home}#workflow`}>
             Workflow
           </a>
-          <a className="transition hover:text-foreground" href={`${paths.home}#generative-design`}>
-            Studio
+          <a className="transition hover:text-foreground" href={`${paths.home}#use-cases`}>
+            Use Cases
+          </a>
+          <a className="transition hover:text-foreground" href={`${paths.home}#exports`}>
+            Exports
           </a>
           <a className="transition hover:text-foreground" href={paths.pricing}>
             Pricing

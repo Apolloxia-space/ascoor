@@ -5,37 +5,27 @@ import {
   threeJsDesignSystemInstruction,
 } from './repositories/threejs-guidelines';
 
-test('threeJsDesignSystemInstruction includes Ascoor runtime constraints', () => {
-  assert.match(threeJsDesignSystemInstruction, /Ascoor, a 3D design studio/);
-  assert.match(threeJsDesignSystemInstruction, /structure tree and transform controls/);
-  assert.match(threeJsDesignSystemInstruction, /Keep the output compatible with that edit flow/);
+test('threeJsDesignSystemInstruction keeps only minimal runtime constraints', () => {
   assert.match(threeJsDesignSystemInstruction, /Return executable JavaScript only/);
+  assert.match(threeJsDesignSystemInstruction, /Use `THREE` globals and do not include import statements/);
+  assert.match(threeJsDesignSystemInstruction, /Do not include markdown fences or explanations/);
   assert.match(threeJsDesignSystemInstruction, /Assign the final model to `result`/);
-  assert.match(threeJsDesignSystemInstruction, /X=front\/back, Y=left\/right, Z=up\/down/);
-  assert.match(threeJsDesignSystemInstruction, /Add this exact top comment in output/);
+  assert.doesNotMatch(threeJsDesignSystemInstruction, /Ascoor, a 3D design studio/);
+  assert.doesNotMatch(threeJsDesignSystemInstruction, /structure tree and transform controls/);
+  assert.doesNotMatch(threeJsDesignSystemInstruction, /X=front\/back, Y=left\/right, Z=up\/down/);
 });
 
-test('buildThreeJsCompiledPrompt renders structure rules from the shared source', () => {
+test('buildThreeJsCompiledPrompt renders the minimal user request template', () => {
   const out = buildThreeJsCompiledPrompt('A modular mecha');
 
-  assert.match(out, /Rules:/);
-  assert.match(
-    out,
-    /Create a simple 3D model in three\.js that is clearly recognizable as the requested object/,
-  );
-  assert.match(out, /Build `result` as a top-level `THREE\.Group`/);
-  assert.match(out, /Keep a shallow, editable hierarchy/);
-  assert.match(
-    out,
-    /Split only major editable or functional parts into named `Group` or `Mesh` nodes under `result`/,
-  );
-  assert.match(out, /Prefer local pivots for major editable parts/);
-  assert.doesNotMatch(out, /structure tree and transform controls/);
-  assert.doesNotMatch(out, /Return executable JavaScript only/);
+  assert.match(out, /Write three\.js code that creates the object requested below/);
+  assert.match(out, /User request:/);
+  assert.doesNotMatch(out, /Rules:/);
+  assert.doesNotMatch(out, /Build `result` as a top-level `THREE\.Group`/);
   assert.match(out, /A modular mecha/);
 });
 
-test('runCompilePrompt returns template with coordinate and axis constraints', async () => {
+test('runCompilePrompt returns the minimal template', async () => {
   process.env.OPENAI_API_KEY ??= 'test-key';
   const { runCompilePrompt } = await import('./agent');
   const out = await runCompilePrompt({
@@ -43,24 +33,9 @@ test('runCompilePrompt returns template with coordinate and axis constraints', a
   });
 
   assert.doesNotMatch(out, /buildStepTarget/);
-  assert.match(out, /Rules:/);
-  assert.match(out, /Build `result` as a top-level `THREE\.Group`/);
-  assert.match(out, /clearly recognizable as the requested object/);
-  assert.match(out, /Keep a shallow, editable hierarchy/);
-  assert.match(
-    out,
-    /Split only major editable or functional parts into named `Group` or `Mesh` nodes under `result`/,
-  );
-  assert.match(
-    out,
-    /Collapse minor static details into their parent part when reasonable/,
-  );
-  assert.match(
-    out,
-    /If recognizability and fine-grained structure conflict, prefer recognizability with fewer, larger parts/,
-  );
-  assert.doesNotMatch(out, /structure tree and transform controls/);
-  assert.doesNotMatch(out, /Return executable JavaScript only/);
+  assert.match(out, /Write three\.js code that creates the object requested below/);
   assert.match(out, /User request:/);
+  assert.doesNotMatch(out, /Rules:/);
+  assert.doesNotMatch(out, /Build `result` as a top-level `THREE\.Group`/);
   assert.match(out, /A simple steam locomotive/);
 });
