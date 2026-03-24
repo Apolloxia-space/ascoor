@@ -151,6 +151,7 @@ export function StudioPage() {
     setStructureNodeHidden: (id: string, hidden: boolean) => void;
     nudgeNode: (axis: TransformAxis, delta: number) => void;
     rotateNode: (axis: TransformAxis, deltaRadians: number) => void;
+    setNodeRotation: (axis: TransformAxis, radians: number) => void;
     resetNode: (target: ResetTransformTarget) => void;
     hideSelectedNode: () => void;
     restoreNode: (id: string) => void;
@@ -1062,6 +1063,9 @@ export function StudioPage() {
                 onRotateNode={(axis, deltaRadians) =>
                   assemblyControlsRef.current?.rotateNode(axis, deltaRadians)
                 }
+                onSetNodeRotation={(axis, radians) =>
+                  assemblyControlsRef.current?.setNodeRotation(axis, radians)
+                }
                 onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
                 onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
                 onRestoreNode={(id) => assemblyControlsRef.current?.restoreNode(id)}
@@ -1153,6 +1157,9 @@ export function StudioPage() {
               onNudgeNode={(axis, delta) => assemblyControlsRef.current?.nudgeNode(axis, delta)}
               onRotateNode={(axis, deltaRadians) =>
                 assemblyControlsRef.current?.rotateNode(axis, deltaRadians)
+              }
+              onSetNodeRotation={(axis, radians) =>
+                assemblyControlsRef.current?.setNodeRotation(axis, radians)
               }
               onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
               onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}

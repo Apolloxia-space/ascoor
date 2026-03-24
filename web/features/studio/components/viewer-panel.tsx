@@ -55,6 +55,7 @@ type ViewerPanelProps = {
     setStructureNodeHidden: (id: string, hidden: boolean) => void;
     nudgeNode: (axis: TransformAxis, delta: number) => void;
     rotateNode: (axis: TransformAxis, deltaRadians: number) => void;
+    setNodeRotation: (axis: TransformAxis, radians: number) => void;
     resetNode: (target: ResetTransformTarget) => void;
     hideSelectedNode: () => void;
     restoreNode: (id: string) => void;
@@ -549,6 +550,9 @@ export function ViewerPanel({
       },
       rotateNode: (axis, deltaRadians) => {
         viewerRef.current?.rotateSelectedNode(axis, deltaRadians);
+      },
+      setNodeRotation: (axis, radians) => {
+        viewerRef.current?.setSelectedNodeRotation(axis, radians);
       },
       resetNode: (target) => {
         viewerRef.current?.resetSelectedNode(target);

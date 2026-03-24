@@ -18,6 +18,7 @@ type TransformControlsProps = {
   onRotateStepChange?: (step: number) => void;
   onNudgeNode?: (axis: TransformAxis, delta: number) => void;
   onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
+  onSetNodeRotation?: (axis: TransformAxis, radians: number) => void;
   onResetNode?: (target: ResetTransformTarget) => void;
   onHideSelectedNode?: () => void;
   onRestoreNode?: (nodeId: string) => void;
@@ -32,6 +33,7 @@ export function TransformControls({
   onRotateStepChange,
   onNudgeNode,
   onRotateNode,
+  onSetNodeRotation,
   onResetNode,
   onHideSelectedNode,
   onRestoreNode,
@@ -108,9 +110,8 @@ export function TransformControls({
       return;
     }
     const nextRadians = (nextDegrees * Math.PI) / 180;
-    const delta = nextRadians - selectedNode.rotation[axis];
-    if (Math.abs(delta) > Number.EPSILON) {
-      onRotateNode?.(axis, delta);
+    if (Math.abs(nextRadians - selectedNode.rotation[axis]) > Number.EPSILON) {
+      onSetNodeRotation?.(axis, nextRadians);
       return;
     }
     setRotationDraft((current) => ({
@@ -119,13 +120,10 @@ export function TransformControls({
     }));
   };
 
-  const handleTransformInputKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-    onCommit: () => void,
-  ) => {
+  const handleTransformInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Enter') return;
+    event.preventDefault();
     event.currentTarget.blur();
-    onCommit();
   };
 
   return (
@@ -185,9 +183,7 @@ export function TransformControls({
                     }))
                   }
                   onBlur={() => commitPositionInput(axis)}
-                  onKeyDown={(event) =>
-                    handleTransformInputKeyDown(event, () => commitPositionInput(axis))
-                  }
+                  onKeyDown={handleTransformInputKeyDown}
                 />
                 <Button
                   type="button"
@@ -245,9 +241,7 @@ export function TransformControls({
                     }))
                   }
                   onBlur={() => commitRotationInput(axis)}
-                  onKeyDown={(event) =>
-                    handleTransformInputKeyDown(event, () => commitRotationInput(axis))
-                  }
+                  onKeyDown={handleTransformInputKeyDown}
                 />
                 <Button
                   type="button"

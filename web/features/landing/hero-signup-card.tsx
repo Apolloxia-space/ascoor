@@ -58,9 +58,19 @@ export function HeroSignupCard({ className, overlay = false }: HeroSignupCardPro
     >
       {overlay ? (
         <div className="mb-3 text-center text-foreground [text-shadow:0_2px_16px_rgba(255,255,255,0.28),0_10px_30px_rgba(15,23,42,0.18)]">
-          <h1 className="text-2xl font-semibold leading-tight md:text-3xl">
-            3D Starts with <span className="text-primary">Words.</span>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-foreground/82">
+            For 3D Printing
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold leading-tight md:text-3xl">
+            Turn prompts into <span className="text-primary">printable drafts.</span>
           </h1>
+          <p className="mt-3 text-sm leading-relaxed text-foreground/84">
+            Generate a first model, fix the surfaces that matter, and export STL without
+            leaving the browser.
+          </p>
+          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/72">
+            Prompt - Edit - STL - Print
+          </p>
         </div>
       ) : null}
       <Button

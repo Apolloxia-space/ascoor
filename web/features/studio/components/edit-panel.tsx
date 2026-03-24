@@ -23,6 +23,7 @@ type EditPanelProps = {
   onSetStructureNodeHidden?: (nodeId: string, hidden: boolean) => void;
   onNudgeNode?: (axis: TransformAxis, delta: number) => void;
   onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
+  onSetNodeRotation?: (axis: TransformAxis, radians: number) => void;
   onResetNode?: (target: ResetTransformTarget) => void;
   onHideSelectedNode?: () => void;
   onRestoreNode?: (nodeId: string) => void;
@@ -42,6 +43,7 @@ export function EditPanel({
   onSetStructureNodeHidden,
   onNudgeNode,
   onRotateNode,
+  onSetNodeRotation,
   onResetNode,
   onHideSelectedNode,
   onRestoreNode,
@@ -66,6 +68,7 @@ export function EditPanel({
         onSetStructureNodeHidden={onSetStructureNodeHidden}
         onNudgeNode={onNudgeNode}
         onRotateNode={onRotateNode}
+        onSetNodeRotation={onSetNodeRotation}
         onResetNode={onResetNode}
         onHideSelectedNode={onHideSelectedNode}
         onRestoreNode={onRestoreNode}
@@ -87,6 +90,7 @@ export function EditPanelContent({
   onSetStructureNodeHidden,
   onNudgeNode,
   onRotateNode,
+  onSetNodeRotation,
   onResetNode,
   onHideSelectedNode,
   onRestoreNode,
@@ -131,6 +135,7 @@ export function EditPanelContent({
         onRotateStepChange={onRotateStepChange}
         onNudgeNode={onNudgeNode}
         onRotateNode={onRotateNode}
+        onSetNodeRotation={onSetNodeRotation}
         onResetNode={onResetNode}
         onHideSelectedNode={onHideSelectedNode}
         onRestoreNode={onRestoreNode}

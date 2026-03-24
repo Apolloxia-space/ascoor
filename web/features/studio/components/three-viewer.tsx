@@ -61,6 +61,7 @@ export type ThreeViewerHandle = {
   setStructureNodeHidden: (id: string, hidden: boolean) => void;
   nudgeSelectedNode: (axis: TransformAxis, delta: number) => void;
   rotateSelectedNode: (axis: TransformAxis, deltaRadians: number) => void;
+  setSelectedNodeRotation: (axis: TransformAxis, radians: number) => void;
   resetSelectedNode: (target: ResetTransformTarget) => void;
   hideSelectedNode: () => void;
   restoreNode: (id: string) => void;
@@ -507,7 +508,6 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       structureTreeRef.current.length > 0
         ? findStructureTreeNode(structureTreeRef.current, selectedNode.id)
         : null;
-    const rotation = new THREE.Euler().setFromQuaternion(activeNode.quaternion, 'XYZ');
     return {
       id: selectedNode.id,
       name: sourceTreeNode?.displayName ?? activeNode.name ?? 'Node',
@@ -520,9 +520,9 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         z: activeNode.position.z,
       },
       rotation: {
-        x: rotation.x,
-        y: rotation.y,
-        z: rotation.z,
+        x: activeNode.rotation.x,
+        y: activeNode.rotation.y,
+        z: activeNode.rotation.z,
       },
     };
   };
@@ -688,6 +688,11 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
           } else {
             node.rotateZ(deltaRadians);
           }
+        });
+      },
+      setSelectedNodeRotation: (axis: TransformAxis, radians: number) => {
+        updateSelectedNode((node) => {
+          node.rotation[axis] = radians;
         });
       },
       resetSelectedNode: (target: ResetTransformTarget) => {
