@@ -6,7 +6,7 @@ import type { ResetTransformTarget, SelectedNode, TransformAxis } from './three-
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 
-export const MOVE_STEP_OPTIONS = [0.01, 0.05, 0.2] as const;
+export const MOVE_STEP_OPTIONS = [0.01, 0.2, 0.5] as const;
 export const ROTATE_STEP_OPTIONS = [5, 15, 45] as const;
 
 type TransformControlsProps = {
@@ -127,7 +127,7 @@ export function TransformControls({
   };
 
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-3">
+    <section className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Transform

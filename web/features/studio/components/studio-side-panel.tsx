@@ -8,7 +8,7 @@ import { cn } from '@shared/lib/utils';
 type StudioSidePanelProps = {
   open: boolean;
   title: string;
-  description: string;
+  description?: string;
   variant?: 'desktop' | 'mobile';
   resizeAriaLabel: string;
   onToggle?: () => void;
@@ -104,7 +104,7 @@ export function StudioSidePanel({
         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
           <div className="space-y-0.5">
             <p className="text-sm font-semibold text-foreground">{title}</p>
-            <p className="text-xs text-muted-foreground">{description}</p>
+            {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
           </div>
           {onToggle && (
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggle}>

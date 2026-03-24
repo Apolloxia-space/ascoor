@@ -301,7 +301,7 @@ export function StructureTree({
 
   if (nodes.length === 0) {
     return (
-      <div className="space-y-2 rounded-lg border border-border/70 bg-background/60 p-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Structure
@@ -316,19 +316,13 @@ export function StructureTree({
   }
 
   return (
-    <section
-      data-structure-tree
-      className="space-y-2 rounded-lg border border-border/70 bg-background/60 p-3"
-    >
+    <section data-structure-tree className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Structure
         </p>
         <p className="text-xs text-muted-foreground">{formatCountLabel(nodeCount, 'node')}</p>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Inspect the runtime hierarchy, focus nodes, and toggle source-node visibility.
-      </p>
       <div role="tree" aria-label="Model structure" className="space-y-1">
         {renderNodes(nodes)}
       </div>

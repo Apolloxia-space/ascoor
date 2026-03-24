@@ -54,7 +54,6 @@ export function EditPanel({
       variant={variant}
       resizeAriaLabel="Resize edit panel"
       title="Edit"
-      description="Tune the final model, inspect the hierarchy, and export from the viewer."
       onToggle={onToggle}
     >
       <EditPanelContent
@@ -98,15 +97,11 @@ export function EditPanelContent({
   const rootNodeId = structureTree[0]?.id ?? null;
 
   return (
-    <>
-      <section className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-3">
+    <div className="space-y-4">
+      <section className="space-y-3">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Workspace
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Adjust the finished model here, inspect the hierarchy, and export it from the viewer
-            toolbar.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-2">
@@ -126,27 +121,31 @@ export function EditPanelContent({
         </div>
       </section>
 
-      <TransformControls
-        selectedNode={selectedNode}
-        emptyMessage="Select the full model or a structure node to adjust."
-        moveStep={moveStep}
-        onMoveStepChange={onMoveStepChange}
-        rotateStep={rotateStep}
-        onRotateStepChange={onRotateStepChange}
-        onNudgeNode={onNudgeNode}
-        onRotateNode={onRotateNode}
-        onSetNodeRotation={onSetNodeRotation}
-        onResetNode={onResetNode}
-        onHideSelectedNode={onHideSelectedNode}
-        onRestoreNode={onRestoreNode}
-      />
+      <div className="border-t border-border/70 pt-4">
+        <TransformControls
+          selectedNode={selectedNode}
+          emptyMessage="Select the full model or a structure node to adjust."
+          moveStep={moveStep}
+          onMoveStepChange={onMoveStepChange}
+          rotateStep={rotateStep}
+          onRotateStepChange={onRotateStepChange}
+          onNudgeNode={onNudgeNode}
+          onRotateNode={onRotateNode}
+          onSetNodeRotation={onSetNodeRotation}
+          onResetNode={onResetNode}
+          onHideSelectedNode={onHideSelectedNode}
+          onRestoreNode={onRestoreNode}
+        />
+      </div>
 
-      <StructureTree
-        nodes={structureTree}
-        selectedNodeId={selectedNode?.id ?? null}
-        onFocusNode={onFocusStructureNode}
-        onSetNodeHidden={onSetStructureNodeHidden}
-      />
-    </>
+      <div className="border-t border-border/70 pt-4">
+        <StructureTree
+          nodes={structureTree}
+          selectedNodeId={selectedNode?.id ?? null}
+          onFocusNode={onFocusStructureNode}
+          onSetNodeHidden={onSetStructureNodeHidden}
+        />
+      </div>
+    </div>
   );
 }

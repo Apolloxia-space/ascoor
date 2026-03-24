@@ -28,7 +28,10 @@ type RightPanelProps = {
   onRestoreNode?: (nodeId: string) => void;
 };
 
-const PANEL_COPY: Record<RightPanelMode, { title: string; description: string; resizeLabel: string }> = {
+const PANEL_COPY: Record<
+  RightPanelMode,
+  { title: string; description?: string; resizeLabel: string }
+> = {
   create: {
     title: 'Create',
     description: 'Generate a design from a prompt.',
@@ -36,7 +39,6 @@ const PANEL_COPY: Record<RightPanelMode, { title: string; description: string; r
   },
   edit: {
     title: 'Edit',
-    description: 'Tune the final model, inspect the hierarchy, and export from the viewer.',
     resizeLabel: 'Resize edit panel',
   },
 };
