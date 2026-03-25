@@ -65,8 +65,8 @@ export function HeroSignupCard({ className, overlay = false }: HeroSignupCardPro
             Generate, fix, and <span className="text-primary">export 3D in the browser.</span>
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-foreground/84">
-            Start with a draft, refine the parts that matter, and export JavaScript, GLB, or STL for
-            the workflow you are actually running.
+            Start with a draft, refine the parts that matter, and export generated JavaScript,
+            edited GLB, or STL for the workflow you are actually running.
           </p>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/72">
             Prompt - Edit - Export

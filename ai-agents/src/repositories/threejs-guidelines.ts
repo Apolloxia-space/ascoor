@@ -3,6 +3,7 @@ const runtimeRules = [
   'Use `THREE` globals and do not include import statements.',
   'Do not include markdown fences or explanations.',
   'Assign the final model to `result` at module scope.',
+  'Give every major `Group` or `Mesh` a short descriptive `name` based on its role.',
 ] as const;
 
 function joinInstructionSentences(lines: ReadonlyArray<string>): string {

@@ -5,11 +5,15 @@ import {
   threeJsDesignSystemInstruction,
 } from './repositories/threejs-guidelines';
 
-test('threeJsDesignSystemInstruction keeps only minimal runtime constraints', () => {
+test('threeJsDesignSystemInstruction keeps minimal runtime constraints plus naming', () => {
   assert.match(threeJsDesignSystemInstruction, /Return executable JavaScript only/);
   assert.match(threeJsDesignSystemInstruction, /Use `THREE` globals and do not include import statements/);
   assert.match(threeJsDesignSystemInstruction, /Do not include markdown fences or explanations/);
   assert.match(threeJsDesignSystemInstruction, /Assign the final model to `result`/);
+  assert.match(
+    threeJsDesignSystemInstruction,
+    /Give every major `Group` or `Mesh` a short descriptive `name` based on its role/,
+  );
   assert.doesNotMatch(threeJsDesignSystemInstruction, /Ascoor, a 3D design studio/);
   assert.doesNotMatch(threeJsDesignSystemInstruction, /structure tree and transform controls/);
   assert.doesNotMatch(threeJsDesignSystemInstruction, /X=front\/back, Y=left\/right, Z=up\/down/);

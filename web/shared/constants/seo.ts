@@ -14,5 +14,4 @@ export const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 export const siteName = 'Ascoor';
 export const defaultDescription =
   'Ascoor is a browser-based 3D design studio with Create and Edit workspaces, project history, and GLB, STL, and JavaScript exports.';
-const defaultOgImageVersion = '20260322';
-export const defaultOgImagePath = `/og/default-1200x630.jpeg?v=${defaultOgImageVersion}`;
+export const defaultOgImagePath = '/og/default-1200x630-v20260325.jpeg';

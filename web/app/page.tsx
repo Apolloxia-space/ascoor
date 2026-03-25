@@ -1,17 +1,11 @@
+import Image from 'next/image';
 import type { Metadata } from 'next';
-import {
-  ArrowRight,
-  Box,
-  Braces,
-  Layers3,
-  Printer,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, Braces, Printer } from 'lucide-react';
 import { HeroSignupCard } from '@/features/landing/hero-signup-card';
 import { LandingFooter } from '@/features/landing/landing-footer';
+import { LandingGlbPreview } from '@/features/landing/landing-glb-preview';
 import { LandingHeader } from '@/features/landing/landing-header';
 import { XPostEmbed } from '@/features/landing/x-post-embed';
-import { HeroAstronautViewer } from '@/features/landing/hero-astronaut-viewer';
 import { PlanInclusions } from '@/features/plan/components/plan-inclusions';
 import { planDefinitions } from '@/features/plan/plan-definitions';
 import { defaultDescription, defaultOgImagePath } from '@shared/constants/seo';
@@ -37,32 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
-const workflowPillars = [
-  {
-    icon: Sparkles,
-    title: 'Generate the first draft',
-    description: 'Start from a prompt when you need shape, not a blank file.',
-  },
-  {
-    icon: Layers3,
-    title: 'Edit in the browser',
-    description: 'Inspect structure and fix the parts that matter before handoff.',
-  },
-  {
-    icon: Braces,
-    title: 'Export for the next tool',
-    description: 'Move into JavaScript, GLB, or STL without rebuilding from zero.',
-  },
-];
-
-const workflowTags = [
-  'three.js',
-  'JavaScript export',
-  'GLB handoff',
-  'STL output',
-  'Browser editing',
-  'Blender prep',
-];
+const heroDemoVideoPath = '/hero/demo-v20260325.mp4';
+const draftFirstModelImagePath = '/landing/draft-first-model-v20260325.webp';
+const refineLanternImagePath = '/landing/refine-lantan-v20260325.webp';
+const stoneLanternGlbPath = '/landing/Japanese Garden Stone Lantern Model-v20260325.glb';
 
 type StoryVisualKind = 'draft' | 'edit' | 'export';
 
@@ -107,9 +79,9 @@ const storySections: Array<StorySection> = [
     description:
       'The value is in what happens after generation. Use the same draft-to-edit flow, then export the format your workflow already expects.',
     points: [
-      'JavaScript for code-first web scenes.',
-      'GLB for portable 3D assets and viewer handoff.',
-      'STL for rapid print prototypes.',
+      'JavaScript export for generated designs.',
+      'GLB export for portable assets and edited model handoff.',
+      'STL export for rapid print prototypes.',
     ],
     visual: 'export',
   },
@@ -155,7 +127,7 @@ export default function HomePage() {
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
                 Ascoor helps you get to a first 3D draft fast, fix the important parts, and hand
-                off JavaScript, GLB, or STL into the workflow you already run.
+                off generated JavaScript, edited GLB, or STL into the workflow you already run.
               </p>
             </div>
 
@@ -163,85 +135,30 @@ export default function HomePage() {
               <HeroSignupCard />
             </div>
 
-            <div className="mt-10 overflow-hidden rounded-[36px] border border-white/40 bg-white/70 shadow-[0_28px_90px_rgba(15,23,42,0.14)] backdrop-blur-[18px]">
-              <div className="border-b border-[#8ca2b6]/20 px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#34495e]/72 sm:px-6">
-                Create → Edit → Export
-              </div>
-              <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-                <div className="relative min-h-[360px] border-b border-[#8ca2b6]/20 bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,0.98),rgba(240,245,249,0.96)_42%,rgba(226,234,241,0.94))] lg:min-h-[520px] lg:border-b-0 lg:border-r">
-                  <HeroAstronautViewer className="h-full min-h-[360px] w-full lg:min-h-[520px]" />
-                  <div className="pointer-events-none absolute left-5 top-5 rounded-2xl border border-white/60 bg-white/82 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[#34495e]/60">
-                      Draft Preview
-                    </p>
-                    <p className="mt-2 text-sm font-medium text-[#243545]">Prompt-generated shape</p>
-                  </div>
-                  <div className="pointer-events-none absolute bottom-5 right-5 rounded-2xl border border-[#34495e]/10 bg-[#34495e] px-4 py-3 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-white/60">
-                      Output
-                    </p>
-                    <p className="mt-2 text-sm font-medium">JavaScript / GLB / STL</p>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 p-5 sm:p-6">
-                  <div className="rounded-[28px] border border-[#8ca2b6]/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,249,252,0.94))] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#34495e]/62">
-                      Why It Works
-                    </p>
-                    <div className="mt-4 space-y-4">
-                      {workflowPillars.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={item.title} className="flex items-start gap-4">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-                              <Icon className="size-5" />
-                            </div>
-                            <div>
-                              <h2 className="text-base font-semibold text-[#243545]">{item.title}</h2>
-                              <p className="mt-1 text-sm leading-relaxed text-[#34495e]/76">
-                                {item.description}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[24px] border border-[#8ca2b6]/24 bg-white/92 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#34495e]/60">
-                        Best For
-                      </p>
-                      <p className="mt-3 text-lg font-semibold text-[#243545]">Web and prototype work</p>
-                      <p className="mt-2 text-sm leading-relaxed text-[#34495e]/76">
-                        Especially useful when the next step is three.js, a viewer handoff, or a print retry.
-                      </p>
-                    </div>
-                    <div className="rounded-[24px] border border-[#8ca2b6]/24 bg-[#34495e] p-4 text-white shadow-[0_14px_32px_rgba(15,23,42,0.14)]">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/58">
-                        Workflow
-                      </p>
-                      <p className="mt-3 text-lg font-semibold">Prompt → Edit → Export</p>
-                      <p className="mt-2 text-sm leading-relaxed text-white/72">
-                        Useful when speed to first usable draft matters more than maximum generation volume.
+            <div className="mx-auto mt-10 max-w-[56rem]">
+              <div className="relative overflow-hidden rounded-[24px]">
+                  <video
+                    className="h-full min-h-[250px] w-full object-cover md:min-h-[330px] lg:min-h-[430px]"
+                    src={heroDemoVideoPath}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    aria-label="Ascoor create, edit, and export workflow demo"
+                  />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,0.72))] px-5 pb-5 pt-16 sm:px-6 sm:pb-6">
+                    <div className="max-w-2xl">
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/64">
+                        Create → Edit → Export
                       </p>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-center">
-              {workflowTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm"
-                >
-                  {tag}
-                </span>
-              ))}
+              <p className="mt-3 px-2 text-center text-xs leading-relaxed text-muted-foreground">
+                Demo edited for presentation. Actual product experience and generation results may
+                vary.
+              </p>
             </div>
           </div>
         </section>
@@ -290,31 +207,25 @@ export default function HomePage() {
               Use Cases
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-              Built for web scenes, print prototypes, and Blender handoff
+              Built for web scenes and print prototypes
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground">
               The strongest use cases are the ones where getting a draft fast, fixing it lightly,
               and exporting cleanly saves real production time.
             </p>
           </div>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-2">
             <UseCaseCard
               icon={Braces}
               title="Web 3D"
-              description="Prototype assets for three.js and browser-based scenes without spending the first hour modeling by hand."
-              tags={['JavaScript', 'GLB', 'three.js']}
+              description="Prototype assets for three.js and browser-based scenes, then hand off generated JavaScript or GLB without spending the first hour modeling by hand."
+              tags={['Generated JavaScript', 'GLB', 'three.js']}
             />
             <UseCaseCard
               icon={Printer}
               title="3D Print"
               description="Create rough printable concepts, fix obvious issues, and send STL into the next physical iteration."
               tags={['STL', 'Prototype', 'Print retry']}
-            />
-            <UseCaseCard
-              icon={Box}
-              title="Blender Prep"
-              description="Use Ascoor for the first pass, then continue detail, polish, and finishing work inside Blender."
-              tags={['Draft first', 'Handoff', 'Faster start']}
             />
           </div>
         </div>
@@ -347,10 +258,6 @@ export default function HomePage() {
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
               One plan for fast 3D draft workflows
             </h2>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Use the same plan whether the next step is a web scene, a print prototype, or a
-              downstream modeling tool.
-            </p>
             <a className="text-sm text-primary hover:underline" href={paths.pricing}>
               View full pricing page
             </a>
@@ -439,111 +346,38 @@ function UseCaseCard({
 function StoryVisual({ kind }: { kind: StoryVisualKind }) {
   if (kind === 'draft') {
     return (
-      <div className="overflow-hidden rounded-[32px] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(242,246,249,0.94))] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
-        <div className="rounded-[24px] border border-[#8ca2b6]/20 bg-white/92 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[#34495e]/60">
-              Prompt
-            </p>
-            <p className="text-xs text-[#34495e]/56">Display stand for a small product</p>
-          </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-[22px] border border-dashed border-[#8ca2b6]/30 bg-[#f7fafc] p-4">
-              <div className="space-y-2">
-                <div className="h-3 w-3/4 rounded-full bg-[#d7e1ea]" />
-                <div className="h-3 w-full rounded-full bg-[#e6edf3]" />
-                <div className="h-3 w-5/6 rounded-full bg-[#dfe8ef]" />
-              </div>
-            </div>
-            <div className="relative min-h-[220px] rounded-[24px] bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.98),rgba(231,238,243,0.96)_58%,rgba(214,223,231,0.92))]">
-              <div className="absolute inset-x-10 bottom-6 h-8 rounded-full bg-[radial-gradient(circle,rgba(52,73,94,0.18),rgba(52,73,94,0.02)_62%,transparent_72%)] blur-lg" />
-              <div className="absolute bottom-10 left-1/2 h-24 w-24 -translate-x-1/2 rounded-[30px] border-[10px] border-[#f4d7ba] bg-[#fff4e7] shadow-[0_18px_28px_rgba(36,53,69,0.10)]" />
-              <div className="absolute bottom-26 left-1/2 h-16 w-4 -translate-x-1/2 rounded-full bg-[#8b5e3c]" />
-              <div className="absolute bottom-38 left-1/2 h-12 w-4 -translate-x-[24px] rotate-[-24deg] rounded-full bg-[#8b5e3c]" />
-              <div className="absolute bottom-38 left-1/2 h-12 w-4 translate-x-[20px] rotate-[24deg] rounded-full bg-[#8b5e3c]" />
-            </div>
-          </div>
-        </div>
+      <div className="overflow-hidden rounded-[32px] bg-[#0c1324] shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+        <Image
+          src={draftFirstModelImagePath}
+          alt="Ascoor showing a first generated 3D model draft in the browser"
+          width={1344}
+          height={1008}
+          className="block h-full w-full object-cover"
+        />
       </div>
     );
   }
 
   if (kind === 'edit') {
     return (
-      <div className="overflow-hidden rounded-[32px] border border-border/60 bg-[#34495e] p-5 text-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
-        <div className="grid gap-4 md:grid-cols-[0.72fr_1.28fr]">
-          <div className="rounded-[24px] border border-white/10 bg-white/6 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-white/56">
-              Structure
-            </p>
-            <div className="mt-4 space-y-3">
-              {['root', 'base', 'stem', 'left_support', 'right_support'].map((node) => (
-                <div
-                  key={node}
-                  className="rounded-xl border border-white/8 bg-white/6 px-3 py-2 text-sm text-white/80"
-                >
-                  {node}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.16),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-white/56">
-                Editor Preview
-              </p>
-              <p className="text-xs text-white/52">Transform controls</p>
-            </div>
-            <div className="relative mt-4 min-h-[240px] rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_50%_26%,rgba(255,255,255,0.22),rgba(255,255,255,0.08)_58%,rgba(255,255,255,0.04))]">
-              <div className="absolute left-1/2 top-10 h-28 w-28 -translate-x-1/2 rounded-full border-4 border-dashed border-[#da9a9d] bg-white/8" />
-              <div className="absolute inset-x-10 bottom-10 h-2 rounded-full bg-white/16" />
-              <div className="absolute right-5 top-5 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/66">
-                Edit Mode
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="overflow-hidden rounded-[32px] border border-border/60 bg-[#0c1324] shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+        <Image
+          src={refineLanternImagePath}
+          alt="Ascoor editor showing a refined 3D model in browser edit mode"
+          width={1344}
+          height={1008}
+          className="block h-full w-full"
+        />
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[32px] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,248,251,0.94))] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
-      <div className="grid gap-4 md:grid-cols-3">
-        <ExportCard
-          title="JavaScript"
-          description="Use a code-first export for web scenes."
-          accent="bg-[#34495e] text-white"
-        />
-        <ExportCard
-          title="GLB"
-          description="Pass a portable asset into viewers or downstream tools."
-          accent="bg-white text-[#243545]"
-        />
-        <ExportCard
-          title="STL"
-          description="Send a draft into print prototyping."
-          accent="bg-[#da9a9d] text-[#243545]"
-        />
-      </div>
-    </div>
-  );
-}
-
-function ExportCard({
-  title,
-  description,
-  accent,
-}: {
-  title: string;
-  description: string;
-  accent: string;
-}) {
-  return (
-    <div className={`rounded-[26px] border border-border/60 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.08)] ${accent}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.26em] opacity-70">Export</p>
-      <h3 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h3>
-      <p className="mt-3 text-sm leading-relaxed opacity-80">{description}</p>
+    <div className="overflow-hidden rounded-[32px] border border-[#23324d]/70 bg-[radial-gradient(circle_at_50%_18%,rgba(37,60,102,0.46),rgba(11,18,36,0.96)_56%,rgba(6,10,22,1))] shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+      <LandingGlbPreview
+        className="h-[320px] w-full md:h-[380px]"
+        src={stoneLanternGlbPath}
+      />
     </div>
   );
 }
