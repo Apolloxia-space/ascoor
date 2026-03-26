@@ -8,6 +8,7 @@ import { Input } from '@shared/components/ui/input';
 
 export const MOVE_STEP_OPTIONS = [0.01, 0.2, 0.5] as const;
 export const ROTATE_STEP_OPTIONS = [5, 15, 45] as const;
+export const SCALE_STEP_OPTIONS = [0.01, 0.1, 0.25] as const;
 
 type TransformControlsProps = {
   selectedNode?: SelectedNode | null;
@@ -16,9 +17,13 @@ type TransformControlsProps = {
   onMoveStepChange?: (step: number) => void;
   rotateStep: number;
   onRotateStepChange?: (step: number) => void;
+  scaleStep: number;
+  onScaleStepChange?: (step: number) => void;
   onNudgeNode?: (axis: TransformAxis, delta: number) => void;
   onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
   onSetNodeRotation?: (axis: TransformAxis, radians: number) => void;
+  onNudgeNodeScale?: (axis: TransformAxis, delta: number) => void;
+  onSetNodeScale?: (axis: TransformAxis, value: number) => void;
   onResetNode?: (target: ResetTransformTarget) => void;
   onHideSelectedNode?: () => void;
   onRestoreNode?: (nodeId: string) => void;
@@ -31,9 +36,13 @@ export function TransformControls({
   onMoveStepChange,
   rotateStep,
   onRotateStepChange,
+  scaleStep,
+  onScaleStepChange,
   onNudgeNode,
   onRotateNode,
   onSetNodeRotation,
+  onNudgeNodeScale,
+  onSetNodeScale,
   onResetNode,
   onHideSelectedNode,
   onRestoreNode,
@@ -48,14 +57,21 @@ export function TransformControls({
     y: '0.0',
     z: '0.0',
   });
+  const [scaleDraft, setScaleDraft] = useState<Record<TransformAxis, string>>({
+    x: '1.00',
+    y: '1.00',
+    z: '1.00',
+  });
 
   const formatCoordinate = (value: number) => value.toFixed(2);
   const formatDegreesValue = (value: number) => ((value * 180) / Math.PI).toFixed(1);
+  const formatScaleValue = (value: number) => value.toFixed(2);
 
   useEffect(() => {
     if (!selectedNode) {
       setPositionDraft({ x: '0.00', y: '0.00', z: '0.00' });
       setRotationDraft({ x: '0.0', y: '0.0', z: '0.0' });
+      setScaleDraft({ x: '1.00', y: '1.00', z: '1.00' });
       return;
     }
     setPositionDraft({
@@ -68,6 +84,11 @@ export function TransformControls({
       y: formatDegreesValue(selectedNode.rotation.y),
       z: formatDegreesValue(selectedNode.rotation.z),
     });
+    setScaleDraft({
+      x: formatScaleValue(selectedNode.scale.x),
+      y: formatScaleValue(selectedNode.scale.y),
+      z: formatScaleValue(selectedNode.scale.z),
+    });
   }, [
     selectedNode?.id,
     selectedNode?.position.x,
@@ -76,6 +97,9 @@ export function TransformControls({
     selectedNode?.rotation.x,
     selectedNode?.rotation.y,
     selectedNode?.rotation.z,
+    selectedNode?.scale.x,
+    selectedNode?.scale.y,
+    selectedNode?.scale.z,
   ]);
 
   const commitPositionInput = (axis: TransformAxis) => {
@@ -117,6 +141,26 @@ export function TransformControls({
     setRotationDraft((current) => ({
       ...current,
       [axis]: formatDegreesValue(selectedNode.rotation[axis]),
+    }));
+  };
+
+  const commitScaleInput = (axis: TransformAxis) => {
+    if (!selectedNode) return;
+    const nextValue = Number(scaleDraft[axis]);
+    if (!Number.isFinite(nextValue) || nextValue <= 0) {
+      setScaleDraft((current) => ({
+        ...current,
+        [axis]: formatScaleValue(selectedNode.scale[axis]),
+      }));
+      return;
+    }
+    if (Math.abs(nextValue - selectedNode.scale[axis]) > Number.EPSILON) {
+      onSetNodeScale?.(axis, nextValue);
+      return;
+    }
+    setScaleDraft((current) => ({
+      ...current,
+      [axis]: formatScaleValue(selectedNode.scale[axis]),
     }));
   };
 
@@ -256,7 +300,65 @@ export function TransformControls({
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-foreground">Scale</p>
+              <div className="flex gap-1">
+                {SCALE_STEP_OPTIONS.map((step) => (
+                  <Button
+                    key={step}
+                    type="button"
+                    size="sm"
+                    variant={scaleStep === step ? 'default' : 'outline'}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => onScaleStepChange?.(step)}
+                  >
+                    {step}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {(['x', 'y', 'z'] as Array<TransformAxis>).map((axis) => (
+              <div key={`scale-${axis}`} className="flex items-center gap-2">
+                <span className="w-5 text-xs font-semibold uppercase text-muted-foreground">
+                  {axis}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-8 px-0"
+                  onClick={() => onNudgeNodeScale?.(axis, -scaleStep)}
+                >
+                  -
+                </Button>
+                <Input
+                  value={scaleDraft[axis]}
+                  inputMode="decimal"
+                  className="h-8 flex-1 bg-background/70 text-sm"
+                  onChange={(event) =>
+                    setScaleDraft((current) => ({
+                      ...current,
+                      [axis]: event.target.value,
+                    }))
+                  }
+                  onBlur={() => commitScaleInput(axis)}
+                  onKeyDown={handleTransformInputKeyDown}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-8 px-0"
+                  onClick={() => onNudgeNodeScale?.(axis, scaleStep)}
+                >
+                  +
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
               size="sm"
@@ -272,6 +374,9 @@ export function TransformControls({
               onClick={() => onResetNode?.('rotation')}
             >
               Reset Rot
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => onResetNode?.('scale')}>
+              Reset Scale
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => onResetNode?.('all')}>
               Reset All

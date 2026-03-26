@@ -17,12 +17,16 @@ type RightPanelProps = {
   onMoveStepChange?: (step: number) => void;
   rotateStep: number;
   onRotateStepChange?: (step: number) => void;
+  scaleStep: number;
+  onScaleStepChange?: (step: number) => void;
   onToggle?: () => void;
   onFocusStructureNode?: (nodeId: string) => void;
   onSetStructureNodeHidden?: (nodeId: string, hidden: boolean) => void;
   onNudgeNode?: (axis: TransformAxis, delta: number) => void;
   onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
   onSetNodeRotation?: (axis: TransformAxis, radians: number) => void;
+  onNudgeNodeScale?: (axis: TransformAxis, delta: number) => void;
+  onSetNodeScale?: (axis: TransformAxis, value: number) => void;
   onResetNode?: (target: ResetTransformTarget) => void;
   onHideSelectedNode?: () => void;
   onRestoreNode?: (nodeId: string) => void;
@@ -53,12 +57,16 @@ export function RightPanel({
   onMoveStepChange,
   rotateStep,
   onRotateStepChange,
+  scaleStep,
+  onScaleStepChange,
   onToggle,
   onFocusStructureNode,
   onSetStructureNodeHidden,
   onNudgeNode,
   onRotateNode,
   onSetNodeRotation,
+  onNudgeNodeScale,
+  onSetNodeScale,
   onResetNode,
   onHideSelectedNode,
   onRestoreNode,
@@ -75,11 +83,15 @@ export function RightPanel({
         onMoveStepChange={onMoveStepChange}
         rotateStep={rotateStep}
         onRotateStepChange={onRotateStepChange}
+        scaleStep={scaleStep}
+        onScaleStepChange={onScaleStepChange}
         onFocusStructureNode={onFocusStructureNode}
         onSetStructureNodeHidden={onSetStructureNodeHidden}
         onNudgeNode={onNudgeNode}
         onRotateNode={onRotateNode}
         onSetNodeRotation={onSetNodeRotation}
+        onNudgeNodeScale={onNudgeNodeScale}
+        onSetNodeScale={onSetNodeScale}
         onResetNode={onResetNode}
         onHideSelectedNode={onHideSelectedNode}
         onRestoreNode={onRestoreNode}

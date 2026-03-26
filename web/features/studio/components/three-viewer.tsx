@@ -58,9 +58,12 @@ export type SelectedNode = {
   hidden?: boolean;
   position: Record<TransformAxis, number>;
   rotation: Record<TransformAxis, number>;
+  scale: Record<TransformAxis, number>;
 };
 
-export type ResetTransformTarget = 'position' | 'rotation' | 'all';
+export type ResetTransformTarget = 'position' | 'rotation' | 'scale' | 'all';
+
+const MIN_NODE_SCALE = 0.01;
 
 export type ThreeViewerHandle = {
   listStructureTree: () => Array<StructureTreeNode>;
@@ -71,6 +74,8 @@ export type ThreeViewerHandle = {
   nudgeSelectedNode: (axis: TransformAxis, delta: number) => void;
   rotateSelectedNode: (axis: TransformAxis, deltaRadians: number) => void;
   setSelectedNodeRotation: (axis: TransformAxis, radians: number) => void;
+  nudgeSelectedNodeScale: (axis: TransformAxis, delta: number) => void;
+  setSelectedNodeScale: (axis: TransformAxis, value: number) => void;
   resetSelectedNode: (target: ResetTransformTarget) => void;
   hideSelectedNode: () => void;
   restoreNode: (id: string) => void;
@@ -282,6 +287,7 @@ const captureInitialTransforms = (root: THREE.Object3D) => {
   root.traverse((child) => {
     child.userData.initialPosition = child.position.clone();
     child.userData.initialQuaternion = child.quaternion.clone();
+    child.userData.initialScale = child.scale.clone();
   });
 };
 
@@ -533,6 +539,11 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         y: activeNode.rotation.y,
         z: activeNode.rotation.z,
       },
+      scale: {
+        x: activeNode.scale.x,
+        y: activeNode.scale.y,
+        z: activeNode.scale.z,
+      },
     };
   };
 
@@ -704,15 +715,29 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
           node.rotation[axis] = radians;
         });
       },
+      nudgeSelectedNodeScale: (axis: TransformAxis, delta: number) => {
+        updateSelectedNode((node) => {
+          node.scale[axis] = Math.max(MIN_NODE_SCALE, node.scale[axis] + delta);
+        });
+      },
+      setSelectedNodeScale: (axis: TransformAxis, value: number) => {
+        updateSelectedNode((node) => {
+          node.scale[axis] = Math.max(MIN_NODE_SCALE, value);
+        });
+      },
       resetSelectedNode: (target: ResetTransformTarget) => {
         updateSelectedNode((node) => {
           const initialPosition = node.userData.initialPosition as THREE.Vector3 | undefined;
           const initialQuaternion = node.userData.initialQuaternion as THREE.Quaternion | undefined;
+          const initialScale = node.userData.initialScale as THREE.Vector3 | undefined;
           if ((target === 'position' || target === 'all') && initialPosition) {
             node.position.copy(initialPosition);
           }
           if ((target === 'rotation' || target === 'all') && initialQuaternion) {
             node.quaternion.copy(initialQuaternion);
+          }
+          if ((target === 'scale' || target === 'all') && initialScale) {
+            node.scale.copy(initialScale);
           }
         });
       },

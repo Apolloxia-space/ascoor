@@ -44,7 +44,11 @@ import { ProjectSidebar } from './components/project-sidebar';
 import { RightPanel } from './components/right-panel';
 import { StudioHeader } from './components/studio-header';
 import type { ResetTransformTarget, SelectedNode, TransformAxis } from './components/three-viewer';
-import { MOVE_STEP_OPTIONS, ROTATE_STEP_OPTIONS } from './components/transform-controls';
+import {
+  MOVE_STEP_OPTIONS,
+  ROTATE_STEP_OPTIONS,
+  SCALE_STEP_OPTIONS,
+} from './components/transform-controls';
 import { ViewerPanel } from './components/viewer-panel';
 import { useDesignMonitor } from './hooks/use-design-monitor';
 import { useStudioApi } from './hooks/use-studio-api';
@@ -141,6 +145,7 @@ export function StudioPage() {
   const [activeTransformAxis, setActiveTransformAxis] = useState<TransformAxis>('x');
   const [moveStep, setMoveStep] = useState<number>(MOVE_STEP_OPTIONS[1]);
   const [rotateStep, setRotateStep] = useState<number>(ROTATE_STEP_OPTIONS[1]);
+  const [scaleStep, setScaleStep] = useState<number>(SCALE_STEP_OPTIONS[1]);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [shortcutHudMessage, setShortcutHudMessage] = useState<string | null>(null);
   const shortcutHudTimerRef = useRef<number | null>(null);
@@ -152,6 +157,8 @@ export function StudioPage() {
     nudgeNode: (axis: TransformAxis, delta: number) => void;
     rotateNode: (axis: TransformAxis, deltaRadians: number) => void;
     setNodeRotation: (axis: TransformAxis, radians: number) => void;
+    nudgeNodeScale: (axis: TransformAxis, delta: number) => void;
+    setNodeScale: (axis: TransformAxis, value: number) => void;
     resetNode: (target: ResetTransformTarget) => void;
     hideSelectedNode: () => void;
     restoreNode: (id: string) => void;
@@ -194,6 +201,7 @@ export function StudioPage() {
     activeTransformAxis !== 'x' ||
     moveStep !== MOVE_STEP_OPTIONS[1] ||
     rotateStep !== ROTATE_STEP_OPTIONS[1] ||
+    scaleStep !== SCALE_STEP_OPTIONS[1] ||
     shortcutHelpOpen ||
     shortcutHudMessage !== null;
 
@@ -207,6 +215,7 @@ export function StudioPage() {
     setActiveTransformAxis('x');
     setMoveStep(MOVE_STEP_OPTIONS[1]);
     setRotateStep(ROTATE_STEP_OPTIONS[1]);
+    setScaleStep(SCALE_STEP_OPTIONS[1]);
     setShortcutHelpOpen(false);
     setShortcutHudMessage(null);
   }, [
@@ -214,6 +223,7 @@ export function StudioPage() {
     hasSelectedDesignState,
     moveStep,
     rotateStep,
+    scaleStep,
     selectedNode,
     shortcutHelpOpen,
     shortcutHudMessage,
@@ -251,6 +261,7 @@ export function StudioPage() {
       setActiveTransformAxis('x');
       setMoveStep(MOVE_STEP_OPTIONS[1]);
       setRotateStep(ROTATE_STEP_OPTIONS[1]);
+      setScaleStep(SCALE_STEP_OPTIONS[1]);
       setShortcutHelpOpen(false);
       setShortcutHudMessage(null);
       setRightPanelMode('edit');
@@ -311,6 +322,14 @@ export function StudioPage() {
     (step: number) => {
       setRotateStep(step);
       showShortcutHud(`Rotate step ${step}deg`);
+    },
+    [showShortcutHud],
+  );
+
+  const handleScaleStepChange = useCallback(
+    (step: number) => {
+      setScaleStep(step);
+      showShortcutHud(`Scale step ${step}`);
     },
     [showShortcutHud],
   );
@@ -1055,6 +1074,8 @@ export function StudioPage() {
                 onMoveStepChange={handleMoveStepChange}
                 rotateStep={rotateStep}
                 onRotateStepChange={handleRotateStepChange}
+                scaleStep={scaleStep}
+                onScaleStepChange={handleScaleStepChange}
                 onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
                 onSetStructureNodeHidden={(id, hidden) =>
                   assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
@@ -1065,6 +1086,12 @@ export function StudioPage() {
                 }
                 onSetNodeRotation={(axis, radians) =>
                   assemblyControlsRef.current?.setNodeRotation(axis, radians)
+                }
+                onNudgeNodeScale={(axis, delta) =>
+                  assemblyControlsRef.current?.nudgeNodeScale(axis, delta)
+                }
+                onSetNodeScale={(axis, value) =>
+                  assemblyControlsRef.current?.setNodeScale(axis, value)
                 }
                 onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
                 onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
@@ -1150,6 +1177,8 @@ export function StudioPage() {
               onMoveStepChange={handleMoveStepChange}
               rotateStep={rotateStep}
               onRotateStepChange={handleRotateStepChange}
+              scaleStep={scaleStep}
+              onScaleStepChange={handleScaleStepChange}
               onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
               onSetStructureNodeHidden={(id, hidden) =>
                 assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
@@ -1160,6 +1189,12 @@ export function StudioPage() {
               }
               onSetNodeRotation={(axis, radians) =>
                 assemblyControlsRef.current?.setNodeRotation(axis, radians)
+              }
+              onNudgeNodeScale={(axis, delta) =>
+                assemblyControlsRef.current?.nudgeNodeScale(axis, delta)
+              }
+              onSetNodeScale={(axis, value) =>
+                assemblyControlsRef.current?.setNodeScale(axis, value)
               }
               onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
               onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
