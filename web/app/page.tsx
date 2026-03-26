@@ -8,25 +8,29 @@ import { LandingHeader } from '@/features/landing/landing-header';
 import { XPostEmbed } from '@/features/landing/x-post-embed';
 import { PlanInclusions } from '@/features/plan/components/plan-inclusions';
 import { planDefinitions } from '@/features/plan/plan-definitions';
-import { defaultDescription, defaultOgImagePath } from '@shared/constants/seo';
+import { defaultOgImagePath } from '@shared/constants/seo';
 import { paths } from '@shared/constants/paths';
 
+const pageTitle = 'Japanese Garden Stone Lantern Workflow for X Marketing';
+const pageDescription =
+  'See how Ascoor takes a Japanese Garden Stone Lantern from prompt to browser refinement and export, then uses the result as an X marketing proof point.';
+
 export const metadata: Metadata = {
-  title: 'Generate, Edit, and Export 3D in the Browser',
-  description: defaultDescription,
+  title: pageTitle,
+  description: pageDescription,
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'Generate, Edit, and Export 3D in the Browser',
-    description: defaultDescription,
+    title: pageTitle,
+    description: pageDescription,
     url: '/',
     images: [{ url: defaultOgImagePath, width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Generate, Edit, and Export 3D in the Browser',
-    description: defaultDescription,
+    title: pageTitle,
+    description: pageDescription,
     images: [defaultOgImagePath],
   },
 };
@@ -51,37 +55,37 @@ const storySections: Array<StorySection> = [
   {
     id: 'drafts',
     eyebrow: 'Draft Fast',
-    title: 'Get to a usable first model in minutes',
+    title: 'Generate the first Japanese stone lantern draft in minutes',
     description:
-      'Ascoor is strongest when the goal is speed to first draft. Start from a prompt, inspect the result, and decide what to refine next.',
+      'This landing page is built around one concrete example: a Japanese Garden Stone Lantern model used as the core visual for X marketing.',
     points: [
-      'Move from idea to 3D form without opening a heavyweight desktop workflow first.',
-      'Keep each pass in project history so you can compare iterations instead of overwriting them.',
+      'Start from a prompt and get to a recognizable garden lantern form without opening a heavyweight desktop workflow first.',
+      'Keep each pass in project history so the version used in X marketing is traceable back to the initial draft.',
     ],
     visual: 'draft',
   },
   {
     id: 'editing',
     eyebrow: 'Refine In Browser',
-    title: 'Fix structure and transforms before export',
+    title: 'Refine silhouette and structure before you publish it',
     description:
-      'The product is not just about generating assets. It gives you a lightweight edit pass so you can clean up the draft before it hits the next stage.',
+      'The value is not just generation. The browser editor gives you a lightweight clean-up pass before the model becomes a public-facing marketing asset.',
     points: [
-      'Inspect the structure tree to understand what was generated.',
-      'Adjust transforms and obvious problems without leaving the browser.',
+      'Inspect the structure tree to understand what was generated and what still needs adjustment.',
+      'Fix transforms and obvious shape issues before the lantern is shown in the X post.',
     ],
     visual: 'edit',
   },
   {
     id: 'exports',
     eyebrow: 'Ship The Right Format',
-    title: 'Export into web, print, or handoff workflows',
+    title: 'Export the same lantern into demo, handoff, and print workflows',
     description:
-      'The value is in what happens after generation. Use the same draft-to-edit flow, then export the format your workflow already expects.',
+      'The same Japanese Garden Stone Lantern model can move from social proof to production handoff without rebuilding it in another tool.',
     points: [
-      'JavaScript export for generated designs.',
-      'GLB export for portable assets and edited model handoff.',
-      'STL export for rapid print prototypes.',
+      'JavaScript export for generated scene output.',
+      'GLB export for portable previews and edited model handoff.',
+      'STL export for rapid print prototypes after the marketing pass.',
     ],
     visual: 'export',
   },
@@ -120,14 +124,15 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.32em] text-primary">
-                Browser-Based 3D Workflow
+                Japanese Garden Stone Lantern
               </p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
-                Generate, refine, and export 3D without leaving the browser.
+                Turn one lantern prompt into a model you can market on X.
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                Ascoor helps you get to a first 3D draft fast, fix the important parts, and hand
-                off generated JavaScript, edited GLB, or STL into the workflow you already run.
+                This page packages the exact workflow behind our Japanese Garden Stone Lantern
+                example: generate the first draft, refine the parts that matter in-browser, and
+                export the result for X, GLB handoff, or STL prototyping.
               </p>
             </div>
 
@@ -150,14 +155,14 @@ export default function HomePage() {
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,0.72))] px-5 pb-5 pt-16 sm:px-6 sm:pb-6">
                     <div className="max-w-2xl">
                       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/64">
-                        Create → Edit → Export
+                        Prompt → Refine → Market On X
                       </p>
                     </div>
                   </div>
                 </div>
               <p className="mt-3 px-2 text-center text-xs leading-relaxed text-muted-foreground">
-                Demo edited for presentation. Actual product experience and generation results may
-                vary.
+                Top demo shows the broader create-edit-export flow. The sections below focus on the
+                Japanese Garden Stone Lantern example used for X marketing.
               </p>
             </div>
           </div>
@@ -207,25 +212,25 @@ export default function HomePage() {
               Use Cases
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-              Built for web scenes and print prototypes
+              One model, multiple outputs after the X post
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              The strongest use cases are the ones where getting a draft fast, fixing it lightly,
-              and exporting cleanly saves real production time.
+              The point of this example is not only the post itself. It shows how one generated
+              model can keep working after marketing, instead of being a throwaway asset.
             </p>
           </div>
           <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-2">
             <UseCaseCard
               icon={Braces}
-              title="Web 3D"
-              description="Prototype assets for three.js and browser-based scenes, then hand off generated JavaScript or GLB without spending the first hour modeling by hand."
-              tags={['Generated JavaScript', 'GLB', 'three.js']}
+              title="Social + Web Demo"
+              description="Use the lantern as the visual proof point in X, then keep the same asset moving into browser demos and lightweight scene work."
+              tags={['X marketing', 'Generated JavaScript', 'GLB']}
             />
             <UseCaseCard
               icon={Printer}
               title="3D Print"
-              description="Create rough printable concepts, fix obvious issues, and send STL into the next physical iteration."
-              tags={['STL', 'Prototype', 'Print retry']}
+              description="Take the same refined lantern, fix obvious issues, and send STL into the next physical prototype instead of remodeling it from scratch."
+              tags={['STL', 'Prototype', 'Physical mock']}
             />
           </div>
         </div>
@@ -238,11 +243,11 @@ export default function HomePage() {
               Example Output
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-              One real print workflow using the same draft-edit-export loop
+              The X post used to market the lantern workflow
             </h2>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              This is still a useful proof point. It shows the kind of lightweight iteration loop
-              the product is designed for, even though the top-of-page message is now broader.
+              This embedded post is the public-facing proof point. It lets visitors connect the
+              marketing result back to the same draft-edit-export flow shown above.
             </p>
           </div>
           <div className="mx-auto mt-10 max-w-3xl">
@@ -256,7 +261,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Pricing</p>
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              One plan for fast 3D draft workflows
+              One plan for shipping campaign-ready 3D examples faster
             </h2>
             <a className="text-sm text-primary hover:underline" href={paths.pricing}>
               View full pricing page
