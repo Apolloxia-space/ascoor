@@ -1,5 +1,10 @@
 import { Button } from '@shared/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@shared/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@shared/components/ui/dialog';
 import { signInWithGoogle } from './use-auth-init';
 
 type LoginModalProps = {
@@ -16,6 +21,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       >
         <div className="sr-only">
           <DialogTitle>Create an account</DialogTitle>
+          <DialogDescription>Sign in with Google to continue to Ascoor Studio.</DialogDescription>
         </div>
         <div className="space-y-4 text-center">
           <h2 className="text-xl font-semibold text-[color:var(--text-primary)]">

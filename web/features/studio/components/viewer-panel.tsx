@@ -878,6 +878,9 @@ export function ViewerPanel({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Prompt</DialogTitle>
+            <DialogDescription>
+              Displays the prompt used for the currently selected design.
+            </DialogDescription>
           </DialogHeader>
           <div className="max-h-[55vh] overflow-auto rounded-md border border-border bg-muted/40 p-3">
             <pre className="whitespace-pre-wrap break-words font-mono text-sm text-foreground">

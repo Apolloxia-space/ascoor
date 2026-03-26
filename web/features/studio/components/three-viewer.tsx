@@ -186,6 +186,12 @@ const disposeObject = (object: THREE.Object3D) => {
   });
 };
 
+const disposeRenderer = (renderer: THREE.WebGLRenderer) => {
+  renderer.renderLists.dispose();
+  renderer.dispose();
+  renderer.forceContextLoss();
+};
+
 const cloneMaterialForMode = (material: THREE.Material, mode: ViewMode['key']) => {
   const clone = material.clone();
   if ('wireframe' in clone) {
@@ -369,6 +375,27 @@ return __runtimeResult;
   ) => unknown;
   const output = runtime(THREE, console);
   return toRenderableObject(output);
+};
+
+const assertWithoutConsoleError = (run: () => void, message: string) => {
+  const originalConsoleError = console.error;
+  let hasConsoleError = false;
+
+  console.error = () => {
+    hasConsoleError = true;
+  };
+
+  try {
+    run();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : message);
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  if (hasConsoleError) {
+    throw new Error(message);
+  }
 };
 
 const findStructureTreeNode = (
@@ -962,7 +989,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       viewHelper.dispose();
       worldAxesHelper.geometry.dispose();
       disposeMaterial(worldAxesHelper.material);
-      renderer.dispose();
+      disposeRenderer(renderer);
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
       }
@@ -986,7 +1013,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     const scene = sceneRef.current;
     const camera = cameraRef.current;
     const controls = controlsRef.current;
-    if (!scene || !camera || !controls) return;
+    const renderer = rendererRef.current;
+    if (!scene || !camera || !controls || !renderer) return;
 
     const toDispose = new Set<THREE.Object3D>();
     if (modelRef.current) toDispose.add(modelRef.current);
@@ -1009,14 +1037,25 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         child.receiveShadow = true;
       });
 
-      sourceModelRef.current = object;
       scene.add(object);
-      modelRef.current = object;
-      syncStructureTree();
-      applyViewMode(object, viewModeKey);
-      fitCameraToObject(camera, controls, object);
-      captureInitialTransforms(object);
-      onModelParseError?.(null);
+      try {
+        assertWithoutConsoleError(() => {
+          applyViewMode(object, viewModeKey);
+          fitCameraToObject(camera, controls, object);
+          renderer.clear();
+          renderer.render(scene, camera);
+        }, 'Model failed to render.');
+
+        sourceModelRef.current = object;
+        modelRef.current = object;
+        syncStructureTree();
+        captureInitialTransforms(object);
+        onModelParseError?.(null);
+      } catch (error) {
+        object.parent?.remove(object);
+        disposeObject(object);
+        throw error;
+      }
     };
 
     if (modelCode) {
@@ -1040,7 +1079,15 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       '',
       (gltf) => {
         if (disposed) return;
-        applyLoadedModel(gltf.scene);
+        try {
+          applyLoadedModel(gltf.scene);
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Loaded model contains invalid geometry and could not be rendered.';
+          onModelParseError?.(message);
+        }
       },
       (error) => {
         if (disposed) return;

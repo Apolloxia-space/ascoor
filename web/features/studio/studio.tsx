@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from '@/shared/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerTitle } from '@/shared/components/ui/drawer';
-import { Sheet, SheetContent, SheetTitle } from '@/shared/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/components/ui/sheet';
 import { paths } from '@/shared/constants/paths';
 import { useIsMobile } from '@/shared/hooks/use-mobile';
 import { cn } from '@/shared/lib/utils';
@@ -850,7 +850,12 @@ export function StudioPage() {
               </Button>
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetContent side="left" className="w-[90vw] max-w-sm gap-0 p-0">
-                  <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+                  <div className="sr-only">
+                    <SheetTitle>Navigation menu</SheetTitle>
+                    <SheetDescription>
+                      Navigate between design tools, project lists, settings, and billing pages.
+                    </SheetDescription>
+                  </div>
                   <div className="border-b border-border px-4 py-4 pr-12">
                     <h2 className="text-lg font-semibold leading-tight">Ascoor</h2>
                   </div>
@@ -1119,7 +1124,12 @@ export function StudioPage() {
           }}
         >
           <SheetContent side="left" className="w-[90vw] max-w-sm p-0 [&>button]:hidden">
-            <SheetTitle className="sr-only">Designs panel</SheetTitle>
+            <div className="sr-only">
+              <SheetTitle>Designs panel</SheetTitle>
+              <SheetDescription>
+                Browse designs in the current project and open design actions.
+              </SheetDescription>
+            </div>
             <ProjectPanel
               designs={designs}
               variant="mobile"
@@ -1145,7 +1155,12 @@ export function StudioPage() {
           }}
         >
           <SheetContent side="right" className="w-[90vw] max-w-sm p-0 [&>button]:hidden">
-            <SheetTitle className="sr-only">Create panel</SheetTitle>
+            <div className="sr-only">
+              <SheetTitle>Create panel</SheetTitle>
+              <SheetDescription>
+                Enter a prompt to generate a new design for the current project.
+              </SheetDescription>
+            </div>
             <ChatPanel
               variant="mobile"
               open={mobileChatOpen}
