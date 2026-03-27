@@ -367,17 +367,8 @@ test('clearEditedModel removes edited glb metadata', async () => {
   assert.equal(clearedEditedAssetUri, null);
 });
 
-test('reportRenderFailure demotes a succeeded design job and marks the design as failed', async () => {
+test('reportRenderFailure marks the design as failed without mutating design job status', async () => {
   const now = new Date('2026-02-15T00:00:00.000Z');
-  const markFailedIfSucceededCalls: Array<{
-    id: string;
-    errorMessage: string;
-    errorStage?: string | null;
-    errorCode?: string | null;
-    message?: string | null;
-    title?: string | null;
-    designId?: string | null;
-  }> = [];
   const updateAssetCalls: Array<{
     designId: string;
     assetStatus: string;
@@ -462,34 +453,11 @@ test('reportRenderFailure demotes a succeeded design job and marks the design as
         createdAt: now,
         updatedAt: now,
       }),
-      markFailedIfSucceeded: async (params: {
-        id: string;
-        errorMessage: string;
-        errorStage?: string | null;
-        errorCode?: string | null;
-        message?: string | null;
-        title?: string | null;
-        designId?: string | null;
-      }) => {
-        markFailedIfSucceededCalls.push(params);
-        return true;
-      },
     } as unknown as DesignJobRepositoryPostgres,
   );
 
   await usecase.reportRenderFailure('user-1', 'file-1', ' Model failed to render. ');
 
-  assert.deepEqual(markFailedIfSucceededCalls, [
-    {
-      id: 'gen-1',
-      errorMessage: 'Model failed to render.',
-      errorStage: 'WEB_THREE_RENDER',
-      errorCode: 'STUDIO_RENDER_FAILED',
-      message: '3D preview failed to render in Studio.',
-      title: 'Bracket',
-      designId: 'file-1',
-    },
-  ]);
   assert.deepEqual(updateAssetCalls, [
     {
       designId: 'file-1',
@@ -501,7 +469,6 @@ test('reportRenderFailure demotes a succeeded design job and marks the design as
 
 test('reportRenderFailure is a no-op when the latest linked job is not succeeded', async () => {
   const now = new Date('2026-02-15T00:00:00.000Z');
-  let markFailedCalled = false;
   let updateAssetCalled = false;
 
   const usecase = new DesignsUsecase(
@@ -562,15 +529,10 @@ test('reportRenderFailure is a no-op when the latest linked job is not succeeded
         createdAt: now,
         updatedAt: now,
       }),
-      markFailedIfSucceeded: async () => {
-        markFailedCalled = true;
-        return true;
-      },
     } as unknown as DesignJobRepositoryPostgres,
   );
 
   await usecase.reportRenderFailure('user-1', 'file-1', 'Model failed to render.');
 
-  assert.equal(markFailedCalled, false);
   assert.equal(updateAssetCalled, false);
 });
