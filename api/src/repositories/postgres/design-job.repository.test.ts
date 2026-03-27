@@ -28,6 +28,14 @@ test('countSucceededByUserInPeriod counts succeeded jobs even when linked design
     where: {
       userId: 'user-1',
       status: 'succeeded',
+      OR: [
+        { design: null },
+        {
+          design: {
+            assetStatus: 'succeeded',
+          },
+        },
+      ],
       finishedAt: {
         gte: new Date('2026-03-01T00:00:00.000Z'),
         lt: new Date('2026-04-01T00:00:00.000Z'),

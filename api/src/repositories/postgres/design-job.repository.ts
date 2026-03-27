@@ -36,6 +36,14 @@ export class DesignJobRepositoryPostgres {
       where: {
         userId: params.userId,
         status: 'succeeded',
+        OR: [
+          { design: null },
+          {
+            design: {
+              assetStatus: 'succeeded',
+            },
+          },
+        ],
         finishedAt: {
           gte: params.periodStart,
           lt: params.periodEnd,
