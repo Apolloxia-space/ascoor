@@ -6,13 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DesignResponseAssetStatus } from './designResponseAssetStatus';
-import type { DesignResponseType } from './designResponseType';
 
 export interface DesignResponse {
   id: string;
   projectId: string;
   displayName: string;
-  type: DesignResponseType;
   assetUriTs?: string | null;
   assetStatus: DesignResponseAssetStatus;
   assetError?: string | null;

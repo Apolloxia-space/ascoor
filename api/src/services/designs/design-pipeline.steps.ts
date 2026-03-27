@@ -171,7 +171,6 @@ export class PersistTypeScriptAssetStep {
       const createdDesign = await this.designRepository.create({
         projectId: params.projectId,
         displayName: params.displayName,
-        type: 'studio_ts',
       });
       designId = createdDesign.id;
       const designJobId = params.trace.designId ?? null;
@@ -187,7 +186,7 @@ export class PersistTypeScriptAssetStep {
         }
       }
       const { objectPath, contentType } = buildDesignObjectPath({
-        design: createdDesign,
+        designId: createdDesign.id,
         userId: params.userId,
       });
       const uploaded = await this.gcsRepository.upload({

@@ -18,7 +18,6 @@ export const createDesignBodySchema = z
   .object({
     projectId: requiredIdentifier(),
     displayName: requiredTrimmedString(DEFAULT_FORM_MAX_CHARS),
-    type: z.literal('studio_ts'),
   })
   .strict();
 

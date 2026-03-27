@@ -28,7 +28,6 @@ export function useStudioApi() {
   const createDesign = async (input: {
     projectId: string;
     displayName: string;
-    type: 'studio_ts';
   }): Promise<DesignResponse> => {
     const response = await createDesignMutation.mutateAsync({ data: input });
     if (response.status !== 201) {

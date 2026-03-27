@@ -28,14 +28,13 @@ export function createDesignsRoutes() {
     '/',
     zValidator('json', createDesignBodySchema),
     async (c: CreateDesignContext<AppEnv>) => {
-      const { projectId, displayName, type } = c.req.valid('json');
+      const { projectId, displayName } = c.req.valid('json');
       const userId = c.get('md').userId;
       const designsUsecase = c.get('usecases').designs;
     try {
       const created = await designsUsecase.create({
         projectId,
         displayName,
-        type,
         ownerId: userId,
       });
       return c.json(created, 201);

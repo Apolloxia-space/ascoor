@@ -8,10 +8,6 @@ datasource db {
 }
 
 // Enums
-enum DesignType {
-  studio_ts
-}
-
 enum AssetStatus {
   queued
   processing
@@ -92,7 +88,6 @@ model Design {
   id                  String      @id @default(uuid())
   projectId           String
   displayName         String
-  type                DesignType
   assetUriTs          String?
   editedAssetUriGlb   String?
   assetStatus         AssetStatus @default(queued)

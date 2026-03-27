@@ -39,7 +39,6 @@ export class DesignsUsecase {
         id: design.id,
         projectId: design.projectId,
         displayName: design.displayName,
-        type: design.type,
         assetUriTs: design.assetUriTs ?? null,
         assetStatus: design.assetStatus,
         assetError: design.assetError ?? null,
@@ -216,7 +215,6 @@ export class DesignsUsecase {
     const created = await this.designRepository.create({
       projectId: input.projectId,
       displayName,
-      type: input.type,
     });
 
     return created;

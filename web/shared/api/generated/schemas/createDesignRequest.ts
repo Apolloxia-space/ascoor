@@ -5,7 +5,6 @@
  * API contract for the Ascoor 3D Design editor backend.
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateDesignRequestType } from './createDesignRequestType';
 
 export interface CreateDesignRequest {
   projectId: string;
@@ -14,5 +13,4 @@ export interface CreateDesignRequest {
    * @maxLength 300
    */
   displayName: string;
-  type: CreateDesignRequestType;
 }

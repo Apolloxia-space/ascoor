@@ -6,13 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProjectDesignSummaryAssetStatus } from './projectDesignSummaryAssetStatus';
-import type { ProjectDesignSummaryType } from './projectDesignSummaryType';
 
 export interface ProjectDesignSummary {
   id: string;
   projectId: string;
   displayName: string;
-  type: ProjectDesignSummaryType;
   assetUriTs?: string | null;
   assetStatus: ProjectDesignSummaryAssetStatus;
   assetError?: string | null;

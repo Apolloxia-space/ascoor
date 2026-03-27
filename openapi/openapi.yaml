@@ -1384,7 +1384,6 @@ components:
         - id
         - projectId
         - displayName
-        - type
         - assetStatus
         - createdAt
         - updatedAt
@@ -1395,9 +1394,6 @@ components:
           type: string
         displayName:
           type: string
-        type:
-          type: string
-          enum: [studio_ts]
         assetUriTs:
           type: string
           nullable: true
@@ -1425,7 +1421,6 @@ components:
       required:
         - projectId
         - displayName
-        - type
       properties:
         projectId:
           type: string
@@ -1433,16 +1428,12 @@ components:
           type: string
           minLength: 1
           maxLength: 300
-        type:
-          type: string
-          enum: [studio_ts]
     DesignResponse:
       type: object
       required:
         - id
         - projectId
         - displayName
-        - type
         - assetStatus
         - updatedAt
       properties:
@@ -1452,9 +1443,6 @@ components:
           type: string
         displayName:
           type: string
-        type:
-          type: string
-          enum: [studio_ts]
         assetUriTs:
           type: string
           nullable: true

@@ -1251,7 +1251,6 @@ export function StudioPage() {
               const created = await createDesign({
                 projectId,
                 displayName: newDesignName,
-                type: 'studio_ts',
               });
               toast.success('Design created.');
               handleSelectDesign(created.id, created.displayName);

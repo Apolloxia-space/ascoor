@@ -41,7 +41,6 @@ test('createDesignBodySchema rejects whitespace-only display names', () => {
       createDesignBodySchema.parse({
         projectId: 'proj-1',
         displayName: '   ',
-        type: 'studio_ts',
       }),
     (error: unknown) =>
       error instanceof ZodError &&

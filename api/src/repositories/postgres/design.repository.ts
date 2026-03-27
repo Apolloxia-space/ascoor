@@ -62,12 +62,11 @@ export class DesignRepositoryPostgres implements IDesignRepository {
     });
   }
 
-  create(params: { projectId: string; displayName: string; type: 'studio_ts' }): Promise<Design> {
+  create(params: { projectId: string; displayName: string }): Promise<Design> {
     return this.prisma.design.create({
       data: {
         projectId: params.projectId,
         displayName: params.displayName,
-        type: params.type,
         assetStatus: 'queued',
       },
     });

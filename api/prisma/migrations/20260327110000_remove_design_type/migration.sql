@@ -1,0 +1,3 @@
+ALTER TABLE "Design" DROP COLUMN IF EXISTS "type";
+
+DROP TYPE IF EXISTS "DesignType";

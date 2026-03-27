@@ -13,7 +13,7 @@ export interface IDesignRepository {
     assetStatus?: AssetStatus;
   }): Promise<Design>;
   updateDisplayName(params: { designId: string; displayName: string }): Promise<Design>;
-  create(params: { projectId: string; displayName: string; type: 'studio_ts' }): Promise<Design>;
+  create(params: { projectId: string; displayName: string }): Promise<Design>;
   updateAsset(params: {
     designId: string;
     assetUriTs?: string | null;

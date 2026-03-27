@@ -8,7 +8,6 @@ export interface ProjectDesignSummary {
   id: string;
   projectId: string;
   displayName: string;
-  type: Design['type'];
   assetStatus: Design['assetStatus'];
   assetUriTs: string | null;
   editedAssetUriGlb: string | null;
@@ -32,7 +31,6 @@ export function buildProjectDesigns(params: {
     id: design.id,
     projectId: design.projectId,
     displayName: design.displayName,
-    type: design.type,
     assetStatus: design.assetStatus,
     assetUriTs: design.assetUriTs ?? null,
     assetError: design.assetError ?? null,

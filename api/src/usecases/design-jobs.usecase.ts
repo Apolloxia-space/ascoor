@@ -570,7 +570,6 @@ export class DesignJobsUsecase {
       const createdDesign = await this.designRepository.create({
         projectId: params.projectId,
         displayName: this.toPromptPreview(params.userPrompt),
-        type: 'studio_ts',
       });
       const linked = await this.designJobRepository.linkDesignIfMissing({
         designId: params.designId,
