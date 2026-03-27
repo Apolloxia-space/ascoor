@@ -10,9 +10,6 @@ import { type ApiError } from '@/shared/api/fetcher';
 import { useStudioStore, type PendingDesign } from '../stores/use-studio-store';
 
 const DESIGN_POLL_INTERVAL_MS = 15_000;
-const DESIGN_BACKGROUND_POLL_INTERVAL_MS = 60_000;
-const DESIGN_FAST_POLL_MAX_TICKS = 12;
-const DESIGN_FAST_POLL_WINDOW_MS = DESIGN_POLL_INTERVAL_MS * DESIGN_FAST_POLL_MAX_TICKS;
 const DEFAULT_FAILURE_MESSAGE = 'Something went wrong. Please try again.';
 
 type MonitorSuccessPayload = {
@@ -42,15 +39,8 @@ type UseDesignMonitorParams = {
 
 const getDesignTraceId = (entry: PendingDesign) => entry.traceId ?? entry.designId;
 
-const getNotificationKey = (
-  kind: 'background' | 'succeeded' | 'failed',
-  designJobId: string,
-) => `${kind}:${designJobId}`;
-
-const isBackgroundCandidate = (createdAt: string) => {
-  const timestamp = Date.parse(createdAt);
-  return Number.isFinite(timestamp) && Date.now() - timestamp >= DESIGN_FAST_POLL_WINDOW_MS;
-};
+const getNotificationKey = (kind: 'succeeded' | 'failed', designJobId: string) =>
+  `${kind}:${designJobId}`;
 
 export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
   const { enabled = true, onDesignSucceeded, onDesignFailed, onInvalidateProjectDesigns } = params;
@@ -64,21 +54,6 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
     notifiedRef.current.add(key);
     return true;
   }, []);
-
-  const moveDesignToBackground = useCallback(
-    (entry: PendingDesign) => {
-      if (entry.status === 'background') return;
-      if (!isBackgroundCandidate(entry.createdAt)) return;
-
-      updatePendingDesign(entry.designId, { status: 'background' });
-
-      const key = getNotificationKey('background', entry.designId);
-      if (markNotified(key)) {
-        toast.info('Design is still running in background.');
-      }
-    },
-    [markNotified, updatePendingDesign],
-  );
 
   const handleDesignSuccess = useCallback(
     (entry: PendingDesign, payload: DesignJobResponse) => {
@@ -150,16 +125,13 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
   const syncInProgressDesign = useCallback(
     (entry: PendingDesign, payload: DesignJobResponse) => {
       if (
-        entry.status !== 'background' &&
         (payload.status === 'queued' || payload.status === 'running') &&
         entry.status !== payload.status
       ) {
         updatePendingDesign(entry.designId, { status: payload.status });
       }
-
-      moveDesignToBackground(entry);
     },
-    [moveDesignToBackground, updatePendingDesign],
+    [updatePendingDesign],
   );
 
   const trackedDesigns = useMemo(
@@ -186,9 +158,7 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
         refetchInterval: (query: { state: { data?: { status?: string } } }) => {
           const status = query.state.data?.status;
           if (status === 'succeeded' || status === 'failed') return false;
-          return entry.status === 'background'
-            ? DESIGN_BACKGROUND_POLL_INTERVAL_MS
-            : DESIGN_POLL_INTERVAL_MS;
+          return DESIGN_POLL_INTERVAL_MS;
         },
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
@@ -203,10 +173,7 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
       if (!query) continue;
 
       const payload = query.data;
-      if (!payload) {
-        moveDesignToBackground(entry);
-        continue;
-      }
+      if (!payload) continue;
 
       switch (payload.status) {
         case 'succeeded':
@@ -236,7 +203,6 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
     designQueries,
     handleDesignFailure,
     handleDesignSuccess,
-    moveDesignToBackground,
     syncInProgressDesign,
     trackedDesigns,
   ]);

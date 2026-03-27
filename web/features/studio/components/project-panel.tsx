@@ -72,19 +72,12 @@ const PENDING_STAGE_TIMELINE: Array<{ afterMs: number; title: string }> = [
   },
 ];
 
-const BACKGROUND_PENDING_TITLE = 'Assembling draft';
-
 const getPendingStageTitle = (pending: PendingDesign, now: number): string => {
-  if (pending.status === 'background') {
-    return BACKGROUND_PENDING_TITLE;
-  }
-
   const createdAt = Date.parse(pending.createdAt);
   const elapsedMs = Number.isFinite(createdAt) ? Math.max(now - createdAt, 0) : 0;
-  const maxStageIndex = pending.status === 'queued' ? 1 : PENDING_STAGE_TIMELINE.length - 1;
 
   let activeStage = PENDING_STAGE_TIMELINE[0];
-  for (let index = 0; index <= maxStageIndex; index += 1) {
+  for (let index = 0; index < PENDING_STAGE_TIMELINE.length; index += 1) {
     const candidate = PENDING_STAGE_TIMELINE[index];
     if (elapsedMs >= candidate.afterMs) {
       activeStage = candidate;
@@ -265,7 +258,7 @@ export function ProjectPanel({
                   key={pending.designId}
                   className={cn(
                     'w-full min-w-0 max-w-full rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-left',
-                    pending.status === 'background' ? 'opacity-90' : 'animate-pulse',
+                    'animate-pulse',
                   )}
                 >
                   <div className="flex min-w-0 items-start gap-3">

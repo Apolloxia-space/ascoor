@@ -6,7 +6,7 @@ import { useAuthStore } from '@/features/auth/use-auth-store';
 import { DEFAULT_FORM_MAX_CHARS } from '@/shared/constants/form-limits';
 import type { RightPanelMode, ViewMode } from '../types';
 
-export type PendingDesignStatus = 'queued' | 'running' | 'background' | 'failed';
+export type PendingDesignStatus = 'queued' | 'running' | 'failed';
 
 export type PendingDesign = {
   designId: string;
