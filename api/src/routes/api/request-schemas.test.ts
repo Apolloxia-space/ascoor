@@ -3,7 +3,11 @@ import test from 'node:test';
 
 import { ZodError } from 'zod';
 
-import { createDesignBodySchema, createDesignJobBodySchema } from './request-schemas';
+import {
+  createDesignBodySchema,
+  createDesignJobBodySchema,
+  reportDesignRenderFailureBodySchema,
+} from './request-schemas';
 
 test('createDesignJobBodySchema trims prompt input', () => {
   const parsed = createDesignJobBodySchema.parse({
@@ -43,4 +47,14 @@ test('createDesignBodySchema rejects whitespace-only display names', () => {
       error instanceof ZodError &&
       error.issues.some((issue) => issue.path[0] === 'displayName'),
   );
+});
+
+test('reportDesignRenderFailureBodySchema trims the error message', () => {
+  const parsed = reportDesignRenderFailureBodySchema.parse({
+    errorMessage: '  Model failed to render.  ',
+  });
+
+  assert.deepEqual(parsed, {
+    errorMessage: 'Model failed to render.',
+  });
 });

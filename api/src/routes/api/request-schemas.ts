@@ -5,6 +5,7 @@ import { CANCEL_SUBSCRIPTION_REASONS } from '../../entities/subscription';
 
 const requiredTrimmedString = (maxChars: number) => z.string().trim().min(1).max(maxChars);
 const requiredIdentifier = () => z.string().trim().min(1);
+const RENDER_FAILURE_MAX_CHARS = 2000;
 
 export const createDesignJobBodySchema = z
   .object({
@@ -24,6 +25,12 @@ export const createDesignBodySchema = z
 export const updateDesignBodySchema = z
   .object({
     displayName: requiredTrimmedString(DEFAULT_FORM_MAX_CHARS),
+  })
+  .strict();
+
+export const reportDesignRenderFailureBodySchema = z
+  .object({
+    errorMessage: requiredTrimmedString(RENDER_FAILURE_MAX_CHARS),
   })
   .strict();
 

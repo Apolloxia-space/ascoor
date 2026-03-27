@@ -11,6 +11,11 @@ import {
 import { DEFAULT_FORM_MAX_CHARS } from '../constants/form-limits';
 import { normalizeRequiredFormValue } from '../utils/form';
 
+const RENDER_FAILURE_STAGE = 'WEB_THREE_RENDER';
+const RENDER_FAILURE_CODE = 'STUDIO_RENDER_FAILED';
+const RENDER_FAILURE_MESSAGE = '3D preview failed to render in Studio.';
+const MAX_RENDER_FAILURE_MESSAGE_CHARS = 2000;
+
 export class DesignsUsecase {
   constructor(
     private readonly designRepository: IDesignRepository,
@@ -160,6 +165,46 @@ export class DesignsUsecase {
       displayName: normalizedName,
     });
     return updated;
+  }
+
+  async reportRenderFailure(userId: string, designId: string, errorMessage: string) {
+    const normalizedErrorMessage = normalizeRequiredFormValue(errorMessage, {
+      field: 'errorMessage',
+      maxChars: MAX_RENDER_FAILURE_MESSAGE_CHARS,
+      errorFactory: (message) => new ValidationError(message),
+    });
+
+    const design = await this.designRepository.getOwned(userId, designId);
+    if (!design) {
+      throw new NotFoundError('design not found');
+    }
+
+    const latestDesignJob = await this.designJobRepository.findLatestByDesignOwned({
+      userId,
+      designId,
+    });
+    if (!latestDesignJob || latestDesignJob.status !== 'succeeded') {
+      return;
+    }
+
+    const marked = await this.designJobRepository.markFailedIfSucceeded({
+      id: latestDesignJob.id,
+      errorMessage: normalizedErrorMessage,
+      errorStage: RENDER_FAILURE_STAGE,
+      errorCode: RENDER_FAILURE_CODE,
+      message: RENDER_FAILURE_MESSAGE,
+      title: latestDesignJob.title ?? 'Design failed',
+      designId,
+    });
+    if (!marked) {
+      return;
+    }
+
+    await this.designRepository.updateAsset({
+      designId,
+      assetStatus: 'failed',
+      assetError: normalizedErrorMessage,
+    });
   }
 
   async delete(userId: string, designId: string) {

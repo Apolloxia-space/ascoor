@@ -50,6 +50,7 @@ export * from './projectDesignSummaryType';
 export * from './projectResponse';
 export * from './projectResponseData';
 export * from './projectsResponse';
+export * from './reportDesignRenderFailureRequest';
 export * from './rootResponse';
 export * from './updateDesignRequest';
 export * from './updateProjectRequest';

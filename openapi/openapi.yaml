@@ -360,6 +360,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /designs/{designId}/render-failures:
+    post:
+      operationId: reportDesignRenderFailure
+      tags:
+        - designs
+      summary: Mark a generated design as failed when the Studio renderer cannot render it.
+      parameters:
+        - name: designId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportDesignRenderFailureRequest'
+      responses:
+        '204':
+          description: Render failure recorded
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /designs/{designId}:
     get:
       operationId: getDesign
@@ -1447,6 +1486,15 @@ components:
           type: string
           minLength: 1
           maxLength: 300
+    ReportDesignRenderFailureRequest:
+      type: object
+      required:
+        - errorMessage
+      properties:
+        errorMessage:
+          type: string
+          minLength: 1
+          maxLength: 2000
     UpdateUserRequest:
       type: object
       required:

@@ -48,6 +48,7 @@ import type {
   ProjectDesignsResponse,
   ProjectResponse,
   ProjectsResponse,
+  ReportDesignRenderFailureRequest,
   RootResponse,
   UpdateDesignRequest,
   UpdateProjectRequest,
@@ -1352,6 +1353,107 @@ export const useClearEditedModel = <TError = ErrorResponse,
         TContext
       > => {
       return useMutation(getClearEditedModelMutationOptions(options), queryClient);
+    }
+    
+/**
+ * @summary Mark a generated design as failed when the Studio renderer cannot render it.
+ */
+export type reportDesignRenderFailureResponse204 = {
+  data: void
+  status: 204
+}
+
+export type reportDesignRenderFailureResponse400 = {
+  data: ErrorResponse
+  status: 400
+}
+
+export type reportDesignRenderFailureResponse401 = {
+  data: ErrorResponse
+  status: 401
+}
+
+export type reportDesignRenderFailureResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type reportDesignRenderFailureResponseSuccess = (reportDesignRenderFailureResponse204) & {
+  headers: Headers;
+};
+export type reportDesignRenderFailureResponseError = (reportDesignRenderFailureResponse400 | reportDesignRenderFailureResponse401 | reportDesignRenderFailureResponse404) & {
+  headers: Headers;
+};
+
+export type reportDesignRenderFailureResponse = (reportDesignRenderFailureResponseSuccess | reportDesignRenderFailureResponseError)
+
+export const getReportDesignRenderFailureUrl = (designId: string,) => {
+
+
+  
+
+  return `/designs/${designId}/render-failures`
+}
+
+export const reportDesignRenderFailure = async (designId: string,
+    reportDesignRenderFailureRequest: ReportDesignRenderFailureRequest, options?: RequestInit): Promise<reportDesignRenderFailureResponse> => {
+  
+  return apiFetcher<reportDesignRenderFailureResponse>(getReportDesignRenderFailureUrl(designId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      reportDesignRenderFailureRequest,)
+  }
+);}
+  
+
+
+
+export const getReportDesignRenderFailureMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportDesignRenderFailure>>, TError,{designId: string;data: ReportDesignRenderFailureRequest}, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportDesignRenderFailure>>, TError,{designId: string;data: ReportDesignRenderFailureRequest}, TContext> => {
+
+const mutationKey = ['reportDesignRenderFailure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportDesignRenderFailure>>, {designId: string;data: ReportDesignRenderFailureRequest}> = (props) => {
+          const {designId,data} = props ?? {};
+
+          return  reportDesignRenderFailure(designId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportDesignRenderFailureMutationResult = NonNullable<Awaited<ReturnType<typeof reportDesignRenderFailure>>>
+    export type ReportDesignRenderFailureMutationBody = ReportDesignRenderFailureRequest
+    export type ReportDesignRenderFailureMutationError = ErrorResponse
+
+    /**
+ * @summary Mark a generated design as failed when the Studio renderer cannot render it.
+ */
+export const useReportDesignRenderFailure = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportDesignRenderFailure>>, TError,{designId: string;data: ReportDesignRenderFailureRequest}, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reportDesignRenderFailure>>,
+        TError,
+        {designId: string;data: ReportDesignRenderFailureRequest},
+        TContext
+      > => {
+      return useMutation(getReportDesignRenderFailureMutationOptions(options), queryClient);
     }
     
 /**

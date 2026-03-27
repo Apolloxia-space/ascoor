@@ -248,6 +248,32 @@ export class DesignJobRepositoryPostgres {
     return result.count > 0;
   }
 
+  async markFailedIfSucceeded(params: {
+    id: string;
+    errorMessage: string;
+    errorStage?: string | null;
+    errorCode?: string | null;
+    message?: string | null;
+    title?: string | null;
+    designId?: string | null;
+  }): Promise<boolean> {
+    const result = await this.prisma.designJob.updateMany({
+      where: { id: params.id, status: 'succeeded' },
+      data: {
+        status: 'failed',
+        errorMessage: params.errorMessage,
+        errorStage: params.errorStage ?? null,
+        errorCode: params.errorCode ?? null,
+        message: params.message ?? null,
+        title: params.title ?? null,
+        designId: params.designId,
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    return result.count > 0;
+  }
+
   async markFailedIfRunningStale(params: {
     id: string;
     staleBefore: Date;

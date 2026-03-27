@@ -15,7 +15,11 @@ import type {
 } from '../../generated/endpoints/designs/designs.context';
 import type { AppEnv } from '../../entities/app-env';
 import { NotFoundError, ValidationError } from '../../usecases/errors';
-import { createDesignBodySchema, updateDesignBodySchema } from './request-schemas';
+import {
+  createDesignBodySchema,
+  reportDesignRenderFailureBodySchema,
+  updateDesignBodySchema,
+} from './request-schemas';
 
 export function createDesignsRoutes() {
   const router = new Hono<AppEnv>();
@@ -142,6 +146,30 @@ export function createDesignsRoutes() {
       throw error;
     }
   });
+
+  router.post(
+    '/:designId/render-failures',
+    zValidator('param', GetDesignParams),
+    zValidator('json', reportDesignRenderFailureBodySchema),
+    async (c) => {
+      const { designId } = c.req.valid('param');
+      const { errorMessage } = c.req.valid('json');
+      const usecase = c.get('usecases').designs;
+      const userId = c.get('md').userId;
+      try {
+        await usecase.reportRenderFailure(userId, designId, errorMessage);
+        return c.body(null, 204);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return c.json({ error: error.message }, 404);
+        }
+        if (error instanceof ValidationError) {
+          return c.json({ error: error.message }, 400);
+        }
+        throw error;
+      }
+    },
+  );
 
   router.patch(
     '/:designId',

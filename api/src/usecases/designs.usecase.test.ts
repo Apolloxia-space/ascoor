@@ -366,3 +366,211 @@ test('clearEditedModel removes edited glb metadata', async () => {
   assert.equal(deletedPrefix, 'users/user-1/designs/file-1/edited-model.glb');
   assert.equal(clearedEditedAssetUri, null);
 });
+
+test('reportRenderFailure demotes a succeeded design job and marks the design as failed', async () => {
+  const now = new Date('2026-02-15T00:00:00.000Z');
+  const markFailedIfSucceededCalls: Array<{
+    id: string;
+    errorMessage: string;
+    errorStage?: string | null;
+    errorCode?: string | null;
+    message?: string | null;
+    title?: string | null;
+    designId?: string | null;
+  }> = [];
+  const updateAssetCalls: Array<{
+    designId: string;
+    assetStatus: string;
+    assetError?: string | null;
+  }> = [];
+
+  const usecase = new DesignsUsecase(
+    {
+      getOwned: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'Bracket',
+        type: 'studio_ts',
+        assetUriTs: 'gs://bucket/file-1.ts',
+        editedAssetUriGlb: null,
+        assetStatus: 'succeeded',
+        assetError: null,
+        editedAssetUpdatedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      get: async () => null,
+      list: async () => [],
+      update: async () => {
+        throw new Error('not used');
+      },
+      updateDisplayName: async () => {
+        throw new Error('not used');
+      },
+      create: async () => {
+        throw new Error('not used');
+      },
+      updateAsset: async (params: {
+        designId: string;
+        assetStatus: 'failed';
+        assetError?: string | null;
+      }) => {
+        updateAssetCalls.push({
+          designId: params.designId,
+          assetStatus: params.assetStatus,
+          assetError: params.assetError ?? null,
+        });
+        return {
+          id: 'file-1',
+          projectId: 'proj-1',
+          displayName: 'Bracket',
+          type: 'studio_ts',
+          assetUriTs: 'gs://bucket/file-1.ts',
+          editedAssetUriGlb: null,
+          assetStatus: 'failed',
+          assetError: params.assetError ?? null,
+          editedAssetUpdatedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        } as never;
+      },
+      updateEditedAsset: async () => {
+        throw new Error('not used');
+      },
+      delete: async () => {
+        throw new Error('not used');
+      },
+    } as unknown as IDesignRepository,
+    {} as ProjectRepository,
+    {} as IGcsRepository,
+    {
+      findLatestByDesignOwned: async () => ({
+        id: 'gen-1',
+        projectId: 'proj-1',
+        userId: 'user-1',
+        userPrompt: 'create a bracket with holes',
+        compiledPrompt: 'Goal\n- Create a bracket with holes',
+        status: 'succeeded',
+        message: 'Generated bracket.',
+        title: 'Bracket',
+        designId: 'file-1',
+        errorMessage: null,
+        errorStage: null,
+        errorCode: null,
+        startedAt: null,
+        finishedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      markFailedIfSucceeded: async (params: {
+        id: string;
+        errorMessage: string;
+        errorStage?: string | null;
+        errorCode?: string | null;
+        message?: string | null;
+        title?: string | null;
+        designId?: string | null;
+      }) => {
+        markFailedIfSucceededCalls.push(params);
+        return true;
+      },
+    } as unknown as DesignJobRepositoryPostgres,
+  );
+
+  await usecase.reportRenderFailure('user-1', 'file-1', ' Model failed to render. ');
+
+  assert.deepEqual(markFailedIfSucceededCalls, [
+    {
+      id: 'gen-1',
+      errorMessage: 'Model failed to render.',
+      errorStage: 'WEB_THREE_RENDER',
+      errorCode: 'STUDIO_RENDER_FAILED',
+      message: '3D preview failed to render in Studio.',
+      title: 'Bracket',
+      designId: 'file-1',
+    },
+  ]);
+  assert.deepEqual(updateAssetCalls, [
+    {
+      designId: 'file-1',
+      assetStatus: 'failed',
+      assetError: 'Model failed to render.',
+    },
+  ]);
+});
+
+test('reportRenderFailure is a no-op when the latest linked job is not succeeded', async () => {
+  const now = new Date('2026-02-15T00:00:00.000Z');
+  let markFailedCalled = false;
+  let updateAssetCalled = false;
+
+  const usecase = new DesignsUsecase(
+    {
+      getOwned: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'Bracket',
+        type: 'studio_ts',
+        assetUriTs: 'gs://bucket/file-1.ts',
+        editedAssetUriGlb: null,
+        assetStatus: 'failed',
+        assetError: 'Existing failure.',
+        editedAssetUpdatedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      get: async () => null,
+      list: async () => [],
+      update: async () => {
+        throw new Error('not used');
+      },
+      updateDisplayName: async () => {
+        throw new Error('not used');
+      },
+      create: async () => {
+        throw new Error('not used');
+      },
+      updateAsset: async () => {
+        updateAssetCalled = true;
+        throw new Error('not used');
+      },
+      updateEditedAsset: async () => {
+        throw new Error('not used');
+      },
+      delete: async () => {
+        throw new Error('not used');
+      },
+    } as unknown as IDesignRepository,
+    {} as ProjectRepository,
+    {} as IGcsRepository,
+    {
+      findLatestByDesignOwned: async () => ({
+        id: 'gen-1',
+        projectId: 'proj-1',
+        userId: 'user-1',
+        userPrompt: 'create a bracket with holes',
+        compiledPrompt: 'Goal\n- Create a bracket with holes',
+        status: 'failed',
+        message: 'Design failed.',
+        title: 'Bracket',
+        designId: 'file-1',
+        errorMessage: 'Existing failure.',
+        errorStage: 'WEB_THREE_RENDER',
+        errorCode: 'STUDIO_RENDER_FAILED',
+        startedAt: null,
+        finishedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      markFailedIfSucceeded: async () => {
+        markFailedCalled = true;
+        return true;
+      },
+    } as unknown as DesignJobRepositoryPostgres,
+  );
+
+  await usecase.reportRenderFailure('user-1', 'file-1', 'Model failed to render.');
+
+  assert.equal(markFailedCalled, false);
+  assert.equal(updateAssetCalled, false);
+});

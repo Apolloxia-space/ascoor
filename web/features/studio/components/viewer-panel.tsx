@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Download, FileText, Keyboard, Loader2, RotateCcw, Save } from 'lucide-react';
 
 import { viewModes } from '@/mock/studio';
@@ -35,7 +36,14 @@ import { Kbd, KbdGroup } from '@shared/components/ui/kbd';
 import { cn } from '@shared/lib/utils';
 import { buildTraceId } from '@shared/api/fetcher';
 import type { ApiError } from '@shared/api/fetcher';
-import { getDesignAssetContent, getEditedModel } from '@shared/api/generated/client';
+import {
+  getDesignAssetContent,
+  getGetBillingStatusQueryKey,
+  getGetDesignJobQueryKey,
+  getEditedModel,
+  getListProjectDesignsQueryKey,
+  reportDesignRenderFailure,
+} from '@shared/api/generated/client';
 import { getFreshAuthToken } from '@/features/auth/token-store';
 import { useDesignDetail } from '../hooks/use-design-detail';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from '../messages';
@@ -107,6 +115,7 @@ export function ViewerPanel({
   onShortcutHelpOpenChange,
   shortcutHudMessage = null,
 }: ViewerPanelProps) {
+  const queryClient = useQueryClient();
   const [modelData, setModelData] = useState<ArrayBuffer | null>(null);
   const [modelCode, setModelCode] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -124,6 +133,7 @@ export function ViewerPanel({
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
   const skipNextSourceReloadRef = useRef(false);
+  const reportedRenderFailureRef = useRef<string | null>(null);
 
   const fileDetailQuery = useDesignDetail(designId);
   const refetchFileDetail = fileDetailQuery.refetch;
@@ -220,6 +230,7 @@ export function ViewerPanel({
     setHasUnsavedChanges(false);
     setViewerReloadNonce(0);
     skipNextSourceReloadRef.current = false;
+    reportedRenderFailureRef.current = null;
   }, [designId]);
 
   const buildAuthHeaders = useCallback(async () => {
@@ -334,6 +345,74 @@ export function ViewerPanel({
   const handleModelParseError = useCallback((message: string | null) => {
     setParseError(message);
   }, []);
+
+  useEffect(() => {
+    const designJobId = latestDesignJob?.designJobId ?? null;
+    const projectId = designData?.projectId ?? null;
+    const shouldReport =
+      Boolean(designId) &&
+      Boolean(modelCode) &&
+      Boolean(parseError) &&
+      latestDesignJob?.status === 'succeeded' &&
+      assetStatus === 'succeeded';
+
+    if (!shouldReport || !designId || !designJobId || !parseError) {
+      return;
+    }
+
+    const reportKey = `${designId}:${designJobId}:${parseError}`;
+    if (reportedRenderFailureRef.current === reportKey) {
+      return;
+    }
+    reportedRenderFailureRef.current = reportKey;
+
+    let cancelled = false;
+    const requestTraceId = traceId ?? buildTraceId();
+
+    void (async () => {
+      try {
+        await reportDesignRenderFailure(
+          designId,
+          { errorMessage: parseError },
+          {
+            headers: {
+              'X-Trace-Id': requestTraceId,
+            },
+          },
+        );
+        if (cancelled) {
+          return;
+        }
+        await Promise.all([
+          refetchFileDetail(),
+          projectId
+            ? queryClient.invalidateQueries({ queryKey: getListProjectDesignsQueryKey(projectId) })
+            : Promise.resolve(),
+          queryClient.invalidateQueries({ queryKey: getGetDesignJobQueryKey(designJobId) }),
+          queryClient.invalidateQueries({ queryKey: getGetBillingStatusQueryKey() }),
+        ]);
+      } catch {
+        if (!cancelled) {
+          reportedRenderFailureRef.current = null;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    assetStatus,
+    designData?.projectId,
+    designId,
+    latestDesignJob?.designJobId,
+    latestDesignJob?.status,
+    modelCode,
+    parseError,
+    queryClient,
+    refetchFileDetail,
+    traceId,
+  ]);
 
   const handleStructureTreeChange = useCallback(
     (tree: Array<StructureTreeNode>) => {
