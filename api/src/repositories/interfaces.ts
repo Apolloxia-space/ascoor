@@ -1,4 +1,4 @@
-import type { AssetStatus, Design } from '../generated/prisma/client';
+import type { Design, PreviewStatus } from '../generated/prisma/client';
 import type { GeneratedDesignInfo } from '../entities/designs';
 import type { UploadedObjectInfo } from '../entities/storage';
 
@@ -10,15 +10,15 @@ export interface IDesignRepository {
   update(params: {
     designId: string;
     assetUriTs: string;
-    assetStatus?: AssetStatus;
+    previewStatus?: PreviewStatus;
   }): Promise<Design>;
   updateDisplayName(params: { designId: string; displayName: string }): Promise<Design>;
   create(params: { projectId: string; displayName: string }): Promise<Design>;
-  updateAsset(params: {
+  updatePreview(params: {
     designId: string;
     assetUriTs?: string | null;
-    assetStatus: AssetStatus;
-    assetError?: string | null;
+    previewStatus: PreviewStatus;
+    previewError?: string | null;
   }): Promise<Design>;
   updateEditedAsset(params: {
     designId: string;

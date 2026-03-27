@@ -1,4 +1,4 @@
-import type { PrismaClient, AssetStatus, Design, Prisma } from '../../generated/prisma/client';
+import type { PrismaClient, Design, PreviewStatus, Prisma } from '../../generated/prisma/client';
 import type { IDesignRepository } from '../interfaces';
 
 export class DesignRepositoryPostgres implements IDesignRepository {
@@ -39,14 +39,14 @@ export class DesignRepositoryPostgres implements IDesignRepository {
   update(params: {
     designId: string;
     assetUriTs: string;
-    assetStatus?: AssetStatus;
+    previewStatus?: PreviewStatus;
   }): Promise<Design> {
-    const { designId, assetUriTs, assetStatus = 'processing' } = params;
+    const { designId, assetUriTs, previewStatus = 'unverified' } = params;
     return this.prisma.design.update({
       where: { id: designId },
       data: {
         assetUriTs,
-        assetStatus,
+        previewStatus,
         updatedAt: new Date(),
       },
     });
@@ -67,23 +67,23 @@ export class DesignRepositoryPostgres implements IDesignRepository {
       data: {
         projectId: params.projectId,
         displayName: params.displayName,
-        assetStatus: 'queued',
+        previewStatus: 'unverified',
       },
     });
   }
 
-  updateAsset(params: {
+  updatePreview(params: {
     designId: string;
     assetUriTs?: string | null;
-    assetStatus: AssetStatus;
-    assetError?: string | null;
+    previewStatus: PreviewStatus;
+    previewError?: string | null;
   }): Promise<Design> {
     return this.prisma.design.update({
       where: { id: params.designId },
       data: {
         assetUriTs: params.assetUriTs ?? undefined,
-        assetStatus: params.assetStatus,
-        assetError: params.assetError ?? null,
+        previewStatus: params.previewStatus,
+        previewError: params.previewError ?? null,
         updatedAt: new Date(),
       },
     });

@@ -17,8 +17,8 @@ test('get returns design detail and latest linked design prompt', async () => {
         type: 'studio_ts',
         assetUriTs: 'gs://bucket/file-1.ts',
         editedAssetUriGlb: 'gs://bucket/file-1-edited.glb',
-        assetStatus: 'succeeded',
-        assetError: null,
+        previewStatus: 'succeeded',
+        previewError: null,
         editedAssetUpdatedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -34,7 +34,7 @@ test('get returns design detail and latest linked design prompt', async () => {
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async () => {
+      updatePreview: async () => {
         throw new Error('not used');
       },
       updateEditedAsset: async () => {
@@ -70,7 +70,7 @@ test('get returns design detail and latest linked design prompt', async () => {
   const result = await usecase.get('user-1', 'file-1');
 
   assert.equal(result.design.id, 'file-1');
-  assert.equal(result.design.assetStatus, 'succeeded');
+  assert.equal(result.design.previewStatus, 'succeeded');
   assert.equal(result.design.editedAssetUriGlb, 'gs://bucket/file-1-edited.glb');
   assert.equal(result.latestDesignJob?.designJobId, 'gen-1');
   assert.equal(result.latestDesignJob?.userPrompt, 'create a bracket with holes');
@@ -87,8 +87,8 @@ test('get returns latestDesignJob as null when no linked design exists', async (
         type: 'studio_ts',
         assetUriTs: null,
         editedAssetUriGlb: null,
-        assetStatus: 'queued',
-        assetError: null,
+        previewStatus: 'unverified',
+        previewError: null,
         editedAssetUpdatedAt: null,
         createdAt: now,
         updatedAt: now,
@@ -104,7 +104,7 @@ test('get returns latestDesignJob as null when no linked design exists', async (
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async () => {
+      updatePreview: async () => {
         throw new Error('not used');
       },
       updateEditedAsset: async () => {
@@ -139,8 +139,8 @@ test('getAssetContent returns JavaScript bytes even when asset status is failed'
         type: 'studio_ts',
         assetUriTs: 'gs://bucket/file-1.ts',
         editedAssetUriGlb: null,
-        assetStatus: 'failed',
-        assetError: 'Code execution failed.',
+        previewStatus: 'failed',
+        previewError: 'Code execution failed.',
         editedAssetUpdatedAt: null,
         createdAt: now,
         updatedAt: now,
@@ -156,7 +156,7 @@ test('getAssetContent returns JavaScript bytes even when asset status is failed'
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async () => {
+      updatePreview: async () => {
         throw new Error('not used');
       },
       updateEditedAsset: async () => {
@@ -203,8 +203,8 @@ test('saveEditedModel uploads edited glb and persists metadata', async () => {
         type: 'studio_ts',
         assetUriTs: 'gs://bucket/file-1.ts',
         editedAssetUriGlb: null,
-        assetStatus: 'succeeded',
-        assetError: null,
+        previewStatus: 'succeeded',
+        previewError: null,
         editedAssetUpdatedAt: null,
         createdAt: now,
         updatedAt: now,
@@ -220,7 +220,7 @@ test('saveEditedModel uploads edited glb and persists metadata', async () => {
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async () => {
+      updatePreview: async () => {
         throw new Error('not used');
       },
       updateEditedAsset: async (params: {
@@ -236,8 +236,8 @@ test('saveEditedModel uploads edited glb and persists metadata', async () => {
           type: 'studio_ts',
           assetUriTs: 'gs://bucket/file-1.ts',
           editedAssetUriGlb: params.editedAssetUriGlb,
-          assetStatus: 'succeeded',
-          assetError: null,
+          previewStatus: 'succeeded',
+          previewError: null,
           editedAssetUpdatedAt: params.editedAssetUpdatedAt,
           createdAt: now,
           updatedAt: now,
@@ -296,8 +296,8 @@ test('clearEditedModel removes edited glb metadata', async () => {
         type: 'studio_ts',
         assetUriTs: 'gs://bucket/file-1.ts',
         editedAssetUriGlb: 'gs://bucket/users/user-1/designs/file-1/edited-model.glb',
-        assetStatus: 'succeeded',
-        assetError: null,
+        previewStatus: 'succeeded',
+        previewError: null,
         editedAssetUpdatedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -313,7 +313,7 @@ test('clearEditedModel removes edited glb metadata', async () => {
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async () => {
+      updatePreview: async () => {
         throw new Error('not used');
       },
       updateEditedAsset: async (params: {
@@ -329,8 +329,8 @@ test('clearEditedModel removes edited glb metadata', async () => {
           type: 'studio_ts',
           assetUriTs: 'gs://bucket/file-1.ts',
           editedAssetUriGlb: params.editedAssetUriGlb,
-          assetStatus: 'succeeded',
-          assetError: null,
+          previewStatus: 'succeeded',
+          previewError: null,
           editedAssetUpdatedAt: params.editedAssetUpdatedAt,
           createdAt: now,
           updatedAt: now,
@@ -367,12 +367,12 @@ test('clearEditedModel removes edited glb metadata', async () => {
   assert.equal(clearedEditedAssetUri, null);
 });
 
-test('reportRenderFailure marks the design as failed without mutating design job status', async () => {
+test('reportPreviewResult marks the design preview as failed without mutating design job status', async () => {
   const now = new Date('2026-02-15T00:00:00.000Z');
-  const updateAssetCalls: Array<{
+  const updatePreviewCalls: Array<{
     designId: string;
-    assetStatus: string;
-    assetError?: string | null;
+    previewStatus: string;
+    previewError?: string | null;
   }> = [];
 
   const usecase = new DesignsUsecase(
@@ -384,8 +384,8 @@ test('reportRenderFailure marks the design as failed without mutating design job
         type: 'studio_ts',
         assetUriTs: 'gs://bucket/file-1.ts',
         editedAssetUriGlb: null,
-        assetStatus: 'succeeded',
-        assetError: null,
+        previewStatus: 'succeeded',
+        previewError: null,
         editedAssetUpdatedAt: null,
         createdAt: now,
         updatedAt: now,
@@ -401,15 +401,15 @@ test('reportRenderFailure marks the design as failed without mutating design job
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async (params: {
+      updatePreview: async (params: {
         designId: string;
-        assetStatus: 'failed';
-        assetError?: string | null;
+        previewStatus: 'failed';
+        previewError?: string | null;
       }) => {
-        updateAssetCalls.push({
+        updatePreviewCalls.push({
           designId: params.designId,
-          assetStatus: params.assetStatus,
-          assetError: params.assetError ?? null,
+          previewStatus: params.previewStatus,
+          previewError: params.previewError ?? null,
         });
         return {
           id: 'file-1',
@@ -418,8 +418,8 @@ test('reportRenderFailure marks the design as failed without mutating design job
           type: 'studio_ts',
           assetUriTs: 'gs://bucket/file-1.ts',
           editedAssetUriGlb: null,
-          assetStatus: 'failed',
-          assetError: params.assetError ?? null,
+          previewStatus: 'failed',
+          previewError: params.previewError ?? null,
           editedAssetUpdatedAt: null,
           createdAt: now,
           updatedAt: now,
@@ -456,20 +456,23 @@ test('reportRenderFailure marks the design as failed without mutating design job
     } as unknown as DesignJobRepositoryPostgres,
   );
 
-  await usecase.reportRenderFailure('user-1', 'file-1', ' Model failed to render. ');
+  await usecase.reportPreviewResult('user-1', 'file-1', {
+    status: 'failed',
+    errorMessage: ' Model failed to render. ',
+  });
 
-  assert.deepEqual(updateAssetCalls, [
+  assert.deepEqual(updatePreviewCalls, [
     {
       designId: 'file-1',
-      assetStatus: 'failed',
-      assetError: 'Model failed to render.',
+      previewStatus: 'failed',
+      previewError: 'Model failed to render.',
     },
   ]);
 });
 
-test('reportRenderFailure is a no-op when the latest linked job is not succeeded', async () => {
+test('reportPreviewResult is a no-op when the latest linked job is not succeeded', async () => {
   const now = new Date('2026-02-15T00:00:00.000Z');
-  let updateAssetCalled = false;
+  let updatePreviewCalled = false;
 
   const usecase = new DesignsUsecase(
     {
@@ -480,8 +483,8 @@ test('reportRenderFailure is a no-op when the latest linked job is not succeeded
         type: 'studio_ts',
         assetUriTs: 'gs://bucket/file-1.ts',
         editedAssetUriGlb: null,
-        assetStatus: 'failed',
-        assetError: 'Existing failure.',
+        previewStatus: 'failed',
+        previewError: 'Existing failure.',
         editedAssetUpdatedAt: null,
         createdAt: now,
         updatedAt: now,
@@ -497,8 +500,8 @@ test('reportRenderFailure is a no-op when the latest linked job is not succeeded
       create: async () => {
         throw new Error('not used');
       },
-      updateAsset: async () => {
-        updateAssetCalled = true;
+      updatePreview: async () => {
+        updatePreviewCalled = true;
         throw new Error('not used');
       },
       updateEditedAsset: async () => {
@@ -532,7 +535,10 @@ test('reportRenderFailure is a no-op when the latest linked job is not succeeded
     } as unknown as DesignJobRepositoryPostgres,
   );
 
-  await usecase.reportRenderFailure('user-1', 'file-1', 'Model failed to render.');
+  await usecase.reportPreviewResult('user-1', 'file-1', {
+    status: 'failed',
+    errorMessage: 'Model failed to render.',
+  });
 
-  assert.equal(updateAssetCalled, false);
+  assert.equal(updatePreviewCalled, false);
 });

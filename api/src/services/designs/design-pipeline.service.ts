@@ -88,8 +88,8 @@ export class DesignPipelineService {
       displayName: aiOutput.title,
       code: aiOutput.code,
       executionStatus: 'success',
-      assetStatus: 'succeeded',
-      assetError: null,
+      previewStatus: 'unverified',
+      previewError: null,
       trace,
     });
 

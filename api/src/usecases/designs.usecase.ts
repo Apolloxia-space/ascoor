@@ -40,8 +40,8 @@ export class DesignsUsecase {
         projectId: design.projectId,
         displayName: design.displayName,
         assetUriTs: design.assetUriTs ?? null,
-        assetStatus: design.assetStatus,
-        assetError: design.assetError ?? null,
+        previewStatus: design.previewStatus,
+        previewError: design.previewError ?? null,
         editedAssetUpdatedAt: editedSnapshot.editedAssetUpdatedAt?.toISOString() ?? null,
         createdAt: design.createdAt.toISOString(),
         updatedAt: design.updatedAt.toISOString(),
@@ -163,13 +163,14 @@ export class DesignsUsecase {
     return updated;
   }
 
-  async reportRenderFailure(userId: string, designId: string, errorMessage: string) {
-    const normalizedErrorMessage = normalizeRequiredFormValue(errorMessage, {
-      field: 'errorMessage',
-      maxChars: MAX_RENDER_FAILURE_MESSAGE_CHARS,
-      errorFactory: (message) => new ValidationError(message),
-    });
-
+  async reportPreviewResult(
+    userId: string,
+    designId: string,
+    input: {
+      status: 'succeeded' | 'failed';
+      errorMessage?: string;
+    },
+  ) {
     const design = await this.designRepository.getOwned(userId, designId);
     if (!design) {
       throw new NotFoundError('design not found');
@@ -183,10 +184,25 @@ export class DesignsUsecase {
       return;
     }
 
-    await this.designRepository.updateAsset({
+    if (input.status === 'succeeded') {
+      await this.designRepository.updatePreview({
+        designId,
+        previewStatus: 'succeeded',
+        previewError: null,
+      });
+      return;
+    }
+
+    const normalizedErrorMessage = normalizeRequiredFormValue(input.errorMessage ?? '', {
+      field: 'errorMessage',
+      maxChars: MAX_RENDER_FAILURE_MESSAGE_CHARS,
+      errorFactory: (message) => new ValidationError(message),
+    });
+
+    await this.designRepository.updatePreview({
       designId,
-      assetStatus: 'failed',
-      assetError: normalizedErrorMessage,
+      previewStatus: 'failed',
+      previewError: normalizedErrorMessage,
     });
   }
 

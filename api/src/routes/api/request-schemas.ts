@@ -6,6 +6,7 @@ import { CANCEL_SUBSCRIPTION_REASONS } from '../../entities/subscription';
 const requiredTrimmedString = (maxChars: number) => z.string().trim().min(1).max(maxChars);
 const requiredIdentifier = () => z.string().trim().min(1);
 const RENDER_FAILURE_MAX_CHARS = 2000;
+const PREVIEW_RESULT_STATUSES = ['succeeded', 'failed'] as const;
 
 export const createDesignJobBodySchema = z
   .object({
@@ -27,9 +28,19 @@ export const updateDesignBodySchema = z
   })
   .strict();
 
-export const reportDesignRenderFailureBodySchema = z
+export const reportDesignPreviewResultBodySchema = z
   .object({
-    errorMessage: requiredTrimmedString(RENDER_FAILURE_MAX_CHARS),
+    status: z.enum(PREVIEW_RESULT_STATUSES),
+    errorMessage: z.string().trim().max(RENDER_FAILURE_MAX_CHARS).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.status === 'failed' && (!value.errorMessage || value.errorMessage.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'errorMessage is required when status is failed',
+        path: ['errorMessage'],
+      });
+    }
   })
   .strict();
 

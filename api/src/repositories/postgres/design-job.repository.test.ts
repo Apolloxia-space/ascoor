@@ -32,7 +32,7 @@ test('countSucceededByUserInPeriod counts succeeded jobs even when linked design
         { design: null },
         {
           design: {
-            assetStatus: 'succeeded',
+            previewStatus: 'succeeded',
           },
         },
       ],

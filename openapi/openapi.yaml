@@ -360,12 +360,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /designs/{designId}/render-failures:
+  /designs/{designId}/preview-results:
     post:
-      operationId: reportDesignRenderFailure
+      operationId: reportDesignPreviewResult
       tags:
         - designs
-      summary: Mark a generated design as failed when the Studio renderer cannot render it.
+      summary: Record the latest preview result for a generated design.
       parameters:
         - name: designId
           in: path
@@ -377,10 +377,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReportDesignRenderFailureRequest'
+              $ref: '#/components/schemas/ReportDesignPreviewResultRequest'
       responses:
         '204':
-          description: Render failure recorded
+          description: Preview result recorded
         '400':
           description: Validation error
           content:
@@ -1384,7 +1384,7 @@ components:
         - id
         - projectId
         - displayName
-        - assetStatus
+        - previewStatus
         - createdAt
         - updatedAt
       properties:
@@ -1397,10 +1397,10 @@ components:
         assetUriTs:
           type: string
           nullable: true
-        assetStatus:
+        previewStatus:
           type: string
-          enum: [queued, processing, succeeded, failed]
-        assetError:
+          enum: [unverified, succeeded, failed]
+        previewError:
           type: string
           nullable: true
         editedAssetUriGlb:
@@ -1434,7 +1434,7 @@ components:
         - id
         - projectId
         - displayName
-        - assetStatus
+        - previewStatus
         - updatedAt
       properties:
         id:
@@ -1446,10 +1446,10 @@ components:
         assetUriTs:
           type: string
           nullable: true
-        assetStatus:
+        previewStatus:
           type: string
-          enum: [queued, processing, succeeded, failed]
-        assetError:
+          enum: [unverified, succeeded, failed]
+        previewError:
           type: string
           nullable: true
         editedAssetUriGlb:
@@ -1474,14 +1474,16 @@ components:
           type: string
           minLength: 1
           maxLength: 300
-    ReportDesignRenderFailureRequest:
+    ReportDesignPreviewResultRequest:
       type: object
       required:
-        - errorMessage
+        - status
       properties:
+        status:
+          type: string
+          enum: [succeeded, failed]
         errorMessage:
           type: string
-          minLength: 1
           maxLength: 2000
     UpdateUserRequest:
       type: object

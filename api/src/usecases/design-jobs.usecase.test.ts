@@ -124,7 +124,7 @@ test('process succeeds and marks design as succeeded', async () => {
     {
       create: async () => createdFile,
       update: async () => ({ ...createdFile }),
-      updateAsset: async () => ({ ...createdFile }),
+      updatePreview: async () => ({ ...createdFile }),
       get: async () => null,
       getOwned: async () => null,
       list: async () => [],
@@ -212,7 +212,7 @@ test('process marks failed when AI returns no executable code', async () => {
         displayName: 'Broken',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'Broken',
@@ -284,7 +284,7 @@ test('process marks failed when AI returns no executable code', async () => {
 
   assert.equal(markFailedCalls.length, 1);
   assert.equal(markFailedCalls[0]?.id, 'gen-1');
-  assert.equal(markFailedCalls[0]?.designId, 'file-1');
+  assert.equal(markFailedCalls[0]?.designId, undefined);
   assert.equal(markFailedCalls[0]?.errorMessage, 'Model design did not return executable code.');
 });
 
@@ -326,7 +326,7 @@ test('process succeeds without runtime execution and links generated design', as
         displayName: 'Broken bracket',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-failed-1',
         projectId: 'proj-1',
         displayName: 'Broken bracket',
@@ -454,7 +454,7 @@ test('process does not recover stale design when claimed by another worker', asy
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',
@@ -556,7 +556,7 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',
@@ -664,7 +664,7 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',
@@ -768,7 +768,7 @@ test('enqueue resolves only the Pro plan limit', async () => {
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',
@@ -884,7 +884,7 @@ test('reap stale also recovers queued designs', async () => {
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',
@@ -989,7 +989,7 @@ test('enqueue creates a design when monthly generated design count is below limi
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',
@@ -1096,7 +1096,7 @@ test('enqueue requires an active Pro subscription', async () => {
         displayName: 'file',
         type: 'studio_ts',
       }),
-      updateAsset: async () => ({
+      updatePreview: async () => ({
         id: 'file-1',
         projectId: 'proj-1',
         displayName: 'file',

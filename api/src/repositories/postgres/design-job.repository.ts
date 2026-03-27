@@ -40,7 +40,7 @@ export class DesignJobRepositoryPostgres {
           { design: null },
           {
             design: {
-              assetStatus: 'succeeded',
+              previewStatus: 'succeeded',
             },
           },
         ],

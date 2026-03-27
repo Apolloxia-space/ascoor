@@ -8,9 +8,8 @@ datasource db {
 }
 
 // Enums
-enum AssetStatus {
-  queued
-  processing
+enum PreviewStatus {
+  unverified
   succeeded
   failed
 }
@@ -90,8 +89,8 @@ model Design {
   displayName         String
   assetUriTs          String?
   editedAssetUriGlb   String?
-  assetStatus         AssetStatus @default(queued)
-  assetError          String?
+  previewStatus       PreviewStatus @default(unverified)
+  previewError        String?
   editedAssetUpdatedAt DateTime?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt

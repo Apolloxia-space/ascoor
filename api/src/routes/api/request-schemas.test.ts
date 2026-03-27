@@ -6,7 +6,7 @@ import { ZodError } from 'zod';
 import {
   createDesignBodySchema,
   createDesignJobBodySchema,
-  reportDesignRenderFailureBodySchema,
+  reportDesignPreviewResultBodySchema,
 } from './request-schemas';
 
 test('createDesignJobBodySchema trims prompt input', () => {
@@ -48,12 +48,24 @@ test('createDesignBodySchema rejects whitespace-only display names', () => {
   );
 });
 
-test('reportDesignRenderFailureBodySchema trims the error message', () => {
-  const parsed = reportDesignRenderFailureBodySchema.parse({
+test('reportDesignPreviewResultBodySchema trims the error message', () => {
+  const parsed = reportDesignPreviewResultBodySchema.parse({
+    status: 'failed',
     errorMessage: '  Model failed to render.  ',
   });
 
   assert.deepEqual(parsed, {
+    status: 'failed',
     errorMessage: 'Model failed to render.',
+  });
+});
+
+test('reportDesignPreviewResultBodySchema accepts success without error message', () => {
+  const parsed = reportDesignPreviewResultBodySchema.parse({
+    status: 'succeeded',
+  });
+
+  assert.deepEqual(parsed, {
+    status: 'succeeded',
   });
 });

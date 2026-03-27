@@ -292,8 +292,8 @@ export function ProjectPanel({
                   const rawName = file.displayName ?? 'Untitled';
                   const displayName = rawName;
                   const isSelected = file.id === selectedDesignId;
-                  const isFailed = file.assetStatus === 'failed';
-                  const isSucceeded = file.assetStatus === 'succeeded';
+                  const isFailed = file.previewStatus === 'failed';
+                  const isSucceeded = file.previewStatus === 'succeeded';
                   const target: DesignTarget = {
                     id: file.id,
                     rawName,

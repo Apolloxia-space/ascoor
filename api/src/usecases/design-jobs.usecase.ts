@@ -37,7 +37,6 @@ const DEFAULT_RUNNING_TIMEOUT_MESSAGE = 'Design timed out while processing.';
 const DEFAULT_QUEUED_TIMEOUT_MESSAGE = 'Design timed out while waiting in queue.';
 const DEFAULT_STALE_REAP_BATCH_LIMIT = 100;
 const MAX_STALE_REAP_BATCH_LIMIT = 500;
-const DEFAULT_ERROR_LOG_MAX_CHARS = 2000;
 const DEFAULT_LIST_DESIGNS_LIMIT = 30;
 const ERROR_CODE_MESSAGES: Record<string, string> = {
   AI_AGENT_TIMEOUT: DEFAULT_USER_FACING_FAILURE_MESSAGE,
@@ -363,17 +362,6 @@ export class DesignJobsUsecase {
         error instanceof DesignPipelineError
           ? error.errorCode
           : this.inferErrorCode(error, 'DESIGN_FINALIZE_FAILED');
-      let failedDesignId =
-        error instanceof DesignPipelineError ? (error.designId ?? undefined) : undefined;
-      if (!failedDesignId) {
-        failedDesignId = await this.createFailedPlaceholderDesign({
-          designId: job.id,
-          projectId: job.projectId,
-          userPrompt: job.userPrompt,
-          errorMessage: failureMessage,
-        });
-      }
-
       const marked = await this.designJobRepository.markFailedIfRunning({
         id: job.id,
         errorMessage: failureMessage,
@@ -381,7 +369,6 @@ export class DesignJobsUsecase {
         errorCode,
         message: failureMessage,
         title: DEFAULT_FAILURE_TITLE,
-        designId: failedDesignId,
       });
       if (!marked) {
         return;
@@ -558,37 +545,6 @@ export class DesignJobsUsecase {
       }
     } catch {}
     throw new Error(`design_plan_limit_missing:${planKey}`);
-  }
-
-  private async createFailedPlaceholderDesign(params: {
-    designId: string;
-    projectId: string;
-    userPrompt: string;
-    errorMessage: string;
-  }): Promise<string | undefined> {
-    try {
-      const createdDesign = await this.designRepository.create({
-        projectId: params.projectId,
-        displayName: this.toPromptPreview(params.userPrompt),
-      });
-      const linked = await this.designJobRepository.linkDesignIfMissing({
-        designId: params.designId,
-        resultDesignId: createdDesign.id,
-      });
-      if (!linked) {
-        throw new Error(
-          `Failed to link design job ${params.designId} to design ${createdDesign.id}.`,
-        );
-      }
-      await this.designRepository.updateAsset({
-        designId: createdDesign.id,
-        assetStatus: 'failed',
-        assetError: truncateText(params.errorMessage, DEFAULT_ERROR_LOG_MAX_CHARS),
-      });
-      return createdDesign.id;
-    } catch {
-      return undefined;
-    }
   }
 
   private toResponse(job: {

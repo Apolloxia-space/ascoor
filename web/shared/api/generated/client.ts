@@ -48,7 +48,7 @@ import type {
   ProjectDesignsResponse,
   ProjectResponse,
   ProjectsResponse,
-  ReportDesignRenderFailureRequest,
+  ReportDesignPreviewResultRequest,
   RootResponse,
   UpdateDesignRequest,
   UpdateProjectRequest,
@@ -1356,66 +1356,66 @@ export const useClearEditedModel = <TError = ErrorResponse,
     }
     
 /**
- * @summary Mark a generated design as failed when the Studio renderer cannot render it.
+ * @summary Record the latest preview result for a generated design.
  */
-export type reportDesignRenderFailureResponse204 = {
+export type reportDesignPreviewResultResponse204 = {
   data: void
   status: 204
 }
 
-export type reportDesignRenderFailureResponse400 = {
+export type reportDesignPreviewResultResponse400 = {
   data: ErrorResponse
   status: 400
 }
 
-export type reportDesignRenderFailureResponse401 = {
+export type reportDesignPreviewResultResponse401 = {
   data: ErrorResponse
   status: 401
 }
 
-export type reportDesignRenderFailureResponse404 = {
+export type reportDesignPreviewResultResponse404 = {
   data: ErrorResponse
   status: 404
 }
 
-export type reportDesignRenderFailureResponseSuccess = (reportDesignRenderFailureResponse204) & {
+export type reportDesignPreviewResultResponseSuccess = (reportDesignPreviewResultResponse204) & {
   headers: Headers;
 };
-export type reportDesignRenderFailureResponseError = (reportDesignRenderFailureResponse400 | reportDesignRenderFailureResponse401 | reportDesignRenderFailureResponse404) & {
+export type reportDesignPreviewResultResponseError = (reportDesignPreviewResultResponse400 | reportDesignPreviewResultResponse401 | reportDesignPreviewResultResponse404) & {
   headers: Headers;
 };
 
-export type reportDesignRenderFailureResponse = (reportDesignRenderFailureResponseSuccess | reportDesignRenderFailureResponseError)
+export type reportDesignPreviewResultResponse = (reportDesignPreviewResultResponseSuccess | reportDesignPreviewResultResponseError)
 
-export const getReportDesignRenderFailureUrl = (designId: string,) => {
+export const getReportDesignPreviewResultUrl = (designId: string,) => {
 
 
   
 
-  return `/designs/${designId}/render-failures`
+  return `/designs/${designId}/preview-results`
 }
 
-export const reportDesignRenderFailure = async (designId: string,
-    reportDesignRenderFailureRequest: ReportDesignRenderFailureRequest, options?: RequestInit): Promise<reportDesignRenderFailureResponse> => {
+export const reportDesignPreviewResult = async (designId: string,
+    reportDesignPreviewResultRequest: ReportDesignPreviewResultRequest, options?: RequestInit): Promise<reportDesignPreviewResultResponse> => {
   
-  return apiFetcher<reportDesignRenderFailureResponse>(getReportDesignRenderFailureUrl(designId),
+  return apiFetcher<reportDesignPreviewResultResponse>(getReportDesignPreviewResultUrl(designId),
   {      
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      reportDesignRenderFailureRequest,)
+      reportDesignPreviewResultRequest,)
   }
 );}
   
 
 
 
-export const getReportDesignRenderFailureMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportDesignRenderFailure>>, TError,{designId: string;data: ReportDesignRenderFailureRequest}, TContext>, request?: SecondParameter<typeof apiFetcher>}
-): UseMutationOptions<Awaited<ReturnType<typeof reportDesignRenderFailure>>, TError,{designId: string;data: ReportDesignRenderFailureRequest}, TContext> => {
+export const getReportDesignPreviewResultMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportDesignPreviewResult>>, TError,{designId: string;data: ReportDesignPreviewResultRequest}, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportDesignPreviewResult>>, TError,{designId: string;data: ReportDesignPreviewResultRequest}, TContext> => {
 
-const mutationKey = ['reportDesignRenderFailure'];
+const mutationKey = ['reportDesignPreviewResult'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -1425,10 +1425,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportDesignRenderFailure>>, {designId: string;data: ReportDesignRenderFailureRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportDesignPreviewResult>>, {designId: string;data: ReportDesignPreviewResultRequest}> = (props) => {
           const {designId,data} = props ?? {};
 
-          return  reportDesignRenderFailure(designId,data,requestOptions)
+          return  reportDesignPreviewResult(designId,data,requestOptions)
         }
 
 
@@ -1438,22 +1438,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type ReportDesignRenderFailureMutationResult = NonNullable<Awaited<ReturnType<typeof reportDesignRenderFailure>>>
-    export type ReportDesignRenderFailureMutationBody = ReportDesignRenderFailureRequest
-    export type ReportDesignRenderFailureMutationError = ErrorResponse
+    export type ReportDesignPreviewResultMutationResult = NonNullable<Awaited<ReturnType<typeof reportDesignPreviewResult>>>
+    export type ReportDesignPreviewResultMutationBody = ReportDesignPreviewResultRequest
+    export type ReportDesignPreviewResultMutationError = ErrorResponse
 
     /**
- * @summary Mark a generated design as failed when the Studio renderer cannot render it.
+ * @summary Record the latest preview result for a generated design.
  */
-export const useReportDesignRenderFailure = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportDesignRenderFailure>>, TError,{designId: string;data: ReportDesignRenderFailureRequest}, TContext>, request?: SecondParameter<typeof apiFetcher>}
+export const useReportDesignPreviewResult = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportDesignPreviewResult>>, TError,{designId: string;data: ReportDesignPreviewResultRequest}, TContext>, request?: SecondParameter<typeof apiFetcher>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof reportDesignRenderFailure>>,
+        Awaited<ReturnType<typeof reportDesignPreviewResult>>,
         TError,
-        {designId: string;data: ReportDesignRenderFailureRequest},
+        {designId: string;data: ReportDesignPreviewResultRequest},
         TContext
       > => {
-      return useMutation(getReportDesignRenderFailureMutationOptions(options), queryClient);
+      return useMutation(getReportDesignPreviewResultMutationOptions(options), queryClient);
     }
     
 /**

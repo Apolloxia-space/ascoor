@@ -6,12 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ProjectDesignSummaryAssetStatus = typeof ProjectDesignSummaryAssetStatus[keyof typeof ProjectDesignSummaryAssetStatus];
+export type DesignResponsePreviewStatus = typeof DesignResponsePreviewStatus[keyof typeof DesignResponsePreviewStatus];
 
 
-export const ProjectDesignSummaryAssetStatus = {
-  queued: 'queued',
-  processing: 'processing',
+export const DesignResponsePreviewStatus = {
+  unverified: 'unverified',
   succeeded: 'succeeded',
   failed: 'failed',
 } as const;

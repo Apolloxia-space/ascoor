@@ -39,10 +39,9 @@ import type { ApiError } from '@shared/api/fetcher';
 import {
   getDesignAssetContent,
   getGetBillingStatusQueryKey,
-  getGetDesignJobQueryKey,
   getEditedModel,
   getListProjectDesignsQueryKey,
-  reportDesignRenderFailure,
+  reportDesignPreviewResult,
 } from '@shared/api/generated/client';
 import { getFreshAuthToken } from '@/features/auth/token-store';
 import { useDesignDetail } from '../hooks/use-design-detail';
@@ -133,7 +132,8 @@ export function ViewerPanel({
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
   const skipNextSourceReloadRef = useRef(false);
-  const reportedRenderFailureRef = useRef<string | null>(null);
+  const reportedPreviewResultRef = useRef<string | null>(null);
+  const [renderSucceeded, setRenderSucceeded] = useState(false);
 
   const fileDetailQuery = useDesignDetail(designId);
   const refetchFileDetail = fileDetailQuery.refetch;
@@ -142,7 +142,7 @@ export function ViewerPanel({
   const fileDetail = fileDetailResponse?.status === 200 ? fileDetailResponse.data : undefined;
   const designData = fileDetail?.design;
   const latestDesignJob = fileDetail?.latestDesignJob ?? null;
-  const assetStatus = designData?.assetStatus;
+  const previewStatus = designData?.previewStatus;
   const assetUriTs = designData?.assetUriTs ?? null;
   const editedAssetUriGlb = designData?.editedAssetUriGlb ?? null;
   const editedAssetUpdatedAt = designData?.editedAssetUpdatedAt ?? null;
@@ -183,17 +183,13 @@ export function ViewerPanel({
   );
 
   const canExportTs = Boolean(
-    designId &&
-      exportUrlTs &&
-      assetUriTs &&
-      (assetStatus === 'succeeded' || assetStatus === 'failed') &&
-      !isExportingTs,
+    designId && exportUrlTs && assetUriTs && !isExportingTs,
   );
   const canOpenPrompt = Boolean(designId);
   const hasViewerError = Boolean(
     parseError ||
       loadError ||
-      (assetStatus === 'failed' && !isLoading && !modelCode && !modelData),
+      (previewStatus === 'failed' && !isLoading && !modelCode && !modelData),
   );
 
   const promptContent = useMemo(() => {
@@ -229,8 +225,9 @@ export function ViewerPanel({
     setParseError(null);
     setHasUnsavedChanges(false);
     setViewerReloadNonce(0);
+    setRenderSucceeded(false);
     skipNextSourceReloadRef.current = false;
-    reportedRenderFailureRef.current = null;
+    reportedPreviewResultRef.current = null;
   }, [designId]);
 
   const buildAuthHeaders = useCallback(async () => {
@@ -265,6 +262,7 @@ export function ViewerPanel({
       setIsLoading(true);
       setLoadError(null);
       setParseError(null);
+      setRenderSucceeded(false);
       try {
         const requestInit = {
           signal: controller.signal,
@@ -344,36 +342,53 @@ export function ViewerPanel({
 
   const handleModelParseError = useCallback((message: string | null) => {
     setParseError(message);
+    setRenderSucceeded(message === null);
   }, []);
 
   useEffect(() => {
     const designJobId = latestDesignJob?.designJobId ?? null;
     const projectId = designData?.projectId ?? null;
-    const shouldReport =
-      Boolean(designId) &&
-      Boolean(modelCode) &&
-      Boolean(parseError) &&
-      latestDesignJob?.status === 'succeeded' &&
-      assetStatus === 'succeeded';
-
-    if (!shouldReport || !designId || !designJobId || !parseError) {
+    if (!designId || !designJobId || latestDesignJob?.status !== 'succeeded') {
       return;
     }
 
-    const reportKey = `${designId}:${designJobId}:${parseError}`;
-    if (reportedRenderFailureRef.current === reportKey) {
+    const nextStatus =
+      renderSucceeded && !loadError
+        ? 'succeeded'
+        : parseError
+          ? 'failed'
+          : null;
+    if (!nextStatus) {
       return;
     }
-    reportedRenderFailureRef.current = reportKey;
+
+    if (nextStatus === 'succeeded' && previewStatus === 'succeeded') {
+      return;
+    }
+
+    if (nextStatus === 'failed' && previewStatus === 'failed') {
+      return;
+    }
+
+    const reportKey =
+      nextStatus === 'failed'
+        ? `${designId}:${designJobId}:${nextStatus}:${parseError}`
+        : `${designId}:${designJobId}:${nextStatus}`;
+    if (reportedPreviewResultRef.current === reportKey) {
+      return;
+    }
+    reportedPreviewResultRef.current = reportKey;
 
     let cancelled = false;
     const requestTraceId = traceId ?? buildTraceId();
 
     void (async () => {
       try {
-        await reportDesignRenderFailure(
+        await reportDesignPreviewResult(
           designId,
-          { errorMessage: parseError },
+          nextStatus === 'failed'
+            ? { status: 'failed', errorMessage: parseError ?? undefined }
+            : { status: 'succeeded' },
           {
             headers: {
               'X-Trace-Id': requestTraceId,
@@ -388,12 +403,11 @@ export function ViewerPanel({
           projectId
             ? queryClient.invalidateQueries({ queryKey: getListProjectDesignsQueryKey(projectId) })
             : Promise.resolve(),
-          queryClient.invalidateQueries({ queryKey: getGetDesignJobQueryKey(designJobId) }),
           queryClient.invalidateQueries({ queryKey: getGetBillingStatusQueryKey() }),
         ]);
       } catch {
         if (!cancelled) {
-          reportedRenderFailureRef.current = null;
+          reportedPreviewResultRef.current = null;
         }
       }
     })();
@@ -402,15 +416,16 @@ export function ViewerPanel({
       cancelled = true;
     };
   }, [
-    assetStatus,
     designData?.projectId,
     designId,
+    loadError,
     latestDesignJob?.designJobId,
     latestDesignJob?.status,
-    modelCode,
     parseError,
+    previewStatus,
     queryClient,
     refetchFileDetail,
+    renderSucceeded,
     traceId,
   ]);
 
@@ -490,10 +505,6 @@ export function ViewerPanel({
     }
     if (!assetUriTs) {
       toast.warning('JavaScript code is not generated yet.');
-      return;
-    }
-    if (assetStatus !== 'succeeded' && assetStatus !== 'failed') {
-      toast.warning('Download is available after design finishes.');
       return;
     }
     if (!exportUrlTs) {

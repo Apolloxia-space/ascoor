@@ -5,15 +5,15 @@
  * API contract for the Ascoor 3D Design editor backend.
  * OpenAPI spec version: 0.1.0
  */
-import type { DesignResponseAssetStatus } from './designResponseAssetStatus';
+import type { DesignResponsePreviewStatus } from './designResponsePreviewStatus';
 
 export interface DesignResponse {
   id: string;
   projectId: string;
   displayName: string;
   assetUriTs?: string | null;
-  assetStatus: DesignResponseAssetStatus;
-  assetError?: string | null;
+  previewStatus: DesignResponsePreviewStatus;
+  previewError?: string | null;
   editedAssetUriGlb?: string | null;
   editedAssetUpdatedAt?: string | null;
   createdAt?: string;

@@ -17,7 +17,7 @@ import type { AppEnv } from '../../entities/app-env';
 import { NotFoundError, ValidationError } from '../../usecases/errors';
 import {
   createDesignBodySchema,
-  reportDesignRenderFailureBodySchema,
+  reportDesignPreviewResultBodySchema,
   updateDesignBodySchema,
 } from './request-schemas';
 
@@ -147,16 +147,16 @@ export function createDesignsRoutes() {
   });
 
   router.post(
-    '/:designId/render-failures',
+    '/:designId/preview-results',
     zValidator('param', GetDesignParams),
-    zValidator('json', reportDesignRenderFailureBodySchema),
+    zValidator('json', reportDesignPreviewResultBodySchema),
     async (c) => {
       const { designId } = c.req.valid('param');
-      const { errorMessage } = c.req.valid('json');
+      const { status, errorMessage } = c.req.valid('json');
       const usecase = c.get('usecases').designs;
       const userId = c.get('md').userId;
       try {
-        await usecase.reportRenderFailure(userId, designId, errorMessage);
+        await usecase.reportPreviewResult(userId, designId, { status, errorMessage });
         return c.body(null, 204);
       } catch (error) {
         if (error instanceof NotFoundError) {

@@ -162,8 +162,8 @@ export class PersistTypeScriptAssetStep {
     displayName: string;
     code: string;
     executionStatus: 'success' | 'failed';
-    assetStatus: 'processing' | 'succeeded' | 'failed';
-    assetError: string | null;
+    previewStatus: 'unverified' | 'succeeded' | 'failed';
+    previewError: string | null;
     trace: DesignTraceContext;
   }): Promise<string> {
     let designId: string | null = null;
@@ -195,11 +195,11 @@ export class PersistTypeScriptAssetStep {
         contentType,
         metadata: { execution_status: params.executionStatus },
       });
-      await this.designRepository.updateAsset({
+      await this.designRepository.updatePreview({
         designId: createdDesign.id,
         assetUriTs: uploaded.gcsUri,
-        assetStatus: params.assetStatus,
-        assetError: params.assetError,
+        previewStatus: params.previewStatus,
+        previewError: params.previewError,
       });
       return createdDesign.id;
     } catch (error) {

@@ -8,10 +8,10 @@ export interface ProjectDesignSummary {
   id: string;
   projectId: string;
   displayName: string;
-  assetStatus: Design['assetStatus'];
+  previewStatus: Design['previewStatus'];
   assetUriTs: string | null;
   editedAssetUriGlb: string | null;
-  assetError: string | null;
+  previewError: string | null;
   editedAssetUpdatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -31,9 +31,9 @@ export function buildProjectDesigns(params: {
     id: design.id,
     projectId: design.projectId,
     displayName: design.displayName,
-    assetStatus: design.assetStatus,
+    previewStatus: design.previewStatus,
     assetUriTs: design.assetUriTs ?? null,
-    assetError: design.assetError ?? null,
+    previewError: design.previewError ?? null,
     createdAt: design.createdAt,
     updatedAt: design.updatedAt,
   }));
