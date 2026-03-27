@@ -260,7 +260,7 @@ const fitCameraToObject = (
 
   camera.near = Math.max(0.01, distance / 100);
   camera.far = Math.max(500, distance * 10);
-  camera.position.set(distance, distance, distance * 0.85);
+  camera.position.set(distance, distance * 0.85, distance);
   camera.updateProjectionMatrix();
 
   controls.target.set(0, 0, 0);
@@ -831,8 +831,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       0.1,
       2000,
     );
-    camera.up.set(0, 0, 1);
-    camera.position.set(6, 6, 4);
+    camera.up.set(0, 1, 0);
+    camera.position.set(6, 4, 6);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
