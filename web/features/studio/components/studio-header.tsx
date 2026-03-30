@@ -13,6 +13,8 @@ type StudioHeaderProps = {
   onSelectProject: (id: string, name: string) => void;
   onCloseProject: () => void;
   onOpenProjectManager?: () => void;
+  projectsLoading?: boolean;
+  projectsRefreshing?: boolean;
   projectMenuRightSlot?: ReactNode;
   hideProjectMenuOnMobile?: boolean;
 };
@@ -24,6 +26,8 @@ export function StudioHeader({
   onSelectProject,
   onCloseProject,
   onOpenProjectManager,
+  projectsLoading,
+  projectsRefreshing,
   projectMenuRightSlot,
   hideProjectMenuOnMobile,
 }: StudioHeaderProps) {
@@ -41,6 +45,8 @@ export function StudioHeader({
       onSelectProject={onSelectProject}
       onCloseProject={onCloseProject}
       onOpenProjectManager={onOpenProjectManager}
+      projectsLoading={projectsLoading}
+      projectsRefreshing={projectsRefreshing}
       hideProjectMenuOnMobile={hideProjectMenuOnMobile}
       showBrand={false}
       projectMenuRightSlot={projectMenuRightSlot}

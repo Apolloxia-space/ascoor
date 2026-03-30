@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
+import { Skeleton } from '@shared/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { listProjects } from '@/shared/api/generated/client';
@@ -221,10 +222,16 @@ export function ProjectListDialog({
 
           <div ref={listContainerRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             {projectPagesQuery.isPending ? (
-              <div className="px-6 py-10 text-center text-sm text-[color:var(--text-muted)]">
-                <div className="flex items-center justify-center">
-                  <Loader2 className="size-4 animate-spin" aria-label="Loading projects" />
-                </div>
+              <div className="space-y-2 py-1">
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <div key={index} className="flex items-center gap-3 rounded-lg px-2 py-3">
+                    <Skeleton className="h-8 w-8 rounded-md bg-white/10" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-2/3 bg-white/10" />
+                      <Skeleton className="h-3 w-1/3 bg-white/10" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : projectPagesQuery.isError ? (
               <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-[color:var(--text-muted)]">

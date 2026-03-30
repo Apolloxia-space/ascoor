@@ -5,6 +5,7 @@ import {
   CreditCard,
   File,
   FolderOpen,
+  Loader2,
   Menu,
   Palette,
   PlusCircle,
@@ -31,6 +32,7 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerTitle } from '@/shared/components/ui/drawer';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/components/ui/sheet';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 import { paths } from '@/shared/constants/paths';
 import { useIsMobile } from '@/shared/hooks/use-mobile';
 import { cn } from '@/shared/lib/utils';
@@ -200,6 +202,16 @@ export function StudioPage() {
   const projectItems: Array<ProjectResponseData> =
     projectsQuery.data?.status === 200 ? projectsQuery.data.data.items : [];
   const designs = designsQuery.data?.status === 200 ? designsQuery.data.data.designs : [];
+  const projectsLoading = status === 'authenticated' && projectsQuery.isPending;
+  const projectsRefreshing =
+    status === 'authenticated' && projectsQuery.isFetching && !projectsQuery.isPending;
+  const designsLoading =
+    status === 'authenticated' && Boolean(activeProjectId) && designsQuery.isPending;
+  const designsRefreshing =
+    status === 'authenticated' &&
+    Boolean(activeProjectId) &&
+    designsQuery.isFetching &&
+    !designsQuery.isPending;
   const canonicalStudioPath = buildStudioPath(projectId, selectedDesignId);
   const hasSelectedDesignState =
     selectedDesignId !== null ||
@@ -636,7 +648,15 @@ export function StudioPage() {
         clearProject();
       }
     }
-  }, [status, projects.length, projectId, projectName, setProjects, clearProject, clearSelectedDesign]);
+  }, [
+    status,
+    projects.length,
+    projectId,
+    projectName,
+    setProjects,
+    clearProject,
+    clearSelectedDesign,
+  ]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -835,6 +855,8 @@ export function StudioPage() {
           onSelectProject={handleSelectProject}
           onCloseProject={handleCloseProject}
           onOpenProjectManager={() => setProjectListDialogOpen(true)}
+          projectsLoading={projectsLoading}
+          projectsRefreshing={projectsRefreshing}
           hideProjectMenuOnMobile
           projectMenuRightSlot={
             <>
@@ -965,9 +987,28 @@ export function StudioPage() {
                         <FolderOpen className="size-4" />
                         Manage projects
                       </button>
-                      <p className={cn(mobileMenuSectionTitleClass, 'pt-2')}>Recent project</p>
+                      <div
+                        className={cn(mobileMenuSectionTitleClass, 'flex items-center gap-2 pt-2')}
+                      >
+                        <span>Recent project</span>
+                        {projectsRefreshing && !projectsLoading ? (
+                          <Loader2
+                            className="size-3.5 animate-spin"
+                            aria-label="Refreshing recent projects"
+                          />
+                        ) : null}
+                      </div>
                       <div className="max-h-64 space-y-1 overflow-y-auto">
-                        {projects.length === 0 ? (
+                        {projectsLoading && projects.length === 0 ? (
+                          <div className="space-y-2 px-3 py-2">
+                            {[0, 1, 2].map((index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-4 rounded-sm" />
+                                <Skeleton className="h-4 flex-1 rounded-sm" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : projects.length === 0 ? (
                           <p className="px-3 py-2 text-sm text-muted-foreground">No projects</p>
                         ) : (
                           projects.slice(0, 10).map((project) => (
@@ -1049,6 +1090,8 @@ export function StudioPage() {
           <ProjectSidebar open={projectPanelOpen} onToggle={toggleProjectPanel} />
           <ProjectPanel
             designs={designs}
+            loading={designsLoading}
+            refreshing={designsRefreshing}
             open={projectPanelOpen}
             onToggle={toggleProjectPanel}
             onOpenNewDesign={() => setNewDesignModalOpen(true)}
@@ -1167,6 +1210,8 @@ export function StudioPage() {
             </div>
             <ProjectPanel
               designs={designs}
+              loading={designsLoading}
+              refreshing={designsRefreshing}
               variant="mobile"
               open={mobileProjectOpen}
               onToggle={() => setMobileProjectOpen(false)}

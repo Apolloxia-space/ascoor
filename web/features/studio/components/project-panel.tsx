@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Check, CircleDashed, Copy, File, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  CircleDashed,
+  Copy,
+  File,
+  Loader2,
+  Pencil,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@shared/components/ui/button';
@@ -32,6 +43,7 @@ import {
 } from '@shared/components/ui/dialog';
 import { Input } from '@shared/components/ui/input';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
+import { Skeleton } from '@shared/components/ui/skeleton';
 import { cn } from '@shared/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -45,6 +57,8 @@ import { type PendingDesign, useStudioStore } from '../stores/use-studio-store';
 
 type ProjectPanelProps = {
   designs: Array<ProjectDesignSummary>;
+  loading?: boolean;
+  refreshing?: boolean;
   open: boolean;
   variant?: 'desktop' | 'mobile';
   onToggle: () => void;
@@ -89,6 +103,8 @@ const getPendingStageTitle = (pending: PendingDesign, now: number): string => {
 
 export function ProjectPanel({
   designs,
+  loading = false,
+  refreshing = false,
   open,
   variant = 'desktop',
   onToggle,
@@ -135,6 +151,7 @@ export function ProjectPanel({
     [projectPendingDesigns],
   );
   const hasActiveDesigns = activePendingDesigns.length > 0;
+  const showDesignSkeleton = loading && !hasActiveDesigns && designs.length === 0;
 
   useEffect(() => {
     if (!hasActiveDesigns) return;
@@ -226,7 +243,15 @@ export function ProjectPanel({
       <div className={cn('flex h-full min-h-0 min-w-0 flex-col', !open && 'pointer-events-none')}>
         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
           <div className="space-y-0.5">
-            <p className="text-sm font-semibold">Designs</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold">Designs</p>
+              {refreshing && !showDesignSkeleton ? (
+                <Loader2
+                  className="size-3.5 animate-spin text-muted-foreground"
+                  aria-label="Refreshing designs"
+                />
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggle}>
@@ -244,6 +269,7 @@ export function ProjectPanel({
               aria-label="Filter designs"
               value={filterValue}
               onChange={(event) => setFilterValue(event.target.value)}
+              disabled={showDesignSkeleton}
             />
           </div>
         </div>
@@ -263,7 +289,10 @@ export function ProjectPanel({
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-xs font-semibold">
-                      <Loader2 className="size-4 animate-spin text-primary" aria-label="Generating" />
+                      <Loader2
+                        className="size-4 animate-spin text-primary"
+                        aria-label="Generating"
+                      />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
@@ -277,7 +306,20 @@ export function ProjectPanel({
                 </div>
               );
             })}
-            {sortedDesigns.length === 0 ? (
+            {showDesignSkeleton ? (
+              <div className="space-y-2 px-1 py-2">
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2"
+                    aria-hidden="true"
+                  >
+                    <Skeleton className="h-7 w-7 rounded-md" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                ))}
+              </div>
+            ) : sortedDesigns.length === 0 ? (
               hasActiveDesigns ? null : (
                 <div className="px-3 py-2 text-sm text-muted-foreground">No designs yet</div>
               )
@@ -320,8 +362,7 @@ export function ProjectPanel({
                                 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700',
                               isFailed &&
                                 'border-destructive/40 bg-destructive/10 text-destructive',
-                              isUnverified &&
-                                'border-amber-500/40 bg-amber-500/10 text-amber-700',
+                              isUnverified && 'border-amber-500/40 bg-amber-500/10 text-amber-700',
                             )}
                           >
                             {isFailed ? (
@@ -329,7 +370,10 @@ export function ProjectPanel({
                             ) : isSucceeded ? (
                               <Check className="size-3.5" aria-label="Design succeeded" />
                             ) : (
-                              <CircleDashed className="size-3.5" aria-label="Preview pending confirmation" />
+                              <CircleDashed
+                                className="size-3.5"
+                                aria-label="Preview pending confirmation"
+                              />
                             )}
                           </span>
                           <span className="block min-w-0 flex-1 truncate">{displayName}</span>

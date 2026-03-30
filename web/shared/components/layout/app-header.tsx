@@ -1,6 +1,15 @@
 'use client';
 
-import { ChevronDown, File, FolderOpen, LogOut, PlusCircle, User, XCircle } from 'lucide-react';
+import {
+  ChevronDown,
+  File,
+  FolderOpen,
+  Loader2,
+  LogOut,
+  PlusCircle,
+  User,
+  XCircle,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -12,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@shared/components/ui/dropdown-menu';
+import { Skeleton } from '@shared/components/ui/skeleton';
 import { cn } from '@shared/lib/utils';
 
 type AppHeaderProps = {
@@ -24,6 +34,8 @@ type AppHeaderProps = {
   onSelectProject: (id: string, name: string) => void;
   onCloseProject: () => void;
   onOpenProjectManager?: () => void;
+  projectsLoading?: boolean;
+  projectsRefreshing?: boolean;
   showProjectMenu?: boolean;
   hideProjectMenuOnMobile?: boolean;
   showBrand?: boolean;
@@ -45,6 +57,8 @@ export function AppHeader({
   onSelectProject,
   onCloseProject,
   onOpenProjectManager,
+  projectsLoading = false,
+  projectsRefreshing = false,
   showProjectMenu = true,
   hideProjectMenuOnMobile = false,
   showBrand = true,
@@ -58,6 +72,13 @@ export function AppHeader({
   const canCloseProject = Boolean(projectId);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const canShowSignIn = !user && showSignIn && onSignIn;
+  const recentProjects = projects.slice(0, 10);
+  const showProjectSkeleton = projectsLoading && recentProjects.length === 0;
+  const projectLabel = showProjectSkeleton
+    ? projectId
+      ? 'Loading project...'
+      : 'Loading projects...'
+    : projectName || 'No project selected';
 
   return (
     <header className="flex items-center justify-between border-b border-white/10 bg-background/70 px-4 py-3 backdrop-blur md:px-6">
@@ -72,10 +93,18 @@ export function AppHeader({
             <DropdownMenu open={projectMenuOpen} onOpenChange={onProjectMenuChange}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="max-w-[200px] gap-2 md:max-w-none">
-                  <FolderOpen className="size-4 text-[color:var(--text-secondary)]" />
-                  <span className="truncate font-medium">
-                    {projectName || 'No project selected'}
-                  </span>
+                  {showProjectSkeleton ? (
+                    <Loader2 className="size-4 animate-spin text-[color:var(--text-secondary)]" />
+                  ) : (
+                    <FolderOpen className="size-4 text-[color:var(--text-secondary)]" />
+                  )}
+                  <span className="truncate font-medium">{projectLabel}</span>
+                  {projectsRefreshing && !showProjectSkeleton ? (
+                    <Loader2
+                      className="size-3.5 animate-spin text-[color:var(--text-secondary)]"
+                      aria-label="Refreshing projects"
+                    />
+                  ) : null}
                   <ChevronDown
                     className={cn(
                       'size-4 text-[color:var(--text-secondary)] transition-transform',
@@ -106,24 +135,43 @@ export function AppHeader({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="max-h-60 overflow-y-auto py-1 pr-1">
-                  <p className="px-2 py-1 text-xs font-medium tracking-wide text-muted-foreground">
-                    Recent project
-                  </p>
-                  {projects.slice(0, 10).map((project) => (
-                    <DropdownMenuItem
-                      key={project.id}
-                      onSelect={() => {
-                        onSelectProject(project.id, project.name);
-                        onProjectMenuChange(false);
-                      }}
-                    >
-                      <File className="size-4" />
-                      <span className="truncate">{project.name}</span>
-                      {projectId === project.id && (
-                        <span className="ml-auto text-xs text-primary">Current</span>
-                      )}
-                    </DropdownMenuItem>
-                  ))}
+                  <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium tracking-wide text-muted-foreground">
+                    <span>Recent project</span>
+                    {projectsRefreshing && !showProjectSkeleton ? (
+                      <Loader2
+                        className="size-3.5 animate-spin"
+                        aria-label="Refreshing recent projects"
+                      />
+                    ) : null}
+                  </div>
+                  {showProjectSkeleton ? (
+                    <div className="space-y-2 px-2 py-1">
+                      {[0, 1, 2].map((index) => (
+                        <div key={index} className="flex items-center gap-2 rounded-sm px-2 py-2">
+                          <Skeleton className="h-4 w-4 rounded-sm" />
+                          <Skeleton className="h-4 flex-1" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : recentProjects.length === 0 ? (
+                    <p className="px-2 py-2 text-sm text-muted-foreground">No projects</p>
+                  ) : (
+                    recentProjects.map((project) => (
+                      <DropdownMenuItem
+                        key={project.id}
+                        onSelect={() => {
+                          onSelectProject(project.id, project.name);
+                          onProjectMenuChange(false);
+                        }}
+                      >
+                        <File className="size-4" />
+                        <span className="truncate">{project.name}</span>
+                        {projectId === project.id && (
+                          <span className="ml-auto text-xs text-primary">Current</span>
+                        )}
+                      </DropdownMenuItem>
+                    ))
+                  )}
                 </div>
                 {onOpenProjectManager && (
                   <>
