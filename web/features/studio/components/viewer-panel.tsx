@@ -226,13 +226,11 @@ export function ViewerPanel({
   }, [hasViewerError]);
 
   useEffect(() => {
-    setModelData(null);
-    setModelCode(null);
     setLoadError(null);
     setParseError(null);
     setHasUnsavedChanges(false);
-    setViewerReloadNonce(0);
     setRenderSucceeded(false);
+    setIsLoading(Boolean(designId));
     skipNextSourceReloadRef.current = false;
     reportedPreviewResultRef.current = null;
   }, [designId]);
@@ -256,11 +254,22 @@ export function ViewerPanel({
     }
 
     if (!editedModelUrl && !tsContentUrl) {
+      const waitingForDesignDetail =
+        Boolean(designId) && (fileDetailQuery.isPending || fileDetailQuery.isFetching);
+      if (waitingForDesignDetail) {
+        setIsLoading(true);
+        setLoadError(null);
+        setParseError(null);
+        setRenderSucceeded(false);
+        setHasUnsavedChanges(false);
+        return;
+      }
       setModelData(null);
       setModelCode(null);
       setLoadError(null);
       setParseError(null);
       setHasUnsavedChanges(false);
+      setIsLoading(false);
       return;
     }
 
@@ -345,7 +354,15 @@ export function ViewerPanel({
 
     load();
     return () => controller.abort();
-  }, [buildAuthHeaders, editedModelUrl, tsContentUrl, viewerReloadNonce]);
+  }, [
+    buildAuthHeaders,
+    designId,
+    editedModelUrl,
+    fileDetailQuery.isFetching,
+    fileDetailQuery.isPending,
+    tsContentUrl,
+    viewerReloadNonce,
+  ]);
 
   const handleModelParseError = useCallback((message: string | null) => {
     setParseError(message);
@@ -860,7 +877,7 @@ export function ViewerPanel({
 
       <div className="relative flex flex-1 overflow-hidden">
         <ThreeViewer
-          key={`${designId ?? 'no-design'}:${viewerReloadNonce}`}
+          key={viewerReloadNonce}
           ref={viewerRef}
           modelData={modelData}
           modelCode={modelCode}

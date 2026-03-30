@@ -1386,19 +1386,23 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     const renderer = rendererRef.current;
     if (!scene || !camera || !controls || !renderer) return;
 
-    const toDispose = new Set<THREE.Object3D>();
-    if (modelRef.current) toDispose.add(modelRef.current);
-    if (sourceModelRef.current) toDispose.add(sourceModelRef.current);
-    toDispose.forEach((object) => {
-      object.parent?.remove(object);
-      disposeObject(object);
-    });
-    modelRef.current = null;
-    sourceModelRef.current = null;
-    structureNodeMapRef.current = new Map();
-    selectedNodeRef.current = null;
-    updateStructureTree([]);
-    emitSelectedNodeChange();
+    const previousObjects = new Set<THREE.Object3D>();
+    if (modelRef.current) previousObjects.add(modelRef.current);
+    if (sourceModelRef.current) previousObjects.add(sourceModelRef.current);
+
+    const clearCurrentModel = () => {
+      previousObjects.forEach((object) => {
+        object.parent?.remove(object);
+        disposeObject(object);
+      });
+      modelRef.current = null;
+      sourceModelRef.current = null;
+      structureNodeMapRef.current = new Map();
+      structureSelectionCycleRef.current = null;
+      selectedNodeRef.current = null;
+      updateStructureTree([]);
+      emitSelectedNodeChange();
+    };
 
     const applyLoadedModel = (object: THREE.Object3D) => {
       object.traverse((child) => {
@@ -1410,23 +1414,35 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       scene.add(object);
       try {
         assertWithoutConsoleError(() => {
-          applyViewMode(object, viewModeKey);
+          applyViewMode(object, viewModeKeyRef.current);
           fitCameraToObject(camera, controls, object);
           renderer.clear();
           renderer.render(scene, camera);
         }, 'Model failed to render.');
 
+        previousObjects.forEach((previousObject) => {
+          previousObject.parent?.remove(previousObject);
+          disposeObject(previousObject);
+        });
         sourceModelRef.current = object;
         modelRef.current = object;
+        structureSelectionCycleRef.current = null;
+        selectedNodeRef.current = null;
         syncStructureTree();
         captureInitialTransforms(object);
         onModelParseError?.(null);
+        emitSelectedNodeChange();
       } catch (error) {
         object.parent?.remove(object);
         disposeObject(object);
         throw error;
       }
     };
+
+    if (!modelCode && !modelData) {
+      clearCurrentModel();
+      return;
+    }
 
     if (modelCode) {
       try {
@@ -1469,7 +1485,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     return () => {
       disposed = true;
     };
-  }, [modelCode, modelData, onModelParseError, viewModeKey]);
+  }, [modelCode, modelData, onModelParseError]);
 
   useEffect(() => {
     if (!modelRef.current) return;

@@ -14,7 +14,7 @@ import {
   Sparkles,
   XCircle,
 } from 'lucide-react';
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/features/auth/use-auth-store';
@@ -57,6 +57,7 @@ import { ViewerPanel } from './components/viewer-panel';
 import { useDesignMonitor } from './hooks/use-design-monitor';
 import { useStudioApi } from './hooks/use-studio-api';
 import { useStudioPersist } from './hooks/use-studio-persist';
+import { buildStudioPath, getStudioDesignId } from './lib/paths';
 import type { StructureTreeNode } from './lib/structure-tree';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from './messages';
 import { useStudioStore } from './stores/use-studio-store';
@@ -87,12 +88,6 @@ const cyclePreset = (values: ReadonlyArray<number>, current: number, direction: 
 
 const getSingleRouteParam = (value: string | Array<string> | undefined) =>
   Array.isArray(value) ? value[0] : value;
-
-const buildStudioPath = (projectId?: string | null, designId?: string | null) => {
-  if (!projectId) return paths.studio;
-  if (!designId) return `${paths.studio}/${projectId}`;
-  return `${paths.studio}/${projectId}/${designId}`;
-};
 
 export function StudioPage() {
   useStudioPersist();
@@ -128,9 +123,9 @@ export function StudioPage() {
   const status = useAuthStore((state) => state.status);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const params = useParams<{
     projectId?: string | Array<string>;
-    designId?: string | Array<string>;
   }>();
   const isMobile = useIsMobile();
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
@@ -179,7 +174,7 @@ export function StudioPage() {
   const { createProject, createDesign, invalidateProjects, invalidateProjectDesigns } =
     useStudioApi();
   const routeProjectId = getSingleRouteParam(params.projectId) ?? null;
-  const routeDesignId = getSingleRouteParam(params.designId) ?? null;
+  const routeDesignId = getStudioDesignId(searchParams);
   const activeRouteProjectId =
     routeProjectId && routeProjectId !== invalidRouteProjectId ? routeProjectId : null;
   const activeProjectId = activeRouteProjectId ?? projectId ?? '';
@@ -212,7 +207,7 @@ export function StudioPage() {
     Boolean(activeProjectId) &&
     designsQuery.isFetching &&
     !designsQuery.isPending;
-  const canonicalStudioPath = buildStudioPath(projectId, selectedDesignId);
+  const currentStudioPath = buildStudioPath(routeProjectId, routeDesignId);
   const hasSelectedDesignState =
     selectedDesignId !== null ||
     selectedDesignName !== null ||
@@ -253,13 +248,12 @@ export function StudioPage() {
 
   const handleSelectProject = useCallback(
     (nextProjectId: string, _nextProjectName: string) => {
-      clearSelectedDesign();
       const nextPath = buildStudioPath(nextProjectId);
       if (pathname !== nextPath) {
         router.replace(nextPath);
       }
     },
-    [clearSelectedDesign, pathname, router],
+    [pathname, router],
   );
 
   const handleCloseProject = useCallback(() => {
@@ -272,7 +266,7 @@ export function StudioPage() {
     }
   }, [clearProject, clearSelectedDesign, pathname, projectId, projectName, router]);
 
-  const handleSelectDesign = useCallback(
+  const applySelectedDesign = useCallback(
     (designId: string, name: string, traceId: string | null = null) => {
       setSelectedDesignId(designId);
       setSelectedDesignName(name);
@@ -289,6 +283,18 @@ export function StudioPage() {
     },
     [setRightPanelMode],
   );
+
+  const handleSelectDesign = useCallback(
+    (designId: string, _name: string) => {
+      if (!projectId) return;
+      const nextPath = buildStudioPath(projectId, designId);
+      if (currentStudioPath !== nextPath) {
+        router.replace(nextPath);
+      }
+    },
+    [currentStudioPath, projectId, router],
+  );
+
   const handleMobileSelectDesign = (designId: string, name: string) => {
     handleSelectDesign(designId, name);
     setMobileProjectOpen(false);
@@ -761,7 +767,7 @@ export function StudioPage() {
 
     const routeDesignName = routeDesign.displayName ?? 'Untitled';
     if (selectedDesignId !== routeDesign.id || selectedDesignName !== routeDesignName) {
-      handleSelectDesign(routeDesign.id, routeDesignName);
+      applySelectedDesign(routeDesign.id, routeDesignName);
     }
   }, [
     status,
@@ -772,39 +778,31 @@ export function StudioPage() {
     designs,
     hasSelectedDesignState,
     clearSelectedDesign,
-    handleSelectDesign,
+    applySelectedDesign,
   ]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
     if (routeProjectId && projectId !== routeProjectId) return;
 
-    if (routeDesignId) {
-      if (!designsQuery.isSuccess) return;
-      const routeDesignExists = designs.some((design) => design.id === routeDesignId);
-      if (!routeDesignExists) {
-        const projectPath = buildStudioPath(routeProjectId ?? projectId);
-        if (pathname !== projectPath) {
-          router.replace(projectPath);
-        }
-        return;
-      }
-      if (!selectedDesignId) return;
-    }
+    if (!routeDesignId) return;
+    if (!designsQuery.isSuccess) return;
 
-    if (pathname !== canonicalStudioPath) {
-      router.replace(canonicalStudioPath);
+    const routeDesignExists = designs.some((design) => design.id === routeDesignId);
+    if (!routeDesignExists) {
+      const projectPath = buildStudioPath(routeProjectId ?? projectId);
+      if (currentStudioPath !== projectPath) {
+        router.replace(projectPath);
+      }
     }
   }, [
     status,
-    pathname,
     routeProjectId,
     routeDesignId,
     projectId,
-    selectedDesignId,
     designsQuery.isSuccess,
     designs,
-    canonicalStudioPath,
+    currentStudioPath,
     router,
   ]);
 
@@ -1372,7 +1370,10 @@ export function StudioPage() {
                 displayName: newDesignName,
               });
               toast.success('Design created.');
-              handleSelectDesign(created.id, created.displayName);
+              const nextPath = buildStudioPath(projectId, created.id);
+              if (currentStudioPath !== nextPath) {
+                router.replace(nextPath);
+              }
               invalidateProjectDesigns(projectId);
               handleNewDesignChange(false);
             } catch (_error) {
