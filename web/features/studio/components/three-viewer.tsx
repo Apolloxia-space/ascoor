@@ -56,6 +56,17 @@ export type SelectedNode = {
   nodeType: string;
   selectionKind: 'structure-node';
   hidden?: boolean;
+  colorHex: string | null;
+  colorEditable: boolean;
+  colorMixed: boolean;
+  emissiveHex: string | null;
+  emissiveEditable: boolean;
+  emissiveMixed: boolean;
+  emissiveIntensity: number | null;
+  emissiveIntensityMixed: boolean;
+  roughness: number | null;
+  roughnessEditable: boolean;
+  roughnessMixed: boolean;
   position: Record<TransformAxis, number>;
   rotation: Record<TransformAxis, number>;
   scale: Record<TransformAxis, number>;
@@ -79,6 +90,13 @@ export type ThreeViewerHandle = {
   resetSelectedNode: (target: ResetTransformTarget) => void;
   hideSelectedNode: () => void;
   restoreNode: (id: string) => void;
+  setSelectedNodeColor: (hex: string) => void;
+  resetSelectedNodeColor: () => void;
+  setSelectedNodeEmissiveColor: (hex: string) => void;
+  setSelectedNodeEmissiveIntensity: (value: number) => void;
+  resetSelectedNodeEmissive: () => void;
+  setSelectedNodeRoughness: (value: number) => void;
+  resetSelectedNodeRoughness: () => void;
   exportGlb: (target?: 'download' | 'edited-model') => Promise<Blob | null>;
   exportStl: () => Blob | null;
 };
@@ -165,6 +183,153 @@ const getStoredOriginalMaterial = (mesh: THREE.Mesh) => {
   return isMaterialLike(stored) ? stored : null;
 };
 
+const getStoredBaseMaterial = (mesh: THREE.Mesh) => {
+  const stored = mesh.userData.baseMaterial as unknown;
+  if (Array.isArray(stored)) {
+    return stored.length > 0 && stored.every((item) => isMaterialLike(item)) ? stored : null;
+  }
+  return isMaterialLike(stored) ? stored : null;
+};
+
+const cloneMaterialSet = (material: THREE.Material | Array<THREE.Material>) => {
+  if (Array.isArray(material)) {
+    return material.map((item) => item.clone());
+  }
+  return material.clone();
+};
+
+const hasMaterialColor = (material: THREE.Material): material is THREE.Material & {
+  color: THREE.Color;
+} => {
+  return 'color' in material && material.color instanceof THREE.Color;
+};
+
+const hasMaterialEmissive = (material: THREE.Material): material is THREE.Material & {
+  emissive: THREE.Color;
+  emissiveIntensity: number;
+} => {
+  return (
+    'emissive' in material &&
+    material.emissive instanceof THREE.Color &&
+    'emissiveIntensity' in material &&
+    typeof material.emissiveIntensity === 'number'
+  );
+};
+
+const hasMaterialRoughness = (material: THREE.Material): material is THREE.Material & {
+  roughness: number;
+} => {
+  return 'roughness' in material && typeof material.roughness === 'number';
+};
+
+const materialSetToArray = (material: THREE.Material | Array<THREE.Material>) =>
+  Array.isArray(material) ? material : [material];
+
+const isSameMaterialReference = (
+  left: THREE.Material | Array<THREE.Material> | null,
+  right: unknown,
+) => {
+  if (!left) return false;
+  if (Array.isArray(left)) {
+    return (
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((item, index) => item === right[index])
+    );
+  }
+  return left === right;
+};
+
+const ensureMeshMaterialSnapshots = (mesh: THREE.Mesh) => {
+  const storedOriginal = getStoredOriginalMaterial(mesh);
+  const original = normalizeMaterialSet(storedOriginal ?? mesh.material);
+  if (!storedOriginal) {
+    mesh.userData.originalMaterial = original;
+  }
+
+  const storedBase = getStoredBaseMaterial(mesh);
+  const base = storedBase ?? cloneMaterialSet(original);
+  if (!storedBase) {
+    mesh.userData.baseMaterial = base;
+  }
+
+  return {
+    original,
+    base,
+  };
+};
+
+const getObjectColorState = (object: THREE.Object3D) => {
+  const colors = new Set<string>();
+  let editableMaterialCount = 0;
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const { original } = ensureMeshMaterialSnapshots(child);
+    materialSetToArray(original).forEach((material) => {
+      if (!hasMaterialColor(material)) return;
+      editableMaterialCount += 1;
+      colors.add(`#${material.color.getHexString()}`);
+    });
+  });
+
+  return {
+    colorEditable: editableMaterialCount > 0,
+    colorMixed: colors.size > 1,
+    colorHex: colors.size === 1 ? [...colors][0] : null,
+  };
+};
+
+const toRoundedIntensity = (value: number) => Number(value.toFixed(3));
+
+const getObjectEmissiveState = (object: THREE.Object3D) => {
+  const colors = new Set<string>();
+  const intensities = new Set<string>();
+  let editableMaterialCount = 0;
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const { original } = ensureMeshMaterialSnapshots(child);
+    materialSetToArray(original).forEach((material) => {
+      if (!hasMaterialEmissive(material)) return;
+      editableMaterialCount += 1;
+      colors.add(`#${material.emissive.getHexString()}`);
+      intensities.add(String(toRoundedIntensity(material.emissiveIntensity)));
+    });
+  });
+
+  return {
+    emissiveEditable: editableMaterialCount > 0,
+    emissiveMixed: colors.size > 1,
+    emissiveHex: colors.size === 1 ? [...colors][0] : null,
+    emissiveIntensityMixed: intensities.size > 1,
+    emissiveIntensity:
+      intensities.size === 1 ? Number.parseFloat([...intensities][0] ?? '0') : null,
+  };
+};
+
+const getObjectRoughnessState = (object: THREE.Object3D) => {
+  const roughnessValues = new Set<string>();
+  let editableMaterialCount = 0;
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const { original } = ensureMeshMaterialSnapshots(child);
+    materialSetToArray(original).forEach((material) => {
+      if (!hasMaterialRoughness(material)) return;
+      editableMaterialCount += 1;
+      roughnessValues.add(String(toRoundedIntensity(material.roughness)));
+    });
+  });
+
+  return {
+    roughnessEditable: editableMaterialCount > 0,
+    roughnessMixed: roughnessValues.size > 1,
+    roughness:
+      roughnessValues.size === 1 ? Number.parseFloat([...roughnessValues][0] ?? '0') : null,
+  };
+};
+
 const disposeMaterial = (material: unknown) => {
   if (Array.isArray(material)) {
     material.forEach((mat) => {
@@ -181,7 +346,19 @@ const disposeObject = (object: THREE.Object3D) => {
   object.traverse((child) => {
     if (child instanceof THREE.Mesh) {
       child.geometry?.dispose();
+      const storedOriginal = getStoredOriginalMaterial(child);
+      const storedBase = getStoredBaseMaterial(child);
       disposeMaterial(child.material);
+      if (storedOriginal && !isSameMaterialReference(storedOriginal, child.material)) {
+        disposeMaterial(storedOriginal);
+      }
+      if (
+        storedBase &&
+        !isSameMaterialReference(storedBase, child.material) &&
+        !isSameMaterialReference(storedBase, storedOriginal)
+      ) {
+        disposeMaterial(storedBase);
+      }
     }
   });
 };
@@ -219,11 +396,7 @@ const applyViewMode = (root: THREE.Object3D, mode: ViewMode['key']) => {
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
 
-    const storedOriginal = getStoredOriginalMaterial(child);
-    const original = normalizeMaterialSet(storedOriginal ?? child.material);
-    if (!storedOriginal) {
-      child.userData.originalMaterial = original;
-    }
+    const { original } = ensureMeshMaterialSnapshots(child);
 
     if (mode === 'solid') {
       if (child.material !== original) {
@@ -437,6 +610,7 @@ const createEditedModelExportObject = (
 
     current.target.visible = current.source.visible;
     delete current.target.userData.originalMaterial;
+    delete current.target.userData.baseMaterial;
 
     if (current.source instanceof THREE.Mesh && current.target instanceof THREE.Mesh) {
       current.target.castShadow = current.source.castShadow;
@@ -508,6 +682,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   const structureNodeMapRef = useRef<Map<string, THREE.Object3D>>(new Map());
   const selectedNodeRef = useRef<SelectedNodeState | null>(null);
   const interactionModeRef = useRef<RightPanelMode>(interactionMode);
+  const viewModeKeyRef = useRef<ViewMode['key']>(viewModeKey);
   const structureSelectionCycleRef = useRef<{
     signature: string;
     index: number;
@@ -516,9 +691,13 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
 
   useEffect(() => {
     interactionModeRef.current = interactionMode;
-    if (interactionMode === 'edit') return;
+    if (interactionMode !== 'create') return;
     structureSelectionCycleRef.current = null;
   }, [interactionMode]);
+
+  useEffect(() => {
+    viewModeKeyRef.current = viewModeKey;
+  }, [viewModeKey]);
 
   const updateStructureTree = (tree: Array<StructureTreeNode>) => {
     structureTreeRef.current = tree;
@@ -550,12 +729,26 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       structureTreeRef.current.length > 0
         ? findStructureTreeNode(structureTreeRef.current, selectedNode.id)
         : null;
+    const colorState = getObjectColorState(activeNode);
+    const emissiveState = getObjectEmissiveState(activeNode);
+    const roughnessState = getObjectRoughnessState(activeNode);
     return {
       id: selectedNode.id,
       name: sourceTreeNode?.displayName ?? activeNode.name ?? 'Node',
       nodeType: sourceTreeNode?.nodeType ?? activeNode.type ?? 'Object3D',
       selectionKind: 'structure-node',
       hidden: sourceTreeNode?.hidden ?? !activeNode.visible,
+      colorHex: colorState.colorHex,
+      colorEditable: colorState.colorEditable,
+      colorMixed: colorState.colorMixed,
+      emissiveHex: emissiveState.emissiveHex,
+      emissiveEditable: emissiveState.emissiveEditable,
+      emissiveMixed: emissiveState.emissiveMixed,
+      emissiveIntensity: emissiveState.emissiveIntensity,
+      emissiveIntensityMixed: emissiveState.emissiveIntensityMixed,
+      roughness: roughnessState.roughness,
+      roughnessEditable: roughnessState.roughnessEditable,
+      roughnessMixed: roughnessState.roughnessMixed,
       position: {
         x: activeNode.position.x,
         y: activeNode.position.y,
@@ -689,6 +882,176 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     emitSceneMutated();
   };
 
+  const refreshViewModeMaterials = () => {
+    const source = sourceModelRef.current ?? modelRef.current;
+    if (!source) return;
+    applyViewMode(source, viewModeKeyRef.current);
+  };
+
+  const setSelectedNodeColor = (hex: string) => {
+    const normalizedHex = hex.trim();
+    if (!/^#?[0-9a-f]{6}$/i.test(normalizedHex)) return;
+    const nextHex = normalizedHex.startsWith('#') ? normalizedHex : `#${normalizedHex}`;
+
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original } = ensureMeshMaterialSnapshots(child);
+          materialSetToArray(original).forEach((material) => {
+            if (!hasMaterialColor(material)) return;
+            material.color.set(nextHex);
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
+  const resetSelectedNodeColor = () => {
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original, base } = ensureMeshMaterialSnapshots(child);
+          const originalMaterials = materialSetToArray(original);
+          const baseMaterials = materialSetToArray(base);
+          originalMaterials.forEach((material, index) => {
+            const baseMaterial = baseMaterials[index];
+            if (!baseMaterial || !hasMaterialColor(material) || !hasMaterialColor(baseMaterial)) {
+              return;
+            }
+            material.color.copy(baseMaterial.color);
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
+  const setSelectedNodeEmissiveColor = (hex: string) => {
+    const normalizedHex = hex.trim();
+    if (!/^#?[0-9a-f]{6}$/i.test(normalizedHex)) return;
+    const nextHex = normalizedHex.startsWith('#') ? normalizedHex : `#${normalizedHex}`;
+
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original } = ensureMeshMaterialSnapshots(child);
+          materialSetToArray(original).forEach((material) => {
+            if (!hasMaterialEmissive(material)) return;
+            material.emissive.set(nextHex);
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
+  const setSelectedNodeEmissiveIntensity = (value: number) => {
+    if (!Number.isFinite(value)) return;
+    const nextValue = Math.min(Math.max(value, 0), 3);
+
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original } = ensureMeshMaterialSnapshots(child);
+          materialSetToArray(original).forEach((material) => {
+            if (!hasMaterialEmissive(material)) return;
+            material.emissiveIntensity = nextValue;
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
+  const resetSelectedNodeEmissive = () => {
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original, base } = ensureMeshMaterialSnapshots(child);
+          const originalMaterials = materialSetToArray(original);
+          const baseMaterials = materialSetToArray(base);
+          originalMaterials.forEach((material, index) => {
+            const baseMaterial = baseMaterials[index];
+            if (
+              !baseMaterial ||
+              !hasMaterialEmissive(material) ||
+              !hasMaterialEmissive(baseMaterial)
+            ) {
+              return;
+            }
+            material.emissive.copy(baseMaterial.emissive);
+            material.emissiveIntensity = baseMaterial.emissiveIntensity;
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
+  const setSelectedNodeRoughness = (value: number) => {
+    if (!Number.isFinite(value)) return;
+    const nextValue = Math.min(Math.max(value, 0), 1);
+
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original } = ensureMeshMaterialSnapshots(child);
+          materialSetToArray(original).forEach((material) => {
+            if (!hasMaterialRoughness(material)) return;
+            material.roughness = nextValue;
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
+  const resetSelectedNodeRoughness = () => {
+    updateSelectedNode(
+      (node) => {
+        node.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const { original, base } = ensureMeshMaterialSnapshots(child);
+          const originalMaterials = materialSetToArray(original);
+          const baseMaterials = materialSetToArray(base);
+          originalMaterials.forEach((material, index) => {
+            const baseMaterial = baseMaterials[index];
+            if (
+              !baseMaterial ||
+              !hasMaterialRoughness(material) ||
+              !hasMaterialRoughness(baseMaterial)
+            ) {
+              return;
+            }
+            material.roughness = baseMaterial.roughness;
+            material.needsUpdate = true;
+          });
+        });
+        refreshViewModeMaterials();
+      },
+      { syncStructureTree: false },
+    );
+  };
+
   useImperativeHandle(
     ref,
     () => ({
@@ -782,6 +1145,13 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         emitSelectedNodeChange();
         emitSceneMutated();
       },
+      setSelectedNodeColor,
+      resetSelectedNodeColor,
+      setSelectedNodeEmissiveColor,
+      setSelectedNodeEmissiveIntensity,
+      resetSelectedNodeEmissive,
+      setSelectedNodeRoughness,
+      resetSelectedNodeRoughness,
       exportGlb: async (target = 'download') => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
@@ -928,7 +1298,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         if (handledByViewHelper) {
           event.preventDefault();
           event.stopPropagation();
-        } else if (interactionModeRef.current === 'edit') {
+        } else if (interactionModeRef.current !== 'create') {
           const model = modelRef.current;
           const pointer = getPointerInNdc(clickEvent, renderer.domElement);
           const raycaster = raycasterRef.current;

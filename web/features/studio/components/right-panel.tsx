@@ -1,5 +1,6 @@
 'use client';
 
+import { AppearancePanelContent } from './appearance-panel';
 import { CreatePanelContent } from './chat-panel';
 import { EditPanelContent } from './edit-panel';
 import { StudioSidePanel } from './studio-side-panel';
@@ -30,6 +31,13 @@ type RightPanelProps = {
   onResetNode?: (target: ResetTransformTarget) => void;
   onHideSelectedNode?: () => void;
   onRestoreNode?: (nodeId: string) => void;
+  onSetSelectedNodeColor?: (hex: string) => void;
+  onResetSelectedNodeColor?: () => void;
+  onSetSelectedNodeEmissiveColor?: (hex: string) => void;
+  onSetSelectedNodeEmissiveIntensity?: (value: number) => void;
+  onResetSelectedNodeEmissive?: () => void;
+  onSetSelectedNodeRoughness?: (value: number) => void;
+  onResetSelectedNodeRoughness?: () => void;
 };
 
 const PANEL_COPY: Record<
@@ -44,6 +52,11 @@ const PANEL_COPY: Record<
   edit: {
     title: 'Edit',
     resizeLabel: 'Resize edit panel',
+  },
+  appearance: {
+    title: 'Appearance',
+    description: 'Adjust part colors.',
+    resizeLabel: 'Resize appearance panel',
   },
 };
 
@@ -70,12 +83,19 @@ export function RightPanel({
   onResetNode,
   onHideSelectedNode,
   onRestoreNode,
+  onSetSelectedNodeColor,
+  onResetSelectedNodeColor,
+  onSetSelectedNodeEmissiveColor,
+  onSetSelectedNodeEmissiveIntensity,
+  onResetSelectedNodeEmissive,
+  onSetSelectedNodeRoughness,
+  onResetSelectedNodeRoughness,
 }: RightPanelProps) {
   const panelCopy = PANEL_COPY[mode];
   const content =
     mode === 'create' ? (
       <CreatePanelContent open={open} projectId={projectId} />
-    ) : (
+    ) : mode === 'edit' ? (
       <EditPanelContent
         structureTree={structureTree}
         selectedNode={selectedNode}
@@ -95,6 +115,20 @@ export function RightPanel({
         onResetNode={onResetNode}
         onHideSelectedNode={onHideSelectedNode}
         onRestoreNode={onRestoreNode}
+      />
+    ) : (
+      <AppearancePanelContent
+        structureTree={structureTree}
+        selectedNode={selectedNode}
+        onFocusStructureNode={onFocusStructureNode}
+        onSetStructureNodeHidden={onSetStructureNodeHidden}
+        onSetSelectedNodeColor={onSetSelectedNodeColor}
+        onResetSelectedNodeColor={onResetSelectedNodeColor}
+        onSetSelectedNodeEmissiveColor={onSetSelectedNodeEmissiveColor}
+        onSetSelectedNodeEmissiveIntensity={onSetSelectedNodeEmissiveIntensity}
+        onResetSelectedNodeEmissive={onResetSelectedNodeEmissive}
+        onSetSelectedNodeRoughness={onSetSelectedNodeRoughness}
+        onResetSelectedNodeRoughness={onResetSelectedNodeRoughness}
       />
     );
 

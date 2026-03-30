@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Check, Copy, File, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, CircleDashed, Copy, File, Loader2, Pencil, Search, Trash2, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@shared/components/ui/button';
@@ -294,6 +294,7 @@ export function ProjectPanel({
                   const isSelected = file.id === selectedDesignId;
                   const isFailed = file.previewStatus === 'failed';
                   const isSucceeded = file.previewStatus === 'succeeded';
+                  const isUnverified = !isFailed && !isSucceeded;
                   const target: DesignTarget = {
                     id: file.id,
                     rawName,
@@ -319,6 +320,8 @@ export function ProjectPanel({
                                 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700',
                               isFailed &&
                                 'border-destructive/40 bg-destructive/10 text-destructive',
+                              isUnverified &&
+                                'border-amber-500/40 bg-amber-500/10 text-amber-700',
                             )}
                           >
                             {isFailed ? (
@@ -326,15 +329,9 @@ export function ProjectPanel({
                             ) : isSucceeded ? (
                               <Check className="size-3.5" aria-label="Design succeeded" />
                             ) : (
-                              displayName.charAt(0).toUpperCase()
+                              <CircleDashed className="size-3.5" aria-label="Preview pending confirmation" />
                             )}
                           </span>
-                          <File
-                            className={cn(
-                              'size-4',
-                              isSelected ? 'text-primary' : 'text-muted-foreground',
-                            )}
-                          />
                           <span className="block min-w-0 flex-1 truncate">{displayName}</span>
                         </button>
                       </ContextMenuTrigger>

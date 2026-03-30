@@ -6,6 +6,7 @@ import {
   File,
   FolderOpen,
   Menu,
+  Palette,
   PlusCircle,
   Settings,
   SlidersHorizontal,
@@ -38,6 +39,7 @@ import { ChatPanel } from './components/chat-panel';
 import { NewDesignDialog } from './components/dialogs/new-design-dialog';
 import { NewProjectDialog } from './components/dialogs/new-project-dialog';
 import { ProjectListDialog } from './components/dialogs/project-list-dialog';
+import { AppearancePanel } from './components/appearance-panel';
 import { EditPanel } from './components/edit-panel';
 import { ProjectPanel } from './components/project-panel';
 import { ProjectSidebar } from './components/project-sidebar';
@@ -162,6 +164,13 @@ export function StudioPage() {
     resetNode: (target: ResetTransformTarget) => void;
     hideSelectedNode: () => void;
     restoreNode: (id: string) => void;
+    setSelectedNodeColor: (hex: string) => void;
+    resetSelectedNodeColor: () => void;
+    setSelectedNodeEmissiveColor: (hex: string) => void;
+    setSelectedNodeEmissiveIntensity: (value: number) => void;
+    resetSelectedNodeEmissive: () => void;
+    setSelectedNodeRoughness: (value: number) => void;
+    resetSelectedNodeRoughness: () => void;
     saveEditedModel: () => Promise<void>;
     revertEditedModel: () => Promise<void>;
   } | null>(null);
@@ -417,7 +426,7 @@ export function StudioPage() {
         return;
       }
 
-      if (rightPanelMode !== 'edit') {
+      if (rightPanelMode === 'create') {
         return;
       }
 
@@ -797,15 +806,6 @@ export function StudioPage() {
     }
   };
 
-  useEffect(() => {
-    if (rightPanelMode !== 'edit') return;
-    if (!assemblyControlsRef.current) return;
-    if (selectedNode && selectedNode.selectionKind === 'structure-node') return;
-    const rootNodeId = structureTree[0]?.id;
-    if (!rootNodeId) return;
-    assemblyControlsRef.current.focusStructureNode(rootNodeId);
-  }, [rightPanelMode, structureTree, selectedNode]);
-
   const mobileMenuSectionTitleClass =
     'px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground';
   const mobileMenuItemClass =
@@ -903,6 +903,20 @@ export function StudioPage() {
                       >
                         <SlidersHorizontal className="size-4" />
                         Edit
+                      </button>
+                      <button
+                        type="button"
+                        className={mobileMenuItemClass}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setMobileProjectOpen(false);
+                          setMobileChatOpen(false);
+                          setMobileEditOpen(true);
+                          setRightPanelMode('appearance');
+                        }}
+                      >
+                        <Palette className="size-4" />
+                        Appearance
                       </button>
                     </section>
 
@@ -1101,6 +1115,27 @@ export function StudioPage() {
                 onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
                 onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
                 onRestoreNode={(id) => assemblyControlsRef.current?.restoreNode(id)}
+                onSetSelectedNodeColor={(hex) =>
+                  assemblyControlsRef.current?.setSelectedNodeColor(hex)
+                }
+                onResetSelectedNodeColor={() =>
+                  assemblyControlsRef.current?.resetSelectedNodeColor()
+                }
+                onSetSelectedNodeEmissiveColor={(hex) =>
+                  assemblyControlsRef.current?.setSelectedNodeEmissiveColor(hex)
+                }
+                onSetSelectedNodeEmissiveIntensity={(value) =>
+                  assemblyControlsRef.current?.setSelectedNodeEmissiveIntensity(value)
+                }
+                onResetSelectedNodeEmissive={() =>
+                  assemblyControlsRef.current?.resetSelectedNodeEmissive()
+                }
+                onSetSelectedNodeRoughness={(value) =>
+                  assemblyControlsRef.current?.setSelectedNodeRoughness(value)
+                }
+                onResetSelectedNodeRoughness={() =>
+                  assemblyControlsRef.current?.resetSelectedNodeRoughness()
+                }
                 onToggle={toggleChatPanel}
               />
             </div>
@@ -1177,45 +1212,84 @@ export function StudioPage() {
             if (open) {
               setMobileProjectOpen(false);
               setMobileChatOpen(false);
-              setRightPanelMode('edit');
+              if (rightPanelMode === 'create') {
+                setRightPanelMode('edit');
+              }
             }
           }}
         >
           <DrawerContent showOverlay={false} className="h-[72svh] max-h-[72svh] p-0">
-            <DrawerTitle className="sr-only">Edit panel</DrawerTitle>
-            <EditPanel
-              variant="mobile"
-              open={mobileEditOpen}
-              structureTree={structureTree}
-              selectedNode={selectedNode}
-              moveStep={moveStep}
-              onMoveStepChange={handleMoveStepChange}
-              rotateStep={rotateStep}
-              onRotateStepChange={handleRotateStepChange}
-              scaleStep={scaleStep}
-              onScaleStepChange={handleScaleStepChange}
-              onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
-              onSetStructureNodeHidden={(id, hidden) =>
-                assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
-              }
-              onNudgeNode={(axis, delta) => assemblyControlsRef.current?.nudgeNode(axis, delta)}
-              onRotateNode={(axis, deltaRadians) =>
-                assemblyControlsRef.current?.rotateNode(axis, deltaRadians)
-              }
-              onSetNodeRotation={(axis, radians) =>
-                assemblyControlsRef.current?.setNodeRotation(axis, radians)
-              }
-              onNudgeNodeScale={(axis, delta) =>
-                assemblyControlsRef.current?.nudgeNodeScale(axis, delta)
-              }
-              onSetNodeScale={(axis, value) =>
-                assemblyControlsRef.current?.setNodeScale(axis, value)
-              }
-              onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
-              onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
-              onRestoreNode={(id) => assemblyControlsRef.current?.restoreNode(id)}
-              onToggle={() => setMobileEditOpen(false)}
-            />
+            <DrawerTitle className="sr-only">
+              {rightPanelMode === 'appearance' ? 'Appearance panel' : 'Edit panel'}
+            </DrawerTitle>
+            {rightPanelMode === 'appearance' ? (
+              <AppearancePanel
+                variant="mobile"
+                open={mobileEditOpen}
+                structureTree={structureTree}
+                selectedNode={selectedNode}
+                onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
+                onSetStructureNodeHidden={(id, hidden) =>
+                  assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
+                }
+                onSetSelectedNodeColor={(hex) =>
+                  assemblyControlsRef.current?.setSelectedNodeColor(hex)
+                }
+                onResetSelectedNodeColor={() =>
+                  assemblyControlsRef.current?.resetSelectedNodeColor()
+                }
+                onSetSelectedNodeEmissiveColor={(hex) =>
+                  assemblyControlsRef.current?.setSelectedNodeEmissiveColor(hex)
+                }
+                onSetSelectedNodeEmissiveIntensity={(value) =>
+                  assemblyControlsRef.current?.setSelectedNodeEmissiveIntensity(value)
+                }
+                onResetSelectedNodeEmissive={() =>
+                  assemblyControlsRef.current?.resetSelectedNodeEmissive()
+                }
+                onSetSelectedNodeRoughness={(value) =>
+                  assemblyControlsRef.current?.setSelectedNodeRoughness(value)
+                }
+                onResetSelectedNodeRoughness={() =>
+                  assemblyControlsRef.current?.resetSelectedNodeRoughness()
+                }
+                onToggle={() => setMobileEditOpen(false)}
+              />
+            ) : (
+              <EditPanel
+                variant="mobile"
+                open={mobileEditOpen}
+                structureTree={structureTree}
+                selectedNode={selectedNode}
+                moveStep={moveStep}
+                onMoveStepChange={handleMoveStepChange}
+                rotateStep={rotateStep}
+                onRotateStepChange={handleRotateStepChange}
+                scaleStep={scaleStep}
+                onScaleStepChange={handleScaleStepChange}
+                onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
+                onSetStructureNodeHidden={(id, hidden) =>
+                  assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
+                }
+                onNudgeNode={(axis, delta) => assemblyControlsRef.current?.nudgeNode(axis, delta)}
+                onRotateNode={(axis, deltaRadians) =>
+                  assemblyControlsRef.current?.rotateNode(axis, deltaRadians)
+                }
+                onSetNodeRotation={(axis, radians) =>
+                  assemblyControlsRef.current?.setNodeRotation(axis, radians)
+                }
+                onNudgeNodeScale={(axis, delta) =>
+                  assemblyControlsRef.current?.nudgeNodeScale(axis, delta)
+                }
+                onSetNodeScale={(axis, value) =>
+                  assemblyControlsRef.current?.setNodeScale(axis, value)
+                }
+                onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
+                onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
+                onRestoreNode={(id) => assemblyControlsRef.current?.restoreNode(id)}
+                onToggle={() => setMobileEditOpen(false)}
+              />
+            )}
           </DrawerContent>
         </Drawer>
 

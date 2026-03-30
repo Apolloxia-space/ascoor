@@ -1,6 +1,6 @@
 'use client';
 
-import { SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Palette, SlidersHorizontal, Sparkles } from 'lucide-react';
 
 import { IconTile } from './icon-tile';
 import type { RightPanelMode } from '../types';
@@ -39,6 +39,18 @@ export function ActionSidebar({ rightPanelOpen, activeMode, onSelectMode }: Acti
             </IconTile>
           </TooltipTrigger>
           <TooltipContent>Edit</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <IconTile
+              label="Appearance"
+              active={rightPanelOpen && activeMode === 'appearance'}
+              onClick={() => onSelectMode?.('appearance')}
+            >
+              <Palette className="size-5" />
+            </IconTile>
+          </TooltipTrigger>
+          <TooltipContent>Appearance</TooltipContent>
         </Tooltip>
         {/*
         <Tooltip>

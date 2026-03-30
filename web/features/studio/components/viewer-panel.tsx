@@ -68,6 +68,13 @@ type ViewerPanelProps = {
     resetNode: (target: ResetTransformTarget) => void;
     hideSelectedNode: () => void;
     restoreNode: (id: string) => void;
+    setSelectedNodeColor: (hex: string) => void;
+    resetSelectedNodeColor: () => void;
+    setSelectedNodeEmissiveColor: (hex: string) => void;
+    setSelectedNodeEmissiveIntensity: (value: number) => void;
+    resetSelectedNodeEmissive: () => void;
+    setSelectedNodeRoughness: (value: number) => void;
+    resetSelectedNodeRoughness: () => void;
     saveEditedModel: () => Promise<void>;
     revertEditedModel: () => Promise<void>;
   }) => void;
@@ -146,7 +153,7 @@ export function ViewerPanel({
   const assetUriTs = designData?.assetUriTs ?? null;
   const editedAssetUriGlb = designData?.editedAssetUriGlb ?? null;
   const editedAssetUpdatedAt = designData?.editedAssetUpdatedAt ?? null;
-  const isEditingMode = interactionMode === 'edit';
+  const isAssemblyMode = interactionMode !== 'create';
   const hasSavedEditedModel = Boolean(editedAssetUriGlb);
 
   const assetVersion = fileDetailQuery.dataUpdatedAt;
@@ -172,10 +179,10 @@ export function ViewerPanel({
   const canExportGlb = Boolean(hasRenderableModel && !isExportingGlb);
   const canExportStl = Boolean(hasRenderableModel && !isExportingStl);
   const canSaveEditedModel = Boolean(
-    isEditingMode && designId && hasRenderableModel && hasUnsavedChanges && !isSavingEditedModel,
+    isAssemblyMode && designId && hasRenderableModel && hasUnsavedChanges && !isSavingEditedModel,
   );
   const canRevertEditedModel = Boolean(
-    isEditingMode &&
+    isAssemblyMode &&
       designId &&
       hasRenderableModel &&
       (hasUnsavedChanges || hasSavedEditedModel) &&
@@ -661,6 +668,27 @@ export function ViewerPanel({
       restoreNode: (id) => {
         viewerRef.current?.restoreNode(id);
       },
+      setSelectedNodeColor: (hex) => {
+        viewerRef.current?.setSelectedNodeColor(hex);
+      },
+      resetSelectedNodeColor: () => {
+        viewerRef.current?.resetSelectedNodeColor();
+      },
+      setSelectedNodeEmissiveColor: (hex) => {
+        viewerRef.current?.setSelectedNodeEmissiveColor(hex);
+      },
+      setSelectedNodeEmissiveIntensity: (value) => {
+        viewerRef.current?.setSelectedNodeEmissiveIntensity(value);
+      },
+      resetSelectedNodeEmissive: () => {
+        viewerRef.current?.resetSelectedNodeEmissive();
+      },
+      setSelectedNodeRoughness: (value) => {
+        viewerRef.current?.setSelectedNodeRoughness(value);
+      },
+      resetSelectedNodeRoughness: () => {
+        viewerRef.current?.resetSelectedNodeRoughness();
+      },
       saveEditedModel: handleSaveEditedModel,
       revertEditedModel: handleRevertEditedModel,
     });
@@ -718,7 +746,7 @@ export function ViewerPanel({
           >
             <FileText className="size-4" />
           </IconButton>
-          {isEditingMode && (
+          {isAssemblyMode && (
             <IconButton
               label="Save edited model"
               onClick={() => {
@@ -734,7 +762,7 @@ export function ViewerPanel({
               )}
             </IconButton>
           )}
-          {isEditingMode && (
+          {isAssemblyMode && (
             <IconButton
               label="Revert edits"
               onClick={() => {
@@ -884,7 +912,7 @@ export function ViewerPanel({
                     <Kbd>5</Kbd>
                   </KbdGroup>
                 </div>
-                {interactionMode === 'edit' && (
+                {isAssemblyMode && (
                   <>
                     <div className="flex items-center justify-between gap-4">
                       <span>Active axis</span>
