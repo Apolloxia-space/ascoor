@@ -36,18 +36,31 @@ export class DesignJobRepositoryPostgres {
       where: {
         userId: params.userId,
         status: 'succeeded',
-        OR: [
-          { design: null },
-          {
-            design: {
-              previewStatus: 'succeeded',
-            },
-          },
-        ],
         finishedAt: {
           gte: params.periodStart,
           lt: params.periodEnd,
         },
+      },
+    });
+  }
+
+  countActiveByUser(userId: string): Promise<number> {
+    return this.prisma.designJob.count({
+      where: {
+        userId,
+        OR: [
+          {
+            status: {
+              in: ['queued', 'running'],
+            },
+          },
+          {
+            status: 'succeeded',
+            design: {
+              previewStatus: 'unverified',
+            },
+          },
+        ],
       },
     });
   }

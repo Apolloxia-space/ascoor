@@ -10,6 +10,7 @@ import type { BillingRepository } from '../repositories/postgres/billing.reposit
 import type { DesignTaskQueue } from '../infra/design-task-queue';
 import type { DesignStatus } from '../generated/prisma/client';
 import {
+  DesignConcurrencyLimitExceededError,
   DesignQuotaExceededError,
   DesignValidationError,
   NotFoundError,
@@ -255,6 +256,11 @@ export class DesignJobsUsecase {
     });
     if (used >= usage.limit) {
       throw new DesignQuotaExceededError();
+    }
+    const concurrentLimit = await this.resolveConcurrentLimit('pro');
+    const active = await this.designJobRepository.countActiveByUser(input.userId);
+    if (active >= concurrentLimit) {
+      throw new DesignConcurrencyLimitExceededError();
     }
     const job = await this.designJobRepository.create({
       projectId: input.projectId,
@@ -540,6 +546,19 @@ export class DesignJobsUsecase {
         this.billingRepository.findPlanDesignLimit(planKey),
       );
       const limit = record?.monthlyDesignLimit ?? null;
+      if (limit && Number.isFinite(limit) && limit > 0) {
+        return limit;
+      }
+    } catch {}
+    throw new Error(`design_plan_limit_missing:${planKey}`);
+  }
+
+  private async resolveConcurrentLimit(planKey: 'pro'): Promise<number> {
+    try {
+      const record = await this.billingCache.getPlanDesignLimit(planKey, () =>
+        this.billingRepository.findPlanDesignLimit(planKey),
+      );
+      const limit = record?.concurrentDesignLimit ?? null;
       if (limit && Number.isFinite(limit) && limit > 0) {
         return limit;
       }

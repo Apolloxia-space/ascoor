@@ -1,6 +1,7 @@
 [
   {
     "planKey": "pro",
-    "monthlyDesignLimit": 30
+    "monthlyDesignLimit": 30,
+    "concurrentDesignLimit": 3
   }
 ]

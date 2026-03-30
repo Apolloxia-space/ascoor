@@ -18,6 +18,7 @@ type PlanSeed = {
 type PlanLimitSeed = {
   planKey: 'pro';
   monthlyDesignLimit: number;
+  concurrentDesignLimit: number;
 };
 
 const datasourceUrl = process.env.DATABASE_URL;
@@ -79,6 +80,15 @@ function assertPlanLimitSeed(value: unknown, index: number): asserts value is Pl
   ) {
     throw new Error(
       `Invalid plan limit seed at index ${index}: monthlyDesignLimit must be a positive number.`,
+    );
+  }
+  if (
+    typeof planLimit.concurrentDesignLimit !== 'number' ||
+    !Number.isFinite(planLimit.concurrentDesignLimit) ||
+    planLimit.concurrentDesignLimit <= 0
+  ) {
+    throw new Error(
+      `Invalid plan limit seed at index ${index}: concurrentDesignLimit must be a positive number.`,
     );
   }
 }
@@ -146,10 +156,12 @@ async function main(): Promise<void> {
         where: { planKey: planLimit.planKey },
         update: {
           monthlyDesignLimit: planLimit.monthlyDesignLimit,
+          concurrentDesignLimit: planLimit.concurrentDesignLimit,
         },
         create: {
           planKey: planLimit.planKey,
           monthlyDesignLimit: planLimit.monthlyDesignLimit,
+          concurrentDesignLimit: planLimit.concurrentDesignLimit,
         },
       }),
     ),

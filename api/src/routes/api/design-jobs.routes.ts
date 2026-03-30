@@ -9,6 +9,7 @@ import type {
 } from '../../generated/endpoints/design-jobs/design-jobs.context';
 import type { AppEnv } from '../../entities/app-env';
 import {
+  DesignConcurrencyLimitExceededError,
   DesignQuotaExceededError,
   DesignValidationError,
   NotFoundError,
@@ -39,6 +40,9 @@ export function createDesignJobsRoutes() {
       } catch (error: unknown) {
         if (error instanceof ProSubscriptionRequiredError) {
           return c.json({ error: error.message, code: error.code }, 402);
+        }
+        if (error instanceof DesignConcurrencyLimitExceededError) {
+          return c.json({ error: error.message, code: error.code }, 409);
         }
         if (error instanceof DesignQuotaExceededError) {
           return c.json({ error: error.message, code: error.code }, 429);

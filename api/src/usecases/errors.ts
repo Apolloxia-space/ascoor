@@ -21,6 +21,15 @@ export class DesignQuotaExceededError extends DesignValidationError {
   }
 }
 
+export class DesignConcurrencyLimitExceededError extends DesignValidationError {
+  readonly code = 'design_concurrency_limit_exceeded';
+
+  constructor(message = 'Concurrent design limit reached for your plan.') {
+    super(message);
+    this.name = 'DesignConcurrencyLimitExceededError';
+  }
+}
+
 export class ProSubscriptionRequiredError extends DesignValidationError {
   readonly code = 'pro_subscription_required';
 

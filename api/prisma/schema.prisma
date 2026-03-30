@@ -196,7 +196,8 @@ model SubscriptionCancellationFeedback {
 model PlanDesignLimit {
   id                      String   @id @default(uuid())
   planKey                 PlanKey  @unique
-  monthlyDesignLimit  Int
+  monthlyDesignLimit      Int
+  concurrentDesignLimit   Int
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }

@@ -56,7 +56,9 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
   const [messageInput, setMessageInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const isSendingRef = useRef(false);
-  const [upgradeDialogMode, setUpgradeDialogMode] = useState<'required' | 'limit' | null>(null);
+  const [upgradeDialogMode, setUpgradeDialogMode] = useState<
+    'required' | 'limit' | 'concurrency' | null
+  >(null);
   const [designErrorDialogOpen, setDesignErrorDialogOpen] = useState(false);
   const addPendingDesign = useStudioStore((state) => state.addPendingDesign);
   const { createDesign, invalidateProjectDesigns } = useChatConversationApi(projectId);
@@ -139,10 +141,14 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
         (typeof errorMessage === 'string' &&
           (errorMessage.includes('Monthly generated design limit') ||
             errorMessage.includes('Monthly generated file limit')));
+      const isConcurrencyLimitError =
+        apiError?.status === 409 || errorCode === 'design_concurrency_limit_exceeded';
       const isSubscriptionRequiredError =
         apiError?.status === 402 || errorCode === 'pro_subscription_required';
       if (isSubscriptionRequiredError) {
         setUpgradeDialogMode('required');
+      } else if (isConcurrencyLimitError) {
+        setUpgradeDialogMode('concurrency');
       } else if (isLimitError) {
         setUpgradeDialogMode('limit');
       } else {
@@ -195,12 +201,16 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
             <DialogTitle>
               {upgradeDialogMode === 'required'
                 ? 'Pro subscription required'
-                : 'Design limit reached'}
+                : upgradeDialogMode === 'concurrency'
+                  ? 'Concurrent Design Limit Reached'
+                  : 'Design limit reached'}
             </DialogTitle>
             <DialogDescription>
               {upgradeDialogMode === 'required'
                 ? 'An active Pro subscription is required to create designs.'
-                : 'You have reached your generated design limit for this month. Please wait for the next reset.'}
+                : upgradeDialogMode === 'concurrency'
+                  ? 'You can have up to 3 designs awaiting preview at the same time. Open a pending design and complete its preview before creating another.'
+                  : 'You have reached your generated design limit for this month. Please wait for the next reset.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

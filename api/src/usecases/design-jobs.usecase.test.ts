@@ -8,7 +8,11 @@ import type { BillingRepository } from '../repositories/postgres/billing.reposit
 import type { DesignJobRepositoryPostgres } from '../repositories/postgres/design-job.repository';
 import type { ProjectRepository } from '../repositories/postgres/project.repository';
 import type { DesignTaskQueue } from '../infra/design-task-queue';
-import { DesignQuotaExceededError, ProSubscriptionRequiredError } from './errors';
+import {
+  DesignConcurrencyLimitExceededError,
+  DesignQuotaExceededError,
+  ProSubscriptionRequiredError,
+} from './errors';
 
 type TestJob = {
   id: string;
@@ -600,6 +604,7 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
     } as unknown as IGcsRepository,
     {
       countSucceededByUserInPeriod: async () => 0,
+      countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
       markSucceededIfRunning: async () => true,
@@ -619,6 +624,7 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
       findPlanDesignLimit: async (planKey: PlanKey) => ({
         planKey,
         monthlyDesignLimit: 30,
+        concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
     {
@@ -708,6 +714,7 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
     } as unknown as IGcsRepository,
     {
       countSucceededByUserInPeriod: async () => 30,
+      countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
       markSucceededIfRunning: async () => true,
@@ -723,7 +730,11 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }),
+      findPlanDesignLimit: async () => ({
+        planKey: 'pro',
+        monthlyDesignLimit: 30,
+        concurrentDesignLimit: 3,
+      }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -815,6 +826,7 @@ test('enqueue resolves only the Pro plan limit', async () => {
         countCalls += 1;
         return 4;
       },
+      countActiveByUser: async () => 2,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
       markSucceededIfRunning: async () => true,
@@ -835,7 +847,7 @@ test('enqueue resolves only the Pro plan limit', async () => {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
       findPlanDesignLimit: async (planKey: PlanKey) => {
         planLookups.push(planKey);
-        return { planKey: 'pro', monthlyDesignLimit: 30 };
+        return { planKey: 'pro', monthlyDesignLimit: 30, concurrentDesignLimit: 3 };
       },
     } as unknown as BillingRepository,
     {
@@ -856,6 +868,111 @@ test('enqueue resolves only the Pro plan limit', async () => {
   assert.deepEqual(planLookups, ['pro']);
   assert.equal(countCalls, 1);
   assert.equal(createCalls, 1);
+});
+
+test('enqueue throws concurrency exceeded error when active design workflows reach the plan limit', async () => {
+  const usecase = new DesignJobsUsecase(
+    {
+      design: async () => ({ title: 'n/a', message: 'n/a', code: 'n/a' }),
+    } as unknown as AiDesignRepository,
+    {
+      create: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'file',
+        type: 'studio_ts',
+      }),
+      update: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'file',
+        type: 'studio_ts',
+      }),
+      updatePreview: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'file',
+        type: 'studio_ts',
+      }),
+      get: async () => null,
+      getOwned: async () => null,
+      list: async () => [],
+      updateDisplayName: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'file',
+        type: 'studio_ts',
+      }),
+      delete: async () => ({
+        id: 'file-1',
+        projectId: 'proj-1',
+        displayName: 'file',
+        type: 'studio_ts',
+      }),
+    } as unknown as IDesignRepository,
+    {
+      getOwned: async () => ({ id: 'proj-1', ownerId: 'user-1', name: 'p' }),
+      get: async () => null,
+      listByOwner: async () => [],
+      updateName: async () => ({ id: 'proj-1', ownerId: 'user-1', name: 'p' }),
+      delete: async () => ({ id: 'proj-1', ownerId: 'user-1', name: 'p' }),
+      create: async () => ({ id: 'proj-1', ownerId: 'user-1', name: 'p' }),
+    } as unknown as ProjectRepository,
+    {
+      upload: async () => ({
+        bucket: 'b',
+        filename: 'f.ts',
+        gcsUri: 'gs://bucket/file.ts',
+        content: '',
+      }),
+      uploadBinary: async () => ({ bucket: 'b', objectPath: 'o', gcsUri: 'gs://bucket/file.glb' }),
+      download: async () => null,
+      downloadBinary: async () => null,
+      deleteByPrefix: async () => {},
+    } as unknown as IGcsRepository,
+    {
+      countSucceededByUserInPeriod: async () => 0,
+      countActiveByUser: async () => 3,
+      markRunning: async () => true,
+      get: async () => createJob({ status: 'running' }),
+      markSucceededIfRunning: async () => true,
+      markFailedIfRunning: async () => true,
+      create: async () => createJob({ status: 'queued' }),
+      getOwned: async () => null,
+      markFailed: async () => createJob({ status: 'failed' }),
+      markFailedIfRunningStale: async () => false,
+      listRunningStale: async () => [],
+      listQueuedStale: async () => [],
+      markFailedIfQueuedStale: async () => false,
+      linkDesignIfMissing: async () => true,
+    } as unknown as DesignJobRepositoryPostgres,
+    {
+      findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
+      findPlanDesignLimit: async () => ({
+        planKey: 'pro',
+        monthlyDesignLimit: 30,
+        concurrentDesignLimit: 3,
+      }),
+    } as unknown as BillingRepository,
+    undefined,
+  );
+
+  await assert.rejects(
+    () =>
+      usecase.execute({
+        type: 'enqueue',
+        input: {
+          projectId: 'proj-1',
+          userPrompt: 'make bracket',
+          userId: 'user-1',
+        },
+      }),
+    (error: unknown) => {
+      assert(error instanceof DesignConcurrencyLimitExceededError);
+      assert.equal(error.code, 'design_concurrency_limit_exceeded');
+      return true;
+    },
+  );
 });
 
 test('reap stale also recovers queued designs', async () => {
@@ -1036,6 +1153,7 @@ test('enqueue creates a design when monthly generated design count is below limi
         countCalls += 1;
         return 0;
       },
+      countActiveByUser: async () => 0,
       create: async () => {
         createCalls += 1;
         return createJob({ status: 'queued' });
@@ -1057,6 +1175,7 @@ test('enqueue creates a design when monthly generated design count is below limi
       findPlanDesignLimit: async (planKey: PlanKey) => ({
         planKey,
         monthlyDesignLimit: 30,
+        concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
     {
@@ -1140,6 +1259,7 @@ test('enqueue requires an active Pro subscription', async () => {
     } as unknown as IGcsRepository,
     {
       countSucceededByUserInPeriod: async () => 0,
+      countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
       markSucceededIfRunning: async () => true,
@@ -1155,7 +1275,11 @@ test('enqueue requires an active Pro subscription', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }),
+      findPlanDesignLimit: async () => ({
+        planKey: 'pro',
+        monthlyDesignLimit: 30,
+        concurrentDesignLimit: 3,
+      }),
     } as unknown as BillingRepository,
     undefined,
   );

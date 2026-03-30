@@ -594,6 +594,11 @@ export type createDesignJobResponse404 = {
   status: 404
 }
 
+export type createDesignJobResponse409 = {
+  data: ErrorResponse
+  status: 409
+}
+
 export type createDesignJobResponse429 = {
   data: ErrorResponse
   status: 429
@@ -602,7 +607,7 @@ export type createDesignJobResponse429 = {
 export type createDesignJobResponseSuccess = (createDesignJobResponse202) & {
   headers: Headers;
 };
-export type createDesignJobResponseError = (createDesignJobResponse400 | createDesignJobResponse401 | createDesignJobResponse404 | createDesignJobResponse429) & {
+export type createDesignJobResponseError = (createDesignJobResponse400 | createDesignJobResponse401 | createDesignJobResponse404 | createDesignJobResponse409 | createDesignJobResponse429) & {
   headers: Headers;
 };
 
