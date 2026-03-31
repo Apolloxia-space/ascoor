@@ -93,18 +93,8 @@ export function AppHeader({
             <DropdownMenu open={projectMenuOpen} onOpenChange={onProjectMenuChange}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="max-w-[200px] gap-2 md:max-w-none">
-                  {showProjectSkeleton ? (
-                    <Loader2 className="size-4 animate-spin text-[color:var(--text-secondary)]" />
-                  ) : (
-                    <FolderOpen className="size-4 text-[color:var(--text-secondary)]" />
-                  )}
+                  <FolderOpen className="size-4 text-[color:var(--text-secondary)]" />
                   <span className="truncate font-medium">{projectLabel}</span>
-                  {projectsRefreshing && !showProjectSkeleton ? (
-                    <Loader2
-                      className="size-3.5 animate-spin text-[color:var(--text-secondary)]"
-                      aria-label="Refreshing projects"
-                    />
-                  ) : null}
                   <ChevronDown
                     className={cn(
                       'size-4 text-[color:var(--text-secondary)] transition-transform',

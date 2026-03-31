@@ -104,7 +104,6 @@ const getPendingStageTitle = (pending: PendingDesign, now: number): string => {
 export function ProjectPanel({
   designs,
   loading = false,
-  refreshing = false,
   open,
   variant = 'desktop',
   onToggle,
@@ -245,12 +244,6 @@ export function ProjectPanel({
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold">Designs</p>
-              {refreshing && !showDesignSkeleton ? (
-                <Loader2
-                  className="size-3.5 animate-spin text-muted-foreground"
-                  aria-label="Refreshing designs"
-                />
-              ) : null}
             </div>
           </div>
           <div className="flex items-center gap-2">
