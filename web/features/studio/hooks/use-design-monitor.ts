@@ -160,7 +160,8 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
           if (status === 'succeeded' || status === 'failed') return false;
           return DESIGN_POLL_INTERVAL_MS;
         },
-        refetchOnWindowFocus: false,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
         refetchOnReconnect: true,
         retry: false,
       };
