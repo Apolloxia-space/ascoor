@@ -12,7 +12,10 @@ import { Button } from '@shared/components/ui/button';
 type EditPanelProps = {
   open: boolean;
   structureTree: Array<StructureTreeNode>;
-  selectedNode?: SelectedNode | null;
+  selectedNodes?: Array<SelectedNode>;
+  activeSelectedNode?: SelectedNode | null;
+  activeSelectedNodeId?: string | null;
+  selectedNodeIds?: ReadonlySet<string>;
   variant?: 'desktop' | 'mobile';
   moveStep: number;
   onMoveStepChange?: (step: number) => void;
@@ -21,7 +24,7 @@ type EditPanelProps = {
   scaleStep: number;
   onScaleStepChange?: (step: number) => void;
   onToggle?: () => void;
-  onFocusStructureNode?: (nodeId: string) => void;
+  onFocusStructureNode?: (nodeId: string, options?: { additive?: boolean }) => void;
   onSetStructureNodeHidden?: (nodeId: string, hidden: boolean) => void;
   onNudgeNode?: (axis: TransformAxis, delta: number) => void;
   onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
@@ -36,7 +39,10 @@ type EditPanelProps = {
 export function EditPanel({
   open,
   structureTree,
-  selectedNode = null,
+  selectedNodes = [],
+  activeSelectedNode = null,
+  activeSelectedNodeId = null,
+  selectedNodeIds = new Set<string>(),
   variant = 'desktop',
   moveStep,
   onMoveStepChange,
@@ -66,7 +72,10 @@ export function EditPanel({
     >
       <EditPanelContent
         structureTree={structureTree}
-        selectedNode={selectedNode}
+        selectedNodes={selectedNodes}
+        activeSelectedNode={activeSelectedNode}
+        activeSelectedNodeId={activeSelectedNodeId}
+        selectedNodeIds={selectedNodeIds}
         moveStep={moveStep}
         onMoveStepChange={onMoveStepChange}
         rotateStep={rotateStep}
@@ -92,7 +101,10 @@ type EditPanelContentProps = Omit<EditPanelProps, 'open' | 'variant' | 'onToggle
 
 export function EditPanelContent({
   structureTree,
-  selectedNode = null,
+  selectedNodes = [],
+  activeSelectedNode = null,
+  activeSelectedNodeId = null,
+  selectedNodeIds = new Set<string>(),
   moveStep,
   onMoveStepChange,
   rotateStep,
@@ -139,8 +151,9 @@ export function EditPanelContent({
 
       <div className="border-t border-border/70 pt-4">
         <TransformControls
-          selectedNode={selectedNode}
-          emptyMessage="Select the full model or a structure node to adjust."
+          selectedNodes={selectedNodes}
+          activeSelectedNode={activeSelectedNode}
+          emptyMessage="Select one or more structure nodes to adjust."
           moveStep={moveStep}
           onMoveStepChange={onMoveStepChange}
           rotateStep={rotateStep}
@@ -161,7 +174,8 @@ export function EditPanelContent({
       <div className="border-t border-border/70 pt-4">
         <StructureTree
           nodes={structureTree}
-          selectedNodeId={selectedNode?.id ?? null}
+          selectedNodeIds={selectedNodeIds}
+          activeNodeId={activeSelectedNodeId}
           onFocusNode={onFocusStructureNode}
           onSetNodeHidden={onSetStructureNodeHidden}
         />

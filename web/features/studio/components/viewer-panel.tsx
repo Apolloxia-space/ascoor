@@ -7,9 +7,9 @@ import { ChevronDown, Download, FileText, Keyboard, Loader2, RotateCcw, Save } f
 import { viewModes } from '@/mock/studio';
 import { IconButton } from './icon-button';
 import {
+  type NodeSelection,
   ThreeViewer,
   type ResetTransformTarget,
-  type SelectedNode,
   type ThreeViewerHandle,
   type TransformAxis,
 } from './three-viewer';
@@ -56,7 +56,7 @@ type ViewerPanelProps = {
   interactionMode?: RightPanelMode;
   onStructureTreeChange?: (tree: Array<StructureTreeNode>) => void;
   onAssemblyControlsReady?: (controls: {
-    focusStructureNode: (id: string) => void;
+    focusStructureNode: (id: string, options?: { additive?: boolean }) => void;
     focusFullModel: () => void;
     clearSelection: () => void;
     setStructureNodeHidden: (id: string, hidden: boolean) => void;
@@ -78,7 +78,7 @@ type ViewerPanelProps = {
     saveEditedModel: () => Promise<void>;
     revertEditedModel: () => Promise<void>;
   }) => void;
-  onSelectedNodeChange?: (node: SelectedNode | null) => void;
+  onSelectionChange?: (selection: NodeSelection) => void;
   designId?: string | null;
   designName?: string | null;
   traceId?: string | null;
@@ -110,7 +110,7 @@ export function ViewerPanel({
   interactionMode = 'create',
   onStructureTreeChange,
   onAssemblyControlsReady,
-  onSelectedNodeChange,
+  onSelectionChange,
   designId,
   designName,
   traceId,
@@ -189,9 +189,7 @@ export function ViewerPanel({
       !isRevertingEditedModel,
   );
 
-  const canExportTs = Boolean(
-    designId && exportUrlTs && assetUriTs && !isExportingTs,
-  );
+  const canExportTs = Boolean(designId && exportUrlTs && assetUriTs && !isExportingTs);
   const canOpenPrompt = Boolean(designId);
   const hasViewerError = Boolean(
     parseError ||
@@ -376,12 +374,7 @@ export function ViewerPanel({
       return;
     }
 
-    const nextStatus =
-      renderSucceeded && !loadError
-        ? 'succeeded'
-        : parseError
-          ? 'failed'
-          : null;
+    const nextStatus = renderSucceeded && !loadError ? 'succeeded' : parseError ? 'failed' : null;
     if (!nextStatus) {
       return;
     }
@@ -649,8 +642,8 @@ export function ViewerPanel({
   useEffect(() => {
     if (!onAssemblyControlsReady) return;
     onAssemblyControlsReady({
-      focusStructureNode: (id: string) => {
-        viewerRef.current?.focusStructureNode(id);
+      focusStructureNode: (id: string, options?: { additive?: boolean }) => {
+        viewerRef.current?.focusStructureNode(id, options);
       },
       focusFullModel: () => {
         viewerRef.current?.focusFullModel();
@@ -884,7 +877,7 @@ export function ViewerPanel({
           viewModeKey={currentView.key}
           interactionMode={interactionMode}
           onStructureTreeChange={handleStructureTreeChange}
-          onSelectedNodeChange={onSelectedNodeChange}
+          onSelectionChange={onSelectionChange}
           onModelParseError={handleModelParseError}
           onSceneMutated={handleSceneMutated}
           className="absolute inset-0"
@@ -918,6 +911,13 @@ export function ViewerPanel({
                 <div className="flex items-center justify-between gap-4">
                   <span>Clear selection</span>
                   <Kbd>Esc</Kbd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Add or remove node from selection</span>
+                  <KbdGroup>
+                    <Kbd>Cmd/Ctrl</Kbd>
+                    <Kbd>Click</Kbd>
+                  </KbdGroup>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <span>View modes</span>

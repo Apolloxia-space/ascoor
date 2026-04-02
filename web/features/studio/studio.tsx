@@ -15,7 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { viewModes } from '@/mock/studio';
@@ -47,7 +47,12 @@ import { ProjectPanel } from './components/project-panel';
 import { ProjectSidebar } from './components/project-sidebar';
 import { RightPanel } from './components/right-panel';
 import { StudioHeader } from './components/studio-header';
-import type { ResetTransformTarget, SelectedNode, TransformAxis } from './components/three-viewer';
+import type {
+  NodeSelection,
+  ResetTransformTarget,
+  SelectedNode,
+  TransformAxis,
+} from './components/three-viewer';
 import {
   MOVE_STEP_OPTIONS,
   ROTATE_STEP_OPTIONS,
@@ -88,6 +93,15 @@ const cyclePreset = (values: ReadonlyArray<number>, current: number, direction: 
 
 const getSingleRouteParam = (value: string | Array<string> | undefined) =>
   Array.isArray(value) ? value[0] : value;
+
+const formatSelectionSummary = (
+  selectedNodes: Array<SelectedNode>,
+  activeSelectedNode: SelectedNode | null,
+) => {
+  if (selectedNodes.length === 0) return 'No selection';
+  if (selectedNodes.length === 1 && activeSelectedNode) return activeSelectedNode.name;
+  return `${selectedNodes.length} nodes`;
+};
 
 export function StudioPage() {
   useStudioPersist();
@@ -140,7 +154,8 @@ export function StudioPage() {
   const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
   const [invalidRouteProjectId, setInvalidRouteProjectId] = useState<string | null>(null);
   const [structureTree, setStructureTree] = useState<Array<StructureTreeNode>>([]);
-  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<Array<SelectedNode>>([]);
+  const [activeSelectedNodeId, setActiveSelectedNodeId] = useState<string | null>(null);
   const [activeTransformAxis, setActiveTransformAxis] = useState<TransformAxis>('x');
   const [moveStep, setMoveStep] = useState<number>(MOVE_STEP_OPTIONS[1]);
   const [rotateStep, setRotateStep] = useState<number>(ROTATE_STEP_OPTIONS[1]);
@@ -149,7 +164,7 @@ export function StudioPage() {
   const [shortcutHudMessage, setShortcutHudMessage] = useState<string | null>(null);
   const shortcutHudTimerRef = useRef<number | null>(null);
   const assemblyControlsRef = useRef<{
-    focusStructureNode: (id: string) => void;
+    focusStructureNode: (id: string, options?: { additive?: boolean }) => void;
     focusFullModel: () => void;
     clearSelection: () => void;
     setStructureNodeHidden: (id: string, hidden: boolean) => void;
@@ -208,12 +223,23 @@ export function StudioPage() {
     designsQuery.isFetching &&
     !designsQuery.isPending;
   const currentStudioPath = buildStudioPath(routeProjectId, routeDesignId);
+  const selectedNodeIds = useMemo(
+    () => new Set(selectedNodes.map((node) => node.id)),
+    [selectedNodes],
+  );
+  const activeSelectedNode = useMemo(
+    () =>
+      selectedNodes.find((node) => node.id === activeSelectedNodeId) ??
+      selectedNodes[selectedNodes.length - 1] ??
+      null,
+    [activeSelectedNodeId, selectedNodes],
+  );
   const hasSelectedDesignState =
     selectedDesignId !== null ||
     selectedDesignName !== null ||
     selectedDesignTraceId !== null ||
     structureTree.length > 0 ||
-    selectedNode !== null ||
+    selectedNodes.length > 0 ||
     activeTransformAxis !== 'x' ||
     moveStep !== MOVE_STEP_OPTIONS[1] ||
     rotateStep !== ROTATE_STEP_OPTIONS[1] ||
@@ -227,7 +253,8 @@ export function StudioPage() {
     setSelectedDesignName(null);
     setSelectedDesignTraceId(null);
     setStructureTree([]);
-    setSelectedNode(null);
+    setSelectedNodes([]);
+    setActiveSelectedNodeId(null);
     setActiveTransformAxis('x');
     setMoveStep(MOVE_STEP_OPTIONS[1]);
     setRotateStep(ROTATE_STEP_OPTIONS[1]);
@@ -240,7 +267,7 @@ export function StudioPage() {
     moveStep,
     rotateStep,
     scaleStep,
-    selectedNode,
+    selectedNodes.length,
     shortcutHelpOpen,
     shortcutHudMessage,
     structureTree.length,
@@ -272,7 +299,8 @@ export function StudioPage() {
       setSelectedDesignName(name);
       setSelectedDesignTraceId(traceId);
       setStructureTree([]);
-      setSelectedNode(null);
+      setSelectedNodes([]);
+      setActiveSelectedNodeId(null);
       setActiveTransformAxis('x');
       setMoveStep(MOVE_STEP_OPTIONS[1]);
       setRotateStep(ROTATE_STEP_OPTIONS[1]);
@@ -317,6 +345,11 @@ export function StudioPage() {
       clearSelectedDesign();
     }
   };
+
+  const handleSelectionChange = useCallback((selection: NodeSelection) => {
+    setSelectedNodes(selection.selectedNodes);
+    setActiveSelectedNodeId(selection.activeNodeId);
+  }, []);
 
   const showShortcutHud = useCallback((message: string) => {
     setShortcutHudMessage(message);
@@ -390,7 +423,7 @@ export function StudioPage() {
           setShortcutHelpOpen(false);
           return;
         }
-        if (selectedNode) {
+        if (selectedNodes.length > 0) {
           event.preventDefault();
           assemblyControlsRef.current?.clearSelection();
         }
@@ -425,10 +458,10 @@ export function StudioPage() {
           }
           return;
         }
-        if (selectedNode) {
-          assemblyControlsRef.current?.focusStructureNode(selectedNode.id);
+        if (activeSelectedNode) {
+          assemblyControlsRef.current?.focusStructureNode(activeSelectedNode.id);
           if (!event.repeat) {
-            showShortcutHud(`Framed ${selectedNode.name}`);
+            showShortcutHud(`Framed ${formatSelectionSummary(selectedNodes, activeSelectedNode)}`);
           }
           return;
         }
@@ -492,19 +525,22 @@ export function StudioPage() {
         return;
       }
 
-      if (!selectedNode) {
+      if (!activeSelectedNode) {
         return;
       }
 
       if (!metaOrCtrl && !event.shiftKey && !event.altKey && lowerKey === 'h') {
         event.preventDefault();
-        if (selectedNode.hidden) {
-          assemblyControlsRef.current?.restoreNode(selectedNode.id);
-          showShortcutHud(`Restored ${selectedNode.name}`);
+        const allSelectedHidden = selectedNodes.every((node) => node.hidden);
+        if (allSelectedHidden) {
+          selectedNodes.forEach((node) => {
+            assemblyControlsRef.current?.restoreNode(node.id);
+          });
+          showShortcutHud(`Restored ${formatSelectionSummary(selectedNodes, activeSelectedNode)}`);
           return;
         }
         assemblyControlsRef.current?.hideSelectedNode();
-        showShortcutHud(`Hid ${selectedNode.name}`);
+        showShortcutHud(`Hid ${formatSelectionSummary(selectedNodes, activeSelectedNode)}`);
         return;
       }
 
@@ -558,7 +594,8 @@ export function StudioPage() {
       moveStep,
       rightPanelMode,
       rotateStep,
-      selectedNode,
+      activeSelectedNode,
+      selectedNodes,
       setCurrentView,
       shortcutHelpOpen,
       showShortcutHud,
@@ -1113,7 +1150,7 @@ export function StudioPage() {
                 onAssemblyControlsReady={(controls) => {
                   assemblyControlsRef.current = controls;
                 }}
-                onSelectedNodeChange={setSelectedNode}
+                onSelectionChange={handleSelectionChange}
                 designId={selectedDesignId}
                 designName={selectedDesignName}
                 traceId={selectedDesignTraceId}
@@ -1129,14 +1166,19 @@ export function StudioPage() {
                 mode={rightPanelMode}
                 projectId={projectId}
                 structureTree={structureTree}
-                selectedNode={selectedNode}
+                selectedNodes={selectedNodes}
+                activeSelectedNode={activeSelectedNode}
+                activeSelectedNodeId={activeSelectedNodeId}
+                selectedNodeIds={selectedNodeIds}
                 moveStep={moveStep}
                 onMoveStepChange={handleMoveStepChange}
                 rotateStep={rotateStep}
                 onRotateStepChange={handleRotateStepChange}
                 scaleStep={scaleStep}
                 onScaleStepChange={handleScaleStepChange}
-                onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
+                onFocusStructureNode={(id, options) =>
+                  assemblyControlsRef.current?.focusStructureNode(id, options)
+                }
                 onSetStructureNodeHidden={(id, hidden) =>
                   assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
                 }
@@ -1270,8 +1312,13 @@ export function StudioPage() {
                 variant="mobile"
                 open={mobileEditOpen}
                 structureTree={structureTree}
-                selectedNode={selectedNode}
-                onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
+                selectedNodes={selectedNodes}
+                activeSelectedNode={activeSelectedNode}
+                activeSelectedNodeId={activeSelectedNodeId}
+                selectedNodeIds={selectedNodeIds}
+                onFocusStructureNode={(id, options) =>
+                  assemblyControlsRef.current?.focusStructureNode(id, options)
+                }
                 onSetStructureNodeHidden={(id, hidden) =>
                   assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
                 }
@@ -1303,14 +1350,19 @@ export function StudioPage() {
                 variant="mobile"
                 open={mobileEditOpen}
                 structureTree={structureTree}
-                selectedNode={selectedNode}
+                selectedNodes={selectedNodes}
+                activeSelectedNode={activeSelectedNode}
+                activeSelectedNodeId={activeSelectedNodeId}
+                selectedNodeIds={selectedNodeIds}
                 moveStep={moveStep}
                 onMoveStepChange={handleMoveStepChange}
                 rotateStep={rotateStep}
                 onRotateStepChange={handleRotateStepChange}
                 scaleStep={scaleStep}
                 onScaleStepChange={handleScaleStepChange}
-                onFocusStructureNode={(id) => assemblyControlsRef.current?.focusStructureNode(id)}
+                onFocusStructureNode={(id, options) =>
+                  assemblyControlsRef.current?.focusStructureNode(id, options)
+                }
                 onSetStructureNodeHidden={(id, hidden) =>
                   assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
                 }

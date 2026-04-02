@@ -13,7 +13,10 @@ type RightPanelProps = {
   mode: RightPanelMode;
   projectId: string | null;
   structureTree: Array<StructureTreeNode>;
-  selectedNode?: SelectedNode | null;
+  selectedNodes?: Array<SelectedNode>;
+  activeSelectedNode?: SelectedNode | null;
+  activeSelectedNodeId?: string | null;
+  selectedNodeIds?: ReadonlySet<string>;
   moveStep: number;
   onMoveStepChange?: (step: number) => void;
   rotateStep: number;
@@ -21,7 +24,7 @@ type RightPanelProps = {
   scaleStep: number;
   onScaleStepChange?: (step: number) => void;
   onToggle?: () => void;
-  onFocusStructureNode?: (nodeId: string) => void;
+  onFocusStructureNode?: (nodeId: string, options?: { additive?: boolean }) => void;
   onSetStructureNodeHidden?: (nodeId: string, hidden: boolean) => void;
   onNudgeNode?: (axis: TransformAxis, delta: number) => void;
   onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
@@ -65,7 +68,10 @@ export function RightPanel({
   mode,
   projectId,
   structureTree,
-  selectedNode = null,
+  selectedNodes = [],
+  activeSelectedNode = null,
+  activeSelectedNodeId = null,
+  selectedNodeIds = new Set<string>(),
   moveStep,
   onMoveStepChange,
   rotateStep,
@@ -98,7 +104,10 @@ export function RightPanel({
     ) : mode === 'edit' ? (
       <EditPanelContent
         structureTree={structureTree}
-        selectedNode={selectedNode}
+        selectedNodes={selectedNodes}
+        activeSelectedNode={activeSelectedNode}
+        activeSelectedNodeId={activeSelectedNodeId}
+        selectedNodeIds={selectedNodeIds}
         moveStep={moveStep}
         onMoveStepChange={onMoveStepChange}
         rotateStep={rotateStep}
@@ -119,7 +128,10 @@ export function RightPanel({
     ) : (
       <AppearancePanelContent
         structureTree={structureTree}
-        selectedNode={selectedNode}
+        selectedNodes={selectedNodes}
+        activeSelectedNode={activeSelectedNode}
+        activeSelectedNodeId={activeSelectedNodeId}
+        selectedNodeIds={selectedNodeIds}
         onFocusStructureNode={onFocusStructureNode}
         onSetStructureNodeHidden={onSetStructureNodeHidden}
         onSetSelectedNodeColor={onSetSelectedNodeColor}

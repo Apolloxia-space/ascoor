@@ -1,7 +1,7 @@
 'use client';
 
 import { Focus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { SelectedNode } from './three-viewer';
 import type { StructureTreeNode } from '../lib/structure-tree';
@@ -14,10 +14,13 @@ import { Slider } from '@shared/components/ui/slider';
 type AppearancePanelProps = {
   open: boolean;
   structureTree: Array<StructureTreeNode>;
-  selectedNode?: SelectedNode | null;
+  selectedNodes?: Array<SelectedNode>;
+  activeSelectedNode?: SelectedNode | null;
+  activeSelectedNodeId?: string | null;
+  selectedNodeIds?: ReadonlySet<string>;
   variant?: 'desktop' | 'mobile';
   onToggle?: () => void;
-  onFocusStructureNode?: (nodeId: string) => void;
+  onFocusStructureNode?: (nodeId: string, options?: { additive?: boolean }) => void;
   onSetStructureNodeHidden?: (nodeId: string, hidden: boolean) => void;
   onSetSelectedNodeColor?: (hex: string) => void;
   onResetSelectedNodeColor?: () => void;
@@ -48,10 +51,94 @@ const formatIntensityInput = (value: number) => {
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 };
 
+type AggregatedAppearanceState = {
+  editable: boolean;
+  mixed: boolean;
+  hex: string | null;
+};
+
+type AggregatedAppearanceIntensityState = AggregatedAppearanceState & {
+  intensity: number | null;
+  intensityMixed: boolean;
+};
+
+type AggregatedAppearanceRoughnessState = {
+  editable: boolean;
+  mixed: boolean;
+  roughness: number | null;
+};
+
+const getDistinctValues = (values: Array<string | number | null>) => {
+  return Array.from(new Set(values.map((value) => String(value ?? '__null__'))));
+};
+
+const aggregateColorState = (selectedNodes: Array<SelectedNode>): AggregatedAppearanceState => {
+  const editableNodes = selectedNodes.filter((node) => node.colorEditable);
+  if (editableNodes.length === 0) {
+    return { editable: false, mixed: false, hex: null };
+  }
+
+  const distinctHexValues = getDistinctValues(editableNodes.map((node) => node.colorHex));
+  return {
+    editable: true,
+    mixed: editableNodes.some((node) => node.colorMixed) || distinctHexValues.length > 1,
+    hex: editableNodes[0]?.colorHex ?? null,
+  };
+};
+
+const aggregateEmissiveState = (
+  selectedNodes: Array<SelectedNode>,
+): AggregatedAppearanceIntensityState => {
+  const editableNodes = selectedNodes.filter((node) => node.emissiveEditable);
+  if (editableNodes.length === 0) {
+    return {
+      editable: false,
+      mixed: false,
+      hex: null,
+      intensity: null,
+      intensityMixed: false,
+    };
+  }
+
+  const distinctHexValues = getDistinctValues(editableNodes.map((node) => node.emissiveHex));
+  const distinctIntensityValues = getDistinctValues(
+    editableNodes.map((node) => node.emissiveIntensity),
+  );
+
+  return {
+    editable: true,
+    mixed: editableNodes.some((node) => node.emissiveMixed) || distinctHexValues.length > 1,
+    hex: editableNodes[0]?.emissiveHex ?? null,
+    intensity: editableNodes[0]?.emissiveIntensity ?? null,
+    intensityMixed:
+      editableNodes.some((node) => node.emissiveIntensityMixed) ||
+      distinctIntensityValues.length > 1,
+  };
+};
+
+const aggregateRoughnessState = (
+  selectedNodes: Array<SelectedNode>,
+): AggregatedAppearanceRoughnessState => {
+  const editableNodes = selectedNodes.filter((node) => node.roughnessEditable);
+  if (editableNodes.length === 0) {
+    return { editable: false, mixed: false, roughness: null };
+  }
+
+  const distinctRoughnessValues = getDistinctValues(editableNodes.map((node) => node.roughness));
+  return {
+    editable: true,
+    mixed: editableNodes.some((node) => node.roughnessMixed) || distinctRoughnessValues.length > 1,
+    roughness: editableNodes[0]?.roughness ?? null,
+  };
+};
+
 export function AppearancePanel({
   open,
   structureTree,
-  selectedNode = null,
+  selectedNodes = [],
+  activeSelectedNode = null,
+  activeSelectedNodeId = null,
+  selectedNodeIds = new Set<string>(),
   variant = 'desktop',
   onToggle,
   onFocusStructureNode,
@@ -70,12 +157,15 @@ export function AppearancePanel({
       variant={variant}
       resizeAriaLabel="Resize appearance panel"
       title="Appearance"
-      description="Adjust part colors for the selected structure node."
+      description="Adjust part colors for the selected nodes."
       onToggle={onToggle}
     >
       <AppearancePanelContent
         structureTree={structureTree}
-        selectedNode={selectedNode}
+        selectedNodes={selectedNodes}
+        activeSelectedNode={activeSelectedNode}
+        activeSelectedNodeId={activeSelectedNodeId}
+        selectedNodeIds={selectedNodeIds}
         onFocusStructureNode={onFocusStructureNode}
         onSetStructureNodeHidden={onSetStructureNodeHidden}
         onSetSelectedNodeColor={onSetSelectedNodeColor}
@@ -94,7 +184,10 @@ type AppearancePanelContentProps = Omit<AppearancePanelProps, 'open' | 'variant'
 
 export function AppearancePanelContent({
   structureTree,
-  selectedNode = null,
+  selectedNodes = [],
+  activeSelectedNode = null,
+  activeSelectedNodeId = null,
+  selectedNodeIds = new Set<string>(),
   onFocusStructureNode,
   onSetStructureNodeHidden,
   onSetSelectedNodeColor,
@@ -106,6 +199,16 @@ export function AppearancePanelContent({
   onResetSelectedNodeRoughness,
 }: AppearancePanelContentProps) {
   const rootNodeId = structureTree[0]?.id ?? null;
+  const selectedCount = selectedNodes.length;
+  const selectionLabel =
+    selectedCount === 0
+      ? 'No selection'
+      : selectedCount === 1 && activeSelectedNode
+        ? `${activeSelectedNode.name} · ${activeSelectedNode.nodeType}`
+        : `${selectedCount} nodes selected`;
+  const colorState = useMemo(() => aggregateColorState(selectedNodes), [selectedNodes]);
+  const emissiveState = useMemo(() => aggregateEmissiveState(selectedNodes), [selectedNodes]);
+  const roughnessState = useMemo(() => aggregateRoughnessState(selectedNodes), [selectedNodes]);
   const [colorDraft, setColorDraft] = useState(DEFAULT_COLOR);
   const [hexInputValue, setHexInputValue] = useState(DEFAULT_COLOR);
   const [emissiveColorDraft, setEmissiveColorDraft] = useState(DEFAULT_EMISSIVE_COLOR);
@@ -120,55 +223,67 @@ export function AppearancePanelContent({
   );
 
   useEffect(() => {
-    setColorDraft(selectedNode?.colorHex ?? DEFAULT_COLOR);
-    setHexInputValue(selectedNode?.colorMixed ? '' : (selectedNode?.colorHex ?? DEFAULT_COLOR));
-  }, [selectedNode?.colorHex, selectedNode?.colorMixed, selectedNode?.id]);
+    const nextColor = activeSelectedNode?.colorHex ?? colorState.hex ?? DEFAULT_COLOR;
+    setColorDraft(nextColor);
+    setHexInputValue(colorState.mixed ? '' : nextColor);
+  }, [activeSelectedNode?.colorHex, activeSelectedNode?.id, colorState.hex, colorState.mixed]);
 
   useEffect(() => {
-    const nextEmissiveColor = selectedNode?.emissiveHex ?? DEFAULT_EMISSIVE_COLOR;
+    const nextEmissiveColor =
+      activeSelectedNode?.emissiveHex ?? emissiveState.hex ?? DEFAULT_EMISSIVE_COLOR;
     const nextEmissiveIntensity = clampEmissiveIntensity(
-      selectedNode?.emissiveIntensity ?? DEFAULT_EMISSIVE_INTENSITY,
+      activeSelectedNode?.emissiveIntensity ??
+        emissiveState.intensity ??
+        DEFAULT_EMISSIVE_INTENSITY,
     );
     setEmissiveColorDraft(nextEmissiveColor);
-    setEmissiveHexInputValue(selectedNode?.emissiveMixed ? '' : nextEmissiveColor);
+    setEmissiveHexInputValue(emissiveState.mixed ? '' : nextEmissiveColor);
     setEmissiveIntensityDraft(nextEmissiveIntensity);
     setEmissiveIntensityInputValue(
-      selectedNode?.emissiveIntensityMixed ? '' : formatIntensityInput(nextEmissiveIntensity),
+      emissiveState.intensityMixed ? '' : formatIntensityInput(nextEmissiveIntensity),
     );
   }, [
-    selectedNode?.emissiveHex,
-    selectedNode?.emissiveIntensity,
-    selectedNode?.emissiveIntensityMixed,
-    selectedNode?.emissiveMixed,
-    selectedNode?.id,
+    activeSelectedNode?.emissiveHex,
+    activeSelectedNode?.emissiveIntensity,
+    activeSelectedNode?.id,
+    emissiveState.hex,
+    emissiveState.intensity,
+    emissiveState.intensityMixed,
+    emissiveState.mixed,
   ]);
 
   useEffect(() => {
-    const nextRoughness = Math.min(Math.max(selectedNode?.roughness ?? DEFAULT_ROUGHNESS, 0), 1);
-    setRoughnessDraft(nextRoughness);
-    setRoughnessInputValue(
-      selectedNode?.roughnessMixed ? '' : formatIntensityInput(nextRoughness),
+    const nextRoughness = Math.min(
+      Math.max(activeSelectedNode?.roughness ?? roughnessState.roughness ?? DEFAULT_ROUGHNESS, 0),
+      1,
     );
-  }, [selectedNode?.id, selectedNode?.roughness, selectedNode?.roughnessMixed]);
+    setRoughnessDraft(nextRoughness);
+    setRoughnessInputValue(roughnessState.mixed ? '' : formatIntensityInput(nextRoughness));
+  }, [
+    activeSelectedNode?.id,
+    activeSelectedNode?.roughness,
+    roughnessState.mixed,
+    roughnessState.roughness,
+  ]);
 
-  const canEditColor = Boolean(selectedNode?.colorEditable);
-  const canEditEmissive = Boolean(selectedNode?.emissiveEditable);
-  const canEditRoughness = Boolean(selectedNode?.roughnessEditable);
+  const canEditColor = colorState.editable;
+  const canEditEmissive = emissiveState.editable;
+  const canEditRoughness = roughnessState.editable;
 
   const applyDraftColor = () => {
     if (!canEditColor) return;
     const rawValue = hexInputValue.trim();
     if (!rawValue) {
-      const fallback = selectedNode?.colorHex ?? DEFAULT_COLOR;
+      const fallback = activeSelectedNode?.colorHex ?? colorState.hex ?? DEFAULT_COLOR;
       setColorDraft(fallback);
-      setHexInputValue(selectedNode?.colorMixed ? '' : fallback);
+      setHexInputValue(colorState.mixed ? '' : fallback);
       return;
     }
     const normalized = normalizeHexColor(rawValue);
     if (!normalized) {
-      const fallback = selectedNode?.colorHex ?? DEFAULT_COLOR;
+      const fallback = activeSelectedNode?.colorHex ?? colorState.hex ?? DEFAULT_COLOR;
       setColorDraft(fallback);
-      setHexInputValue(selectedNode?.colorMixed ? '' : fallback);
+      setHexInputValue(colorState.mixed ? '' : fallback);
       return;
     }
     setColorDraft(normalized);
@@ -180,16 +295,18 @@ export function AppearancePanelContent({
     if (!canEditEmissive) return;
     const rawValue = emissiveHexInputValue.trim();
     if (!rawValue) {
-      const fallback = selectedNode?.emissiveHex ?? DEFAULT_EMISSIVE_COLOR;
+      const fallback =
+        activeSelectedNode?.emissiveHex ?? emissiveState.hex ?? DEFAULT_EMISSIVE_COLOR;
       setEmissiveColorDraft(fallback);
-      setEmissiveHexInputValue(selectedNode?.emissiveMixed ? '' : fallback);
+      setEmissiveHexInputValue(emissiveState.mixed ? '' : fallback);
       return;
     }
     const normalized = normalizeHexColor(rawValue);
     if (!normalized) {
-      const fallback = selectedNode?.emissiveHex ?? DEFAULT_EMISSIVE_COLOR;
+      const fallback =
+        activeSelectedNode?.emissiveHex ?? emissiveState.hex ?? DEFAULT_EMISSIVE_COLOR;
       setEmissiveColorDraft(fallback);
-      setEmissiveHexInputValue(selectedNode?.emissiveMixed ? '' : fallback);
+      setEmissiveHexInputValue(emissiveState.mixed ? '' : fallback);
       return;
     }
     setEmissiveColorDraft(normalized);
@@ -202,22 +319,26 @@ export function AppearancePanelContent({
     const rawValue = emissiveIntensityInputValue.trim();
     if (!rawValue) {
       const fallback = clampEmissiveIntensity(
-        selectedNode?.emissiveIntensity ?? DEFAULT_EMISSIVE_INTENSITY,
+        activeSelectedNode?.emissiveIntensity ??
+          emissiveState.intensity ??
+          DEFAULT_EMISSIVE_INTENSITY,
       );
       setEmissiveIntensityDraft(fallback);
       setEmissiveIntensityInputValue(
-        selectedNode?.emissiveIntensityMixed ? '' : formatIntensityInput(fallback),
+        emissiveState.intensityMixed ? '' : formatIntensityInput(fallback),
       );
       return;
     }
     const parsed = Number(rawValue);
     if (!Number.isFinite(parsed)) {
       const fallback = clampEmissiveIntensity(
-        selectedNode?.emissiveIntensity ?? DEFAULT_EMISSIVE_INTENSITY,
+        activeSelectedNode?.emissiveIntensity ??
+          emissiveState.intensity ??
+          DEFAULT_EMISSIVE_INTENSITY,
       );
       setEmissiveIntensityDraft(fallback);
       setEmissiveIntensityInputValue(
-        selectedNode?.emissiveIntensityMixed ? '' : formatIntensityInput(fallback),
+        emissiveState.intensityMixed ? '' : formatIntensityInput(fallback),
       );
       return;
     }
@@ -231,16 +352,22 @@ export function AppearancePanelContent({
     if (!canEditRoughness) return;
     const rawValue = roughnessInputValue.trim();
     if (!rawValue) {
-      const fallback = Math.min(Math.max(selectedNode?.roughness ?? DEFAULT_ROUGHNESS, 0), 1);
+      const fallback = Math.min(
+        Math.max(activeSelectedNode?.roughness ?? roughnessState.roughness ?? DEFAULT_ROUGHNESS, 0),
+        1,
+      );
       setRoughnessDraft(fallback);
-      setRoughnessInputValue(selectedNode?.roughnessMixed ? '' : formatIntensityInput(fallback));
+      setRoughnessInputValue(roughnessState.mixed ? '' : formatIntensityInput(fallback));
       return;
     }
     const parsed = Number(rawValue);
     if (!Number.isFinite(parsed)) {
-      const fallback = Math.min(Math.max(selectedNode?.roughness ?? DEFAULT_ROUGHNESS, 0), 1);
+      const fallback = Math.min(
+        Math.max(activeSelectedNode?.roughness ?? roughnessState.roughness ?? DEFAULT_ROUGHNESS, 0),
+        1,
+      );
       setRoughnessDraft(fallback);
-      setRoughnessInputValue(selectedNode?.roughnessMixed ? '' : formatIntensityInput(fallback));
+      setRoughnessInputValue(roughnessState.mixed ? '' : formatIntensityInput(fallback));
       return;
     }
     const normalized = Math.min(Math.max(parsed, 0), 1);
@@ -280,17 +407,15 @@ export function AppearancePanelContent({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Color
             </p>
-            <p className="text-xs text-muted-foreground">
-              {selectedNode ? `${selectedNode.name} · ${selectedNode.nodeType}` : 'No selection'}
-            </p>
+            <p className="text-xs text-muted-foreground">{selectionLabel}</p>
           </div>
-          {!selectedNode ? (
+          {!activeSelectedNode ? (
             <p className="text-sm text-muted-foreground">
-              Select the full model or a structure node to adjust colors.
+              Select one or more structure nodes to adjust colors.
             </p>
           ) : !canEditColor ? (
             <p className="text-sm text-muted-foreground">
-              The selected node does not contain any color-editable materials.
+              None of the selected nodes contain color-editable materials.
             </p>
           ) : (
             <div className="space-y-3">
@@ -315,7 +440,7 @@ export function AppearancePanelContent({
                     value={hexInputValue}
                     inputMode="text"
                     className="h-10 bg-background/70 font-mono text-sm"
-                    placeholder={selectedNode.colorMixed ? 'Mixed' : undefined}
+                    placeholder={colorState.mixed ? 'Mixed' : undefined}
                     onChange={(event) => {
                       setHexInputValue(event.target.value);
                     }}
@@ -334,9 +459,9 @@ export function AppearancePanelContent({
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    const fallback = selectedNode.colorHex ?? DEFAULT_COLOR;
+                    const fallback = activeSelectedNode.colorHex ?? colorState.hex ?? DEFAULT_COLOR;
                     setColorDraft(fallback);
-                    setHexInputValue(selectedNode.colorMixed ? '' : fallback);
+                    setHexInputValue(colorState.mixed ? '' : fallback);
                     onResetSelectedNodeColor?.();
                   }}
                 >
@@ -348,7 +473,7 @@ export function AppearancePanelContent({
         </section>
       </div>
 
-      {selectedNode ? (
+      {activeSelectedNode ? (
         <div className="border-t border-border/70 pt-4">
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -358,7 +483,7 @@ export function AppearancePanelContent({
             </div>
             {!canEditEmissive ? (
               <p className="text-sm text-muted-foreground">
-                The selected node does not contain emissive materials.
+                None of the selected nodes contain emissive materials.
               </p>
             ) : (
               <div className="space-y-3">
@@ -384,7 +509,7 @@ export function AppearancePanelContent({
                       value={emissiveHexInputValue}
                       inputMode="text"
                       className="h-10 bg-background/70 font-mono text-sm"
-                      placeholder={selectedNode.emissiveMixed ? 'Mixed' : undefined}
+                      placeholder={emissiveState.mixed ? 'Mixed' : undefined}
                       onChange={(event) => {
                         setEmissiveHexInputValue(event.target.value);
                       }}
@@ -415,7 +540,7 @@ export function AppearancePanelContent({
                     value={emissiveIntensityInputValue}
                     inputMode="decimal"
                     className="h-10 w-24 shrink-0 bg-background/70 font-mono text-sm"
-                    placeholder={selectedNode.emissiveIntensityMixed ? 'Mixed' : undefined}
+                    placeholder={emissiveState.intensityMixed ? 'Mixed' : undefined}
                     onChange={(event) => {
                       setEmissiveIntensityInputValue(event.target.value);
                     }}
@@ -434,19 +559,20 @@ export function AppearancePanelContent({
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      const fallbackColor = selectedNode.emissiveHex ?? DEFAULT_EMISSIVE_COLOR;
+                      const fallbackColor =
+                        activeSelectedNode.emissiveHex ??
+                        emissiveState.hex ??
+                        DEFAULT_EMISSIVE_COLOR;
                       const fallbackIntensity = clampEmissiveIntensity(
-                        selectedNode.emissiveIntensity ?? DEFAULT_EMISSIVE_INTENSITY,
+                        activeSelectedNode.emissiveIntensity ??
+                          emissiveState.intensity ??
+                          DEFAULT_EMISSIVE_INTENSITY,
                       );
                       setEmissiveColorDraft(fallbackColor);
-                      setEmissiveHexInputValue(
-                        selectedNode.emissiveMixed ? '' : fallbackColor,
-                      );
+                      setEmissiveHexInputValue(emissiveState.mixed ? '' : fallbackColor);
                       setEmissiveIntensityDraft(fallbackIntensity);
                       setEmissiveIntensityInputValue(
-                        selectedNode.emissiveIntensityMixed
-                          ? ''
-                          : formatIntensityInput(fallbackIntensity),
+                        emissiveState.intensityMixed ? '' : formatIntensityInput(fallbackIntensity),
                       );
                       onResetSelectedNodeEmissive?.();
                     }}
@@ -460,7 +586,7 @@ export function AppearancePanelContent({
         </div>
       ) : null}
 
-      {selectedNode ? (
+      {activeSelectedNode ? (
         <div className="border-t border-border/70 pt-4">
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -470,7 +596,7 @@ export function AppearancePanelContent({
             </div>
             {!canEditRoughness ? (
               <p className="text-sm text-muted-foreground">
-                The selected node does not contain roughness-editable materials.
+                None of the selected nodes contain roughness-editable materials.
               </p>
             ) : (
               <div className="space-y-3">
@@ -491,7 +617,7 @@ export function AppearancePanelContent({
                     value={roughnessInputValue}
                     inputMode="decimal"
                     className="h-10 w-24 shrink-0 bg-background/70 font-mono text-sm"
-                    placeholder={selectedNode.roughnessMixed ? 'Mixed' : undefined}
+                    placeholder={roughnessState.mixed ? 'Mixed' : undefined}
                     onChange={(event) => {
                       setRoughnessInputValue(event.target.value);
                     }}
@@ -510,12 +636,17 @@ export function AppearancePanelContent({
                     variant="ghost"
                     onClick={() => {
                       const fallback = Math.min(
-                        Math.max(selectedNode.roughness ?? DEFAULT_ROUGHNESS, 0),
+                        Math.max(
+                          activeSelectedNode.roughness ??
+                            roughnessState.roughness ??
+                            DEFAULT_ROUGHNESS,
+                          0,
+                        ),
                         1,
                       );
                       setRoughnessDraft(fallback);
                       setRoughnessInputValue(
-                        selectedNode.roughnessMixed ? '' : formatIntensityInput(fallback),
+                        roughnessState.mixed ? '' : formatIntensityInput(fallback),
                       );
                       onResetSelectedNodeRoughness?.();
                     }}
@@ -532,7 +663,8 @@ export function AppearancePanelContent({
       <div className="border-t border-border/70 pt-4">
         <StructureTree
           nodes={structureTree}
-          selectedNodeId={selectedNode?.id ?? null}
+          selectedNodeIds={selectedNodeIds}
+          activeNodeId={activeSelectedNodeId}
           onFocusNode={onFocusStructureNode}
           onSetNodeHidden={onSetStructureNodeHidden}
         />

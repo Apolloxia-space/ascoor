@@ -26,7 +26,7 @@ type ThreeViewerProps = {
   interactionMode?: RightPanelMode;
   className?: string;
   onStructureTreeChange?: (tree: Array<StructureTreeNode>) => void;
-  onSelectedNodeChange?: (node: SelectedNode | null) => void;
+  onSelectionChange?: (selection: NodeSelection) => void;
   onModelParseError?: (message: string | null) => void;
   onSceneMutated?: () => void;
 };
@@ -72,13 +72,18 @@ export type SelectedNode = {
   scale: Record<TransformAxis, number>;
 };
 
+export type NodeSelection = {
+  selectedNodes: Array<SelectedNode>;
+  activeNodeId: string | null;
+};
+
 export type ResetTransformTarget = 'position' | 'rotation' | 'scale' | 'all';
 
 const MIN_NODE_SCALE = 0.01;
 
 export type ThreeViewerHandle = {
   listStructureTree: () => Array<StructureTreeNode>;
-  focusStructureNode: (id: string) => void;
+  focusStructureNode: (id: string, options?: { additive?: boolean }) => void;
   focusFullModel: () => void;
   clearSelection: () => void;
   setStructureNodeHidden: (id: string, hidden: boolean) => void;
@@ -116,12 +121,27 @@ const toArrayBuffer = (data: ArrayBuffer | ArrayBufferView) => {
   return copy.buffer;
 };
 
+const EXPORT_WRAPPER_SCENE_NAME = '__ascoor_export_scene__';
+
+// GLB export expects a Scene root. Wrap non-Scene roots to avoid exporter-created aux scenes.
+const wrapObjectForGlbExport = (object: THREE.Object3D) => {
+  if (object instanceof THREE.Scene) {
+    return object;
+  }
+
+  const scene = new THREE.Scene();
+  scene.name = EXPORT_WRAPPER_SCENE_NAME;
+  scene.add(object);
+  return scene;
+};
+
 const exportObjectToGlb = async (object: THREE.Object3D): Promise<Blob> => {
   const exporter = new GLTFExporter();
-  object.updateWorldMatrix(true, true);
+  const exportRoot = wrapObjectForGlbExport(object);
+  exportRoot.updateWorldMatrix(true, true);
   const binary = await new Promise<ArrayBuffer>((resolve, reject) => {
     exporter.parse(
-      object,
+      exportRoot,
       (result) => {
         if (result instanceof ArrayBuffer || ArrayBuffer.isView(result)) {
           resolve(toArrayBuffer(result));
@@ -198,13 +218,17 @@ const cloneMaterialSet = (material: THREE.Material | Array<THREE.Material>) => {
   return material.clone();
 };
 
-const hasMaterialColor = (material: THREE.Material): material is THREE.Material & {
+const hasMaterialColor = (
+  material: THREE.Material,
+): material is THREE.Material & {
   color: THREE.Color;
 } => {
   return 'color' in material && material.color instanceof THREE.Color;
 };
 
-const hasMaterialEmissive = (material: THREE.Material): material is THREE.Material & {
+const hasMaterialEmissive = (
+  material: THREE.Material,
+): material is THREE.Material & {
   emissive: THREE.Color;
   emissiveIntensity: number;
 } => {
@@ -216,7 +240,9 @@ const hasMaterialEmissive = (material: THREE.Material): material is THREE.Materi
   );
 };
 
-const hasMaterialRoughness = (material: THREE.Material): material is THREE.Material & {
+const hasMaterialRoughness = (
+  material: THREE.Material,
+): material is THREE.Material & {
   roughness: number;
 } => {
   return 'roughness' in material && typeof material.roughness === 'number';
@@ -550,6 +576,42 @@ return __runtimeResult;
   return toRenderableObject(output);
 };
 
+const AUXILIARY_SCENE_NAMES = new Set(['AuxScene', 'Aux_Scene', EXPORT_WRAPPER_SCENE_NAME]);
+
+const hasIdentityTransform = (object: THREE.Object3D) => {
+  return (
+    object.position.x === 0 &&
+    object.position.y === 0 &&
+    object.position.z === 0 &&
+    object.quaternion.x === 0 &&
+    object.quaternion.y === 0 &&
+    object.quaternion.z === 0 &&
+    object.quaternion.w === 1 &&
+    object.scale.x === 1 &&
+    object.scale.y === 1 &&
+    object.scale.z === 1
+  );
+};
+
+// Older exports may already contain an aux wrapper scene. Strip it so edits target the actual model.
+const unwrapAuxiliarySceneRoot = (object: THREE.Object3D) => {
+  let current = object;
+
+  while (
+    (current instanceof THREE.Scene || current instanceof THREE.Group) &&
+    AUXILIARY_SCENE_NAMES.has(current.name) &&
+    current.children.length === 1 &&
+    hasIdentityTransform(current)
+  ) {
+    const [child] = current.children;
+    if (!child) break;
+    current.remove(child);
+    current = child;
+  }
+
+  return current;
+};
+
 const assertWithoutConsoleError = (run: () => void, message: string) => {
   const originalConsoleError = console.error;
   let hasConsoleError = false;
@@ -649,7 +711,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     interactionMode = 'create',
     className,
     onStructureTreeChange,
-    onSelectedNodeChange,
+    onSelectionChange,
     onModelParseError,
     onSceneMutated,
   }: ThreeViewerProps,
@@ -678,9 +740,10 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   });
   const frameRef = useRef<number | null>(null);
   const structureTreeRef = useRef<Array<StructureTreeNode>>([]);
-  const selectionHelperRef = useRef<THREE.BoxHelper | null>(null);
+  const selectionHelpersRef = useRef<Map<string, THREE.BoxHelper>>(new Map());
   const structureNodeMapRef = useRef<Map<string, THREE.Object3D>>(new Map());
-  const selectedNodeRef = useRef<SelectedNodeState | null>(null);
+  const selectedNodeIdsRef = useRef<Array<string>>([]);
+  const activeSelectedNodeIdRef = useRef<string | null>(null);
   const interactionModeRef = useRef<RightPanelMode>(interactionMode);
   const viewModeKeyRef = useRef<ViewMode['key']>(viewModeKey);
   const structureSelectionCycleRef = useRef<{
@@ -715,25 +778,24 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     updateStructureTree(buildStructureTree(sourceModel));
   };
 
-  const getSelectedSourceNode = () => {
-    const selectedNode = selectedNodeRef.current;
-    if (!selectedNode) return null;
-    return structureNodeMapRef.current.get(selectedNode.id) ?? null;
+  const getSelectedSourceNodes = () => {
+    return selectedNodeIdsRef.current
+      .map((id) => structureNodeMapRef.current.get(id) ?? null)
+      .filter((node): node is THREE.Object3D => node !== null);
   };
 
-  const getSelectedNodeSnapshot = (): SelectedNode | null => {
-    const selectedNode = selectedNodeRef.current;
-    const activeNode = getSelectedSourceNode();
-    if (!selectedNode || !activeNode) return null;
+  const getSelectedNodeSnapshot = (id: string): SelectedNode | null => {
+    const activeNode = structureNodeMapRef.current.get(id) ?? null;
+    if (!activeNode) return null;
     const sourceTreeNode =
       structureTreeRef.current.length > 0
-        ? findStructureTreeNode(structureTreeRef.current, selectedNode.id)
+        ? findStructureTreeNode(structureTreeRef.current, id)
         : null;
     const colorState = getObjectColorState(activeNode);
     const emissiveState = getObjectEmissiveState(activeNode);
     const roughnessState = getObjectRoughnessState(activeNode);
     return {
-      id: selectedNode.id,
+      id,
       name: sourceTreeNode?.displayName ?? activeNode.name ?? 'Node',
       nodeType: sourceTreeNode?.nodeType ?? activeNode.type ?? 'Object3D',
       selectionKind: 'structure-node',
@@ -767,55 +829,117 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     };
   };
 
-  const clearSelectionHighlight = () => {
-    const helper = selectionHelperRef.current;
-    if (!helper) return;
-    helper.parent?.remove(helper);
-    helper.geometry.dispose();
-    disposeMaterial(helper.material);
-    selectionHelperRef.current = null;
+  const getSelectionSnapshot = (): NodeSelection => {
+    const selectedNodes = selectedNodeIdsRef.current
+      .map((id) => getSelectedNodeSnapshot(id))
+      .filter((node): node is SelectedNode => node !== null);
+    const validIds = new Set(selectedNodes.map((node) => node.id));
+    const activeNodeId =
+      activeSelectedNodeIdRef.current && validIds.has(activeSelectedNodeIdRef.current)
+        ? activeSelectedNodeIdRef.current
+        : (selectedNodes[selectedNodes.length - 1]?.id ?? null);
+
+    selectedNodeIdsRef.current = selectedNodes.map((node) => node.id);
+    activeSelectedNodeIdRef.current = activeNodeId;
+
+    return {
+      selectedNodes,
+      activeNodeId,
+    };
   };
 
-  const updateSelectionHighlight = () => {
+  const clearSelectionHighlights = () => {
+    selectionHelpersRef.current.forEach((helper) => {
+      helper.parent?.remove(helper);
+      helper.geometry.dispose();
+      disposeMaterial(helper.material);
+    });
+    selectionHelpersRef.current.clear();
+  };
+
+  const updateSelectionHighlights = () => {
     const scene = sceneRef.current;
-    const selectedNode = getSelectedSourceNode();
-    clearSelectionHighlight();
-    if (!scene || !selectedNode) return;
-    selectedNode.updateWorldMatrix(true, true);
-    const box = new THREE.Box3().setFromObject(selectedNode);
-    if (box.isEmpty()) return;
-    const helper = new THREE.BoxHelper(selectedNode, 0x38bdf8);
-    helper.renderOrder = 2;
-    if (!Array.isArray(helper.material)) {
-      if ('depthTest' in helper.material) {
-        helper.material.depthTest = false;
+    const activeNodeId = activeSelectedNodeIdRef.current;
+    clearSelectionHighlights();
+    if (!scene) return;
+
+    selectedNodeIdsRef.current.forEach((id) => {
+      const node = structureNodeMapRef.current.get(id);
+      if (!node) return;
+      node.updateWorldMatrix(true, true);
+      const box = new THREE.Box3().setFromObject(node);
+      if (box.isEmpty()) return;
+      const helper = new THREE.BoxHelper(node, id === activeNodeId ? 0x2563eb : 0x38bdf8);
+      helper.renderOrder = 2;
+      if (!Array.isArray(helper.material)) {
+        if ('depthTest' in helper.material) {
+          helper.material.depthTest = false;
+        }
+        if ('transparent' in helper.material) {
+          helper.material.transparent = true;
+        }
+        if ('opacity' in helper.material) {
+          helper.material.opacity = id === activeNodeId ? 1 : 0.8;
+        }
       }
-      if ('transparent' in helper.material) {
-        helper.material.transparent = true;
-      }
-      if ('opacity' in helper.material) {
-        helper.material.opacity = 0.95;
-      }
-    }
-    scene.add(helper);
-    selectionHelperRef.current = helper;
+      scene.add(helper);
+      selectionHelpersRef.current.set(id, helper);
+    });
   };
 
-  const emitSelectedNodeChange = () => {
-    updateSelectionHighlight();
-    onSelectedNodeChange?.(getSelectedNodeSnapshot());
+  const emitSelectionChange = () => {
+    updateSelectionHighlights();
+    onSelectionChange?.(getSelectionSnapshot());
   };
 
   const emitSceneMutated = () => {
     onSceneMutated?.();
   };
 
-  const selectNode = (selection: SelectedNodeState | null) => {
-    if (!selection) {
+  const setSelectionState = (
+    selectedNodeIds: Array<string>,
+    activeNodeId: string | null,
+    options?: { resetCycle?: boolean },
+  ) => {
+    const nextSelectedNodeIds = selectedNodeIds.filter(
+      (id, index, array) => array.indexOf(id) === index && structureNodeMapRef.current.has(id),
+    );
+    const nextActiveNodeId =
+      activeNodeId && nextSelectedNodeIds.includes(activeNodeId)
+        ? activeNodeId
+        : (nextSelectedNodeIds[nextSelectedNodeIds.length - 1] ?? null);
+    if (options?.resetCycle || nextSelectedNodeIds.length === 0) {
       structureSelectionCycleRef.current = null;
     }
-    selectedNodeRef.current = selection;
-    emitSelectedNodeChange();
+    selectedNodeIdsRef.current = nextSelectedNodeIds;
+    activeSelectedNodeIdRef.current = nextActiveNodeId;
+    emitSelectionChange();
+  };
+
+  const selectNode = (
+    selection: SelectedNodeState | null,
+    options?: { mode?: 'replace' | 'toggle'; resetCycle?: boolean },
+  ) => {
+    if (!selection) {
+      setSelectionState([], null, { resetCycle: true });
+      return;
+    }
+
+    if (options?.mode === 'toggle') {
+      const currentNodeIds = selectedNodeIdsRef.current;
+      if (currentNodeIds.includes(selection.id)) {
+        setSelectionState(
+          currentNodeIds.filter((id) => id !== selection.id),
+          activeSelectedNodeIdRef.current === selection.id ? null : activeSelectedNodeIdRef.current,
+          options,
+        );
+        return;
+      }
+      setSelectionState([...currentNodeIds, selection.id], selection.id, options);
+      return;
+    }
+
+    setSelectionState([selection.id], selection.id, options);
   };
 
   const getStructureSelectionPath = (object: THREE.Object3D | null) => {
@@ -839,7 +963,10 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     return path;
   };
 
-  const selectClickTargetFromHit = (object: THREE.Object3D | null) => {
+  const selectClickTargetFromHit = (
+    object: THREE.Object3D | null,
+    options?: { additive?: boolean },
+  ) => {
     const targets = getStructureSelectionPath(object).map(
       (id) => ({ id, selectionKind: 'structure-node' }) satisfies SelectedNodeState,
     );
@@ -847,13 +974,15 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
 
     const signature = targets.map((target) => target.id).join('>');
     const cycle = structureSelectionCycleRef.current;
-    const selectedNode = selectedNodeRef.current;
+    const activeSelectedNodeId = activeSelectedNodeIdRef.current;
 
     let nextIndex = 0;
-    if (cycle && cycle.signature === signature) {
+    if (options?.additive) {
+      nextIndex = cycle && cycle.signature === signature ? cycle.index : 0;
+    } else if (cycle && cycle.signature === signature) {
       nextIndex = (cycle.index + 1) % targets.length;
-    } else if (selectedNode) {
-      const currentIndex = targets.findIndex((target) => target.id === selectedNode.id);
+    } else if (activeSelectedNodeId) {
+      const currentIndex = targets.findIndex((target) => target.id === activeSelectedNodeId);
       if (currentIndex >= 0) {
         nextIndex = (currentIndex + 1) % targets.length;
       }
@@ -863,22 +992,24 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       signature,
       index: nextIndex,
     };
-    selectNode(targets[nextIndex]);
+    selectNode(targets[nextIndex], { mode: options?.additive ? 'toggle' : 'replace' });
     return true;
   };
 
-  const updateSelectedNode = (
+  const updateSelectedNodes = (
     updater: (node: THREE.Object3D) => void,
     options?: { syncStructureTree?: boolean },
   ) => {
-    const node = getSelectedSourceNode();
-    if (!node) return;
-    updater(node);
-    node.updateWorldMatrix(true, true);
+    const selectedNodes = getSelectedSourceNodes();
+    if (selectedNodes.length === 0) return;
+    selectedNodes.forEach((node) => {
+      updater(node);
+      node.updateWorldMatrix(true, true);
+    });
     if (options?.syncStructureTree !== false) {
       syncStructureTree();
     }
-    emitSelectedNodeChange();
+    emitSelectionChange();
     emitSceneMutated();
   };
 
@@ -893,7 +1024,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     if (!/^#?[0-9a-f]{6}$/i.test(normalizedHex)) return;
     const nextHex = normalizedHex.startsWith('#') ? normalizedHex : `#${normalizedHex}`;
 
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -911,7 +1042,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   };
 
   const resetSelectedNodeColor = () => {
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -938,7 +1069,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     if (!/^#?[0-9a-f]{6}$/i.test(normalizedHex)) return;
     const nextHex = normalizedHex.startsWith('#') ? normalizedHex : `#${normalizedHex}`;
 
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -959,7 +1090,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     if (!Number.isFinite(value)) return;
     const nextValue = Math.min(Math.max(value, 0), 3);
 
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -977,7 +1108,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   };
 
   const resetSelectedNodeEmissive = () => {
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -1008,7 +1139,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     if (!Number.isFinite(value)) return;
     const nextValue = Math.min(Math.max(value, 0), 1);
 
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -1026,7 +1157,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   };
 
   const resetSelectedNodeRoughness = () => {
-    updateSelectedNode(
+    updateSelectedNodes(
       (node) => {
         node.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
@@ -1056,10 +1187,14 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     ref,
     () => ({
       listStructureTree: () => structureTreeRef.current,
-      focusStructureNode: (id: string) => {
+      focusStructureNode: (id: string, options?: { additive?: boolean }) => {
         const node = structureNodeMapRef.current.get(id);
         if (!node) return;
-        selectNode({ id, selectionKind: 'structure-node' });
+        selectNode(
+          { id, selectionKind: 'structure-node' },
+          { mode: options?.additive ? 'toggle' : 'replace' },
+        );
+        if (options?.additive) return;
         const camera = cameraRef.current;
         const controls = controlsRef.current;
         if (!camera || !controls) return;
@@ -1081,16 +1216,16 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         node.visible = !hidden;
         node.updateWorldMatrix(true, true);
         syncStructureTree();
-        emitSelectedNodeChange();
+        emitSelectionChange();
         emitSceneMutated();
       },
       nudgeSelectedNode: (axis: TransformAxis, delta: number) => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           node.position[axis] += delta;
         });
       },
       rotateSelectedNode: (axis: TransformAxis, deltaRadians: number) => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           if (axis === 'x') {
             node.rotateX(deltaRadians);
           } else if (axis === 'y') {
@@ -1101,22 +1236,22 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         });
       },
       setSelectedNodeRotation: (axis: TransformAxis, radians: number) => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           node.rotation[axis] = radians;
         });
       },
       nudgeSelectedNodeScale: (axis: TransformAxis, delta: number) => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           node.scale[axis] = Math.max(MIN_NODE_SCALE, node.scale[axis] + delta);
         });
       },
       setSelectedNodeScale: (axis: TransformAxis, value: number) => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           node.scale[axis] = Math.max(MIN_NODE_SCALE, value);
         });
       },
       resetSelectedNode: (target: ResetTransformTarget) => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           const initialPosition = node.userData.initialPosition as THREE.Vector3 | undefined;
           const initialQuaternion = node.userData.initialQuaternion as THREE.Quaternion | undefined;
           const initialScale = node.userData.initialScale as THREE.Vector3 | undefined;
@@ -1132,7 +1267,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         });
       },
       hideSelectedNode: () => {
-        updateSelectedNode((node) => {
+        updateSelectedNodes((node) => {
           node.visible = false;
         });
       },
@@ -1142,7 +1277,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         node.visible = true;
         node.updateWorldMatrix(true, true);
         syncStructureTree();
-        emitSelectedNodeChange();
+        emitSelectionChange();
         emitSceneMutated();
       },
       setSelectedNodeColor,
@@ -1152,16 +1287,14 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       resetSelectedNodeEmissive,
       setSelectedNodeRoughness,
       resetSelectedNodeRoughness,
-      exportGlb: async (target = 'download') => {
+      exportGlb: async (_target = 'download') => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
-        const object = target === 'edited-model' ? createEditedModelExportObject(source) : source;
+        const object = createEditedModelExportObject(source);
         try {
           return await exportObjectToGlb(object);
         } finally {
-          if (target === 'edited-model') {
-            disposeObject(object);
-          }
+          disposeObject(object);
         }
       },
       exportStl: () => {
@@ -1307,7 +1440,9 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
           const hitObject = intersections[0]?.object ?? null;
           const structureNodeId = getStructureNodeIdFromObject(hitObject);
           if (structureNodeId) {
-            selectClickTargetFromHit(hitObject);
+            selectClickTargetFromHit(hitObject, {
+              additive: event.metaKey || event.ctrlKey,
+            });
           } else {
             selectNode(null);
           }
@@ -1336,7 +1471,9 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       }
       controls.enabled = !viewHelper.animating;
       controls.update();
-      selectionHelperRef.current?.update();
+      selectionHelpersRef.current.forEach((helper) => {
+        helper.update();
+      });
       renderer.clear();
       renderer.render(scene, camera);
       viewHelper.render(renderer);
@@ -1371,11 +1508,12 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       viewHelperRef.current = null;
       modelRef.current = null;
       sourceModelRef.current = null;
-      clearSelectionHighlight();
+      clearSelectionHighlights();
       structureNodeMapRef.current = new Map();
-      selectedNodeRef.current = null;
+      selectedNodeIdsRef.current = [];
+      activeSelectedNodeIdRef.current = null;
       updateStructureTree([]);
-      emitSelectedNodeChange();
+      emitSelectionChange();
     };
   }, []);
 
@@ -1399,9 +1537,10 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       sourceModelRef.current = null;
       structureNodeMapRef.current = new Map();
       structureSelectionCycleRef.current = null;
-      selectedNodeRef.current = null;
+      selectedNodeIdsRef.current = [];
+      activeSelectedNodeIdRef.current = null;
       updateStructureTree([]);
-      emitSelectedNodeChange();
+      emitSelectionChange();
     };
 
     const applyLoadedModel = (object: THREE.Object3D) => {
@@ -1427,11 +1566,12 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         sourceModelRef.current = object;
         modelRef.current = object;
         structureSelectionCycleRef.current = null;
-        selectedNodeRef.current = null;
+        selectedNodeIdsRef.current = [];
+        activeSelectedNodeIdRef.current = null;
         syncStructureTree();
         captureInitialTransforms(object);
         onModelParseError?.(null);
-        emitSelectedNodeChange();
+        emitSelectionChange();
       } catch (error) {
         object.parent?.remove(object);
         disposeObject(object);
@@ -1466,7 +1606,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       (gltf) => {
         if (disposed) return;
         try {
-          applyLoadedModel(gltf.scene);
+          applyLoadedModel(unwrapAuxiliarySceneRoot(gltf.scene));
         } catch (error) {
           const message =
             error instanceof Error

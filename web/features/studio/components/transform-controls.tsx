@@ -11,7 +11,8 @@ export const ROTATE_STEP_OPTIONS = [5, 15, 45] as const;
 export const SCALE_STEP_OPTIONS = [0.01, 0.1, 0.25] as const;
 
 type TransformControlsProps = {
-  selectedNode?: SelectedNode | null;
+  selectedNodes?: Array<SelectedNode>;
+  activeSelectedNode?: SelectedNode | null;
   emptyMessage: string;
   moveStep: number;
   onMoveStepChange?: (step: number) => void;
@@ -30,7 +31,8 @@ type TransformControlsProps = {
 };
 
 export function TransformControls({
-  selectedNode = null,
+  selectedNodes = [],
+  activeSelectedNode = null,
   emptyMessage,
   moveStep,
   onMoveStepChange,
@@ -62,105 +64,113 @@ export function TransformControls({
     y: '1.00',
     z: '1.00',
   });
+  const selectionCount = selectedNodes.length;
+  const allSelectedHidden = selectionCount > 0 && selectedNodes.every((node) => node.hidden);
+  const selectionLabel =
+    selectionCount === 0
+      ? 'No selection'
+      : selectionCount === 1 && activeSelectedNode
+        ? `${activeSelectedNode.name} · ${activeSelectedNode.nodeType}`
+        : `${selectionCount} nodes selected`;
 
   const formatCoordinate = (value: number) => value.toFixed(2);
   const formatDegreesValue = (value: number) => ((value * 180) / Math.PI).toFixed(1);
   const formatScaleValue = (value: number) => value.toFixed(2);
 
   useEffect(() => {
-    if (!selectedNode) {
+    if (!activeSelectedNode) {
       setPositionDraft({ x: '0.00', y: '0.00', z: '0.00' });
       setRotationDraft({ x: '0.0', y: '0.0', z: '0.0' });
       setScaleDraft({ x: '1.00', y: '1.00', z: '1.00' });
       return;
     }
     setPositionDraft({
-      x: formatCoordinate(selectedNode.position.x),
-      y: formatCoordinate(selectedNode.position.y),
-      z: formatCoordinate(selectedNode.position.z),
+      x: formatCoordinate(activeSelectedNode.position.x),
+      y: formatCoordinate(activeSelectedNode.position.y),
+      z: formatCoordinate(activeSelectedNode.position.z),
     });
     setRotationDraft({
-      x: formatDegreesValue(selectedNode.rotation.x),
-      y: formatDegreesValue(selectedNode.rotation.y),
-      z: formatDegreesValue(selectedNode.rotation.z),
+      x: formatDegreesValue(activeSelectedNode.rotation.x),
+      y: formatDegreesValue(activeSelectedNode.rotation.y),
+      z: formatDegreesValue(activeSelectedNode.rotation.z),
     });
     setScaleDraft({
-      x: formatScaleValue(selectedNode.scale.x),
-      y: formatScaleValue(selectedNode.scale.y),
-      z: formatScaleValue(selectedNode.scale.z),
+      x: formatScaleValue(activeSelectedNode.scale.x),
+      y: formatScaleValue(activeSelectedNode.scale.y),
+      z: formatScaleValue(activeSelectedNode.scale.z),
     });
   }, [
-    selectedNode?.id,
-    selectedNode?.position.x,
-    selectedNode?.position.y,
-    selectedNode?.position.z,
-    selectedNode?.rotation.x,
-    selectedNode?.rotation.y,
-    selectedNode?.rotation.z,
-    selectedNode?.scale.x,
-    selectedNode?.scale.y,
-    selectedNode?.scale.z,
+    activeSelectedNode?.id,
+    activeSelectedNode?.position.x,
+    activeSelectedNode?.position.y,
+    activeSelectedNode?.position.z,
+    activeSelectedNode?.rotation.x,
+    activeSelectedNode?.rotation.y,
+    activeSelectedNode?.rotation.z,
+    activeSelectedNode?.scale.x,
+    activeSelectedNode?.scale.y,
+    activeSelectedNode?.scale.z,
   ]);
 
   const commitPositionInput = (axis: TransformAxis) => {
-    if (!selectedNode) return;
+    if (!activeSelectedNode) return;
     const nextValue = Number(positionDraft[axis]);
     if (!Number.isFinite(nextValue)) {
       setPositionDraft((current) => ({
         ...current,
-        [axis]: formatCoordinate(selectedNode.position[axis]),
+        [axis]: formatCoordinate(activeSelectedNode.position[axis]),
       }));
       return;
     }
-    const delta = nextValue - selectedNode.position[axis];
+    const delta = nextValue - activeSelectedNode.position[axis];
     if (Math.abs(delta) > Number.EPSILON) {
       onNudgeNode?.(axis, delta);
       return;
     }
     setPositionDraft((current) => ({
       ...current,
-      [axis]: formatCoordinate(selectedNode.position[axis]),
+      [axis]: formatCoordinate(activeSelectedNode.position[axis]),
     }));
   };
 
   const commitRotationInput = (axis: TransformAxis) => {
-    if (!selectedNode) return;
+    if (!activeSelectedNode) return;
     const nextDegrees = Number(rotationDraft[axis]);
     if (!Number.isFinite(nextDegrees)) {
       setRotationDraft((current) => ({
         ...current,
-        [axis]: formatDegreesValue(selectedNode.rotation[axis]),
+        [axis]: formatDegreesValue(activeSelectedNode.rotation[axis]),
       }));
       return;
     }
     const nextRadians = (nextDegrees * Math.PI) / 180;
-    if (Math.abs(nextRadians - selectedNode.rotation[axis]) > Number.EPSILON) {
+    if (Math.abs(nextRadians - activeSelectedNode.rotation[axis]) > Number.EPSILON) {
       onSetNodeRotation?.(axis, nextRadians);
       return;
     }
     setRotationDraft((current) => ({
       ...current,
-      [axis]: formatDegreesValue(selectedNode.rotation[axis]),
+      [axis]: formatDegreesValue(activeSelectedNode.rotation[axis]),
     }));
   };
 
   const commitScaleInput = (axis: TransformAxis) => {
-    if (!selectedNode) return;
+    if (!activeSelectedNode) return;
     const nextValue = Number(scaleDraft[axis]);
     if (!Number.isFinite(nextValue) || nextValue <= 0) {
       setScaleDraft((current) => ({
         ...current,
-        [axis]: formatScaleValue(selectedNode.scale[axis]),
+        [axis]: formatScaleValue(activeSelectedNode.scale[axis]),
       }));
       return;
     }
-    if (Math.abs(nextValue - selectedNode.scale[axis]) > Number.EPSILON) {
+    if (Math.abs(nextValue - activeSelectedNode.scale[axis]) > Number.EPSILON) {
       onSetNodeScale?.(axis, nextValue);
       return;
     }
     setScaleDraft((current) => ({
       ...current,
-      [axis]: formatScaleValue(selectedNode.scale[axis]),
+      [axis]: formatScaleValue(activeSelectedNode.scale[axis]),
     }));
   };
 
@@ -176,11 +186,9 @@ export function TransformControls({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Transform
         </p>
-        <p className="text-xs text-muted-foreground">
-          {selectedNode ? `${selectedNode.name} · ${selectedNode.nodeType}` : 'No selection'}
-        </p>
+        <p className="text-xs text-muted-foreground">{selectionLabel}</p>
       </div>
-      {!selectedNode ? (
+      {!activeSelectedNode ? (
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
         <div className="space-y-4">
@@ -375,7 +383,12 @@ export function TransformControls({
             >
               Reset Rot
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => onResetNode?.('scale')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onResetNode?.('scale')}
+            >
               Reset Scale
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => onResetNode?.('all')}>
@@ -383,18 +396,30 @@ export function TransformControls({
             </Button>
           </div>
 
-          {selectedNode.hidden ? (
+          {allSelectedHidden ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => onRestoreNode?.(selectedNode.id)}
+              onClick={() => {
+                selectedNodes.forEach((node) => {
+                  onRestoreNode?.(node.id);
+                });
+              }}
             >
-              {selectedNode.selectionKind === 'structure-node' ? 'Show Node' : 'Restore Part'}
+              {selectionCount > 1
+                ? 'Show Nodes'
+                : activeSelectedNode.selectionKind === 'structure-node'
+                  ? 'Show Node'
+                  : 'Restore Part'}
             </Button>
           ) : (
             <Button type="button" size="sm" variant="destructive" onClick={onHideSelectedNode}>
-              {selectedNode.selectionKind === 'structure-node' ? 'Hide Node' : 'Hide Part'}
+              {selectionCount > 1
+                ? 'Hide Nodes'
+                : activeSelectedNode.selectionKind === 'structure-node'
+                  ? 'Hide Node'
+                  : 'Hide Part'}
             </Button>
           )}
         </div>

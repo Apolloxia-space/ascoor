@@ -8,8 +8,9 @@ import { cn } from '@shared/lib/utils';
 
 type StructureTreeProps = {
   nodes: Array<StructureTreeNode>;
-  selectedNodeId?: string | null;
-  onFocusNode?: (nodeId: string) => void;
+  selectedNodeIds?: ReadonlySet<string>;
+  activeNodeId?: string | null;
+  onFocusNode?: (nodeId: string, options?: { additive?: boolean }) => void;
   onSetNodeHidden?: (nodeId: string, hidden: boolean) => void;
 };
 
@@ -84,12 +85,13 @@ const getNodeMeta = (node: StructureTreeNode) => {
 
 export function StructureTree({
   nodes,
-  selectedNodeId = null,
+  selectedNodeIds = new Set<string>(),
+  activeNodeId = null,
   onFocusNode,
   onSetNodeHidden,
 }: StructureTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const nodeCount = countTreeNodes(nodes);
   const visibleNodeIds = useMemo(
@@ -124,16 +126,15 @@ export function StructureTree({
 
   useEffect(() => {
     const validIds = collectTreeNodeIds(nodes);
-    setActiveNodeId((current) => (current && validIds.has(current) ? current : null));
+    setFocusedNodeId((current) => (current && validIds.has(current) ? current : null));
   }, [nodes]);
 
   useEffect(() => {
     const validIds = collectTreeNodeIds(nodes);
-    const nextSelectedNodeId =
-      selectedNodeId && validIds.has(selectedNodeId) ? selectedNodeId : null;
-    setActiveNodeId(nextSelectedNodeId);
-    if (!nextSelectedNodeId) return;
-    const path = findTreeNodePath(nodes, nextSelectedNodeId);
+    const nextActiveNodeId = activeNodeId && validIds.has(activeNodeId) ? activeNodeId : null;
+    setFocusedNodeId(nextActiveNodeId);
+    if (!nextActiveNodeId) return;
+    const path = findTreeNodePath(nodes, nextActiveNodeId);
     if (!path) return;
     setExpandedIds((current) => {
       const next = new Set(current);
@@ -142,7 +143,7 @@ export function StructureTree({
       });
       return next;
     });
-  }, [nodes, selectedNodeId]);
+  }, [activeNodeId, nodes]);
 
   const toggleExpanded = (nodeId: string) => {
     setExpandedIds((current) => {
@@ -157,7 +158,7 @@ export function StructureTree({
   };
 
   const focusTreeNode = (nodeId: string) => {
-    setActiveNodeId(nodeId);
+    setFocusedNodeId(nodeId);
     const button = nodeButtonRefs.current.get(nodeId);
     button?.focus();
   };
@@ -165,7 +166,8 @@ export function StructureTree({
   const renderNodes = (treeNodes: Array<StructureTreeNode>, depth = 0): React.ReactNode => {
     return treeNodes.map((node) => {
       const isExpanded = expandedIds.has(node.id);
-      const isSelected = activeNodeId === node.id;
+      const isSelected = selectedNodeIds.has(node.id);
+      const isActive = activeNodeId === node.id;
       const isExpandable = node.children.length > 0;
       const path = findTreeNodePath(nodes, node.id);
       const parentId = path && path.length > 1 ? path[path.length - 2] : null;
@@ -181,9 +183,11 @@ export function StructureTree({
           <div
             className={cn(
               'flex items-start gap-1 rounded-md border px-2 py-1.5 transition-colors',
-              isSelected
+              isActive
                 ? 'border-primary/60 bg-primary/10'
-                : 'border-transparent hover:border-border hover:bg-muted/60',
+                : isSelected
+                  ? 'border-primary/30 bg-primary/5'
+                  : 'border-transparent hover:border-border hover:bg-muted/60',
             )}
             style={{ paddingLeft: `${depth * 0.75 + 0.5}rem` }}
           >
@@ -205,7 +209,7 @@ export function StructureTree({
               role="treeitem"
               aria-expanded={isExpandable ? isExpanded : undefined}
               aria-selected={isSelected}
-              tabIndex={node.id === (activeNodeId ?? firstVisibleNodeId) ? 0 : -1}
+              tabIndex={node.id === (focusedNodeId ?? activeNodeId ?? firstVisibleNodeId) ? 0 : -1}
               ref={(element) => {
                 if (element) {
                   nodeButtonRefs.current.set(node.id, element);
@@ -213,7 +217,7 @@ export function StructureTree({
                 }
                 nodeButtonRefs.current.delete(node.id);
               }}
-              onFocus={() => setActiveNodeId(node.id)}
+              onFocus={() => setFocusedNodeId(node.id)}
               onKeyDown={(event) => {
                 switch (event.key) {
                   case 'ArrowDown':
@@ -253,8 +257,8 @@ export function StructureTree({
                   case 'Enter':
                   case ' ':
                     event.preventDefault();
-                    setActiveNodeId(node.id);
-                    onFocusNode?.(node.id);
+                    setFocusedNodeId(node.id);
+                    onFocusNode?.(node.id, { additive: event.metaKey || event.ctrlKey });
                     return;
                   case 'h':
                   case 'H':
@@ -265,9 +269,9 @@ export function StructureTree({
                     return;
                 }
               }}
-              onClick={() => {
-                setActiveNodeId(node.id);
-                onFocusNode?.(node.id);
+              onClick={(event) => {
+                setFocusedNodeId(node.id);
+                onFocusNode?.(node.id, { additive: event.metaKey || event.ctrlKey });
               }}
             >
               <div className="flex items-center gap-2">
