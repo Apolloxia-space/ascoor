@@ -138,7 +138,7 @@ export function ViewerPanel({
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
-  const skipNextSourceReloadRef = useRef(false);
+  const skipNextEditedModelReloadRef = useRef(false);
   const reportedPreviewResultRef = useRef<string | null>(null);
   const [renderSucceeded, setRenderSucceeded] = useState(false);
 
@@ -229,7 +229,7 @@ export function ViewerPanel({
     setHasUnsavedChanges(false);
     setRenderSucceeded(false);
     setIsLoading(Boolean(designId));
-    skipNextSourceReloadRef.current = false;
+    skipNextEditedModelReloadRef.current = false;
     reportedPreviewResultRef.current = null;
   }, [designId]);
 
@@ -246,14 +246,13 @@ export function ViewerPanel({
   }, [traceId]);
 
   useEffect(() => {
-    if (skipNextSourceReloadRef.current) {
-      skipNextSourceReloadRef.current = false;
+    if (skipNextEditedModelReloadRef.current && editedModelUrl) {
+      skipNextEditedModelReloadRef.current = false;
       return;
     }
 
     if (!editedModelUrl && !tsContentUrl) {
-      const waitingForDesignDetail =
-        Boolean(designId) && (fileDetailQuery.isPending || fileDetailQuery.isFetching);
+      const waitingForDesignDetail = Boolean(designId) && fileDetailQuery.isPending;
       if (waitingForDesignDetail) {
         setIsLoading(true);
         setLoadError(null);
@@ -353,10 +352,8 @@ export function ViewerPanel({
     load();
     return () => controller.abort();
   }, [
-    buildAuthHeaders,
     designId,
     editedModelUrl,
-    fileDetailQuery.isFetching,
     fileDetailQuery.isPending,
     tsContentUrl,
     viewerReloadNonce,
@@ -591,7 +588,7 @@ export function ViewerPanel({
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      skipNextSourceReloadRef.current = true;
+      skipNextEditedModelReloadRef.current = true;
       await refetchFileDetail();
       setHasUnsavedChanges(false);
       toast.success('Edited model saved.');
