@@ -1,5 +1,6 @@
 const runtimeRules = [
   'Return executable JavaScript only.',
+  'THREE core API only.',
   'Use `THREE` globals and do not include import statements.',
   'Do not include markdown fences or explanations.',
   'Assign the final model to `result` at module scope.',

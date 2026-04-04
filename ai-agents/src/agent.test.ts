@@ -7,6 +7,7 @@ import {
 
 test('threeJsDesignSystemInstruction keeps minimal runtime constraints plus naming', () => {
   assert.match(threeJsDesignSystemInstruction, /Return executable JavaScript only/);
+  assert.match(threeJsDesignSystemInstruction, /THREE core API only/);
   assert.match(threeJsDesignSystemInstruction, /Use `THREE` globals and do not include import statements/);
   assert.match(threeJsDesignSystemInstruction, /Do not include markdown fences or explanations/);
   assert.match(threeJsDesignSystemInstruction, /Assign the final model to `result`/);
