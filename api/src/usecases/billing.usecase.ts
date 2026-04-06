@@ -47,6 +47,8 @@ export interface CreatePortalSessionInput {
   userId: string;
 }
 
+const PRO_PLAN_FREE_TRIAL_DAYS = 7;
+
 export class BillingUsecase {
   private readonly billingCache = new BillingCache();
 
@@ -152,6 +154,8 @@ export class BillingUsecase {
       successUrl: successUrl.toString(),
       cancelUrl: cancelUrl.toString(),
       idempotencyKey,
+      trialPeriodDays:
+        plan.name.trim().toLowerCase() === 'pro' ? PRO_PLAN_FREE_TRIAL_DAYS : undefined,
       customerId: existingSubscription?.stripeCustomerId ?? null,
     });
 

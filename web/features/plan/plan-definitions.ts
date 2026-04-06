@@ -11,9 +11,9 @@ type SharedPlanDefinition = {
 export const planDefinitions = {
   pro: {
     name: 'Pro',
-    description: '',
+    description: '7-day free trial. Card required. Cancel before renewal to avoid billing.',
     price: '$17',
-    billing: 'per month',
+    billing: 'per month after trial',
     priceNote: 'Excl. tax',
     features: [
       'Generate designs from prompts in Create mode',

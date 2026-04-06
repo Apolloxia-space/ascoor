@@ -105,7 +105,7 @@ type LandingPlan = {
 const plans: Array<LandingPlan> = [
   {
     ...planDefinitions.pro,
-    cta: 'Get Pro',
+    cta: 'Start free trial',
     highlight: true,
   },
 ];
@@ -303,7 +303,7 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            Monthly subscriptions. Excl. tax.
+            7-day free trial with card required. Then renews monthly. Excl. tax.
           </p>
         </div>
       </section>

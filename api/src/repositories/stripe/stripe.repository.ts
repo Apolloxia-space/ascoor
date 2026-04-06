@@ -10,6 +10,7 @@ export interface StripeRepository {
     successUrl: string;
     cancelUrl: string;
     idempotencyKey: string;
+    trialPeriodDays?: number;
     customerId?: string | null;
     customerEmail?: string | null;
   }): Promise<{ url: string; customerId?: string | null }>;
@@ -34,11 +35,13 @@ export class StripeRepositoryStripe implements StripeRepository {
     successUrl: string;
     cancelUrl: string;
     idempotencyKey: string;
+    trialPeriodDays?: number;
     customerId?: string | null;
     customerEmail?: string | null;
   }): Promise<{ url: string; customerId?: string | null }> {
     const createParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
+      payment_method_collection: 'always',
       line_items: [{ price: params.priceId, quantity: 1 }],
       automatic_tax: {
         enabled: true,
@@ -51,6 +54,7 @@ export class StripeRepositoryStripe implements StripeRepository {
         metadata: {
           userId: params.userId,
         },
+        ...(typeof params.trialPeriodDays === 'number' ? { trial_period_days: params.trialPeriodDays } : {}),
       },
       metadata: {
         userId: params.userId,

@@ -33,14 +33,17 @@ test('createCheckoutSession enables Stripe Tax and updates existing customer add
     successUrl: 'https://ascoor.app/plans?status=success',
     cancelUrl: 'https://ascoor.app/plans?status=cancel',
     idempotencyKey: 'checkout_123',
+    trialPeriodDays: 7,
     customerId: 'cus_123',
     customerEmail: 'test@example.com',
   });
 
   assert.equal(session.url, 'https://checkout.stripe.test/session');
   assert.equal(session.customerId, 'cus_123');
+  assert.equal(capturedParams?.payment_method_collection, 'always');
   assert.equal(capturedParams?.automatic_tax?.enabled, true);
   assert.equal(capturedParams?.billing_address_collection, 'required');
+  assert.equal(capturedParams?.subscription_data?.trial_period_days, 7);
   assert.equal(capturedParams?.customer, 'cus_123');
   assert.equal(capturedParams?.customer_email, undefined);
   assert.deepEqual(capturedParams?.customer_update, {
@@ -79,8 +82,10 @@ test('createCheckoutSession omits customer_update when customer does not exist y
   });
 
   assert.equal(session.customerId, 'cus_new');
+  assert.equal(capturedParams?.payment_method_collection, 'always');
   assert.equal(capturedParams?.automatic_tax?.enabled, true);
   assert.equal(capturedParams?.billing_address_collection, 'required');
+  assert.equal(capturedParams?.subscription_data?.trial_period_days, undefined);
   assert.equal(capturedParams?.customer, undefined);
   assert.equal(capturedParams?.customer_email, 'test@example.com');
   assert.equal(capturedParams?.customer_update, undefined);

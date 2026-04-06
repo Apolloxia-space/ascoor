@@ -276,19 +276,25 @@ test('getUsage returns zero available usage when no active Pro subscription exis
 
 test('createCheckoutSession uses traceId to derive idempotency key', async () => {
   const idempotencyKeys: Array<string> = [];
+  const trialPeriodDays: Array<number | undefined> = [];
   const usecase = new BillingUsecase(
     {
       findPlanById: async () => null,
       findDefaultPlan: async () =>
         ({
           id: 'plan-pro',
+          name: 'Pro',
           stripePriceId: 'price_pro_monthly',
         }) as never,
       findSubscriptionByUserId: async () => null,
     } as unknown as BillingRepository,
     {
-      createCheckoutSession: async (params: { idempotencyKey: string }) => {
+      createCheckoutSession: async (params: {
+        idempotencyKey: string;
+        trialPeriodDays?: number;
+      }) => {
         idempotencyKeys.push(params.idempotencyKey);
+        trialPeriodDays.push(params.trialPeriodDays);
         return { url: 'https://checkout.stripe.test/session' };
       },
     } as unknown as StripeRepository,
@@ -317,6 +323,7 @@ test('createCheckoutSession uses traceId to derive idempotency key', async () =>
   assert.equal(idempotencyKeys.length, 3);
   assert.equal(idempotencyKeys[0], idempotencyKeys[1]);
   assert.notEqual(idempotencyKeys[1], idempotencyKeys[2]);
+  assert.deepEqual(trialPeriodDays, [7, 7, 7]);
 });
 
 test('cancelSubscriptionAtPeriodEnd always schedules period-end cancellation', async () => {

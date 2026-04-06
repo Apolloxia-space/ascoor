@@ -54,11 +54,11 @@ type PlanCard = {
 
 const planGroup: { subtitle: string; plans: Array<PlanCard>; footnote?: string } = {
   subtitle: 'Subscribe to Pro to unlock Ascoor design generation.',
-  footnote: 'Subscriptions renew monthly. Excl. tax.',
+  footnote: '7-day free trial with card required. Then renews monthly. Excl. tax.',
   plans: [
     {
       ...planDefinitions.pro,
-      cta: 'Upgrade to Pro',
+      cta: 'Start 7-day free trial',
       highlight: true,
       badge: 'Most Popular',
       icon: Sparkles,
@@ -127,7 +127,7 @@ export function PlanPage() {
     lastStatusRef.current = status;
 
     if (status === 'success') {
-      toast.success('Subscription activated.');
+      toast.success('Free trial started.');
       router.replace(paths.settingsBilling);
       return;
     }
