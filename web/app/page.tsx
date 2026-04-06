@@ -59,7 +59,6 @@ const storySections: Array<StorySection> = [
       'Ascoor is strongest when the goal is speed to first draft. Start from a prompt, inspect the result, and decide what to refine next.',
     points: [
       'Move from idea to 3D form without opening a heavyweight desktop workflow first.',
-      'Keep each pass in project history so you can compare iterations instead of overwriting them.',
     ],
     visual: 'draft',
   },
@@ -77,14 +76,14 @@ const storySections: Array<StorySection> = [
   },
   {
     id: 'exports',
-    eyebrow: 'Ship The Right Format',
+    eyebrow: 'Export For Real Use',
     title: 'Export into web, print, or handoff workflows',
     description:
-      'The value is in what happens after generation. Use the same draft-to-edit flow, then export the format your workflow already expects.',
+      'The value is in what happens after generation. Use the same draft-to-edit flow, then export your model for the web, 3D printing, or the next step in your work.',
     points: [
-      'JavaScript for code-first web scenes.',
-      'GLB for portable 3D assets and viewer handoff.',
-      'STL for rapid print prototypes.',
+      'Export models for websites and browser-based 3D scenes.',
+      'Prepare drafts for quick 3D print tests and physical prototypes.',
+      'Share cleaned-up models for the next person, tool, or workflow.',
     ],
     visual: 'export',
   },
@@ -129,8 +128,8 @@ export default function HomePage() {
                 Generate, refine, and export 3D without leaving the browser.
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                Ascoor helps you get to a first 3D draft fast, fix the important parts, and hand
-                off generated JavaScript, edited GLB, or STL into the workflow you already run.
+                Ascoor helps you get to a first 3D draft fast, fix the important parts, and export
+                your model for the web, 3D printing, and whatever comes next.
               </p>
             </div>
 
@@ -220,14 +219,14 @@ export default function HomePage() {
             <UseCaseCard
               icon={Braces}
               title="Web 3D"
-              description="Prototype assets for three.js and browser-based scenes, then hand off generated JavaScript or GLB without spending the first hour modeling by hand."
-              tags={['Generated JavaScript', 'GLB', 'three.js']}
+              description="Create 3D drafts for websites and browser-based scenes without spending the first hour modeling everything by hand."
+              tags={['Web', '3D', 'Browser']}
             />
             <UseCaseCard
               icon={Printer}
               title="3D Print"
-              description="Create rough printable concepts, fix obvious issues, and send STL into the next physical iteration."
-              tags={['STL', 'Prototype', 'Print retry']}
+              description="Create rough printable concepts, fix obvious issues, and move quickly into the next print test."
+              tags={['3D Print', 'Prototype', 'Iteration']}
             />
           </div>
         </div>
