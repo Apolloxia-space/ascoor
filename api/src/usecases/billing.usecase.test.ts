@@ -194,7 +194,7 @@ test('getUsage counts succeeded generated designs in the current UTC month', asy
     const usecase = new BillingUsecase(
       {
         findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
-        findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }) as never,
+        findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }) as never,
       } as unknown as BillingRepository,
       {} as unknown as StripeRepository,
       {
@@ -213,7 +213,7 @@ test('getUsage counts succeeded generated designs in the current UTC month', asy
     const usage = await usecase.getUsage('user-1');
 
     assert.equal(usage.used, 3);
-    assert.equal(usage.limit, 30);
+    assert.equal(usage.limit, 100);
     assert.equal(usage.periodStart.toISOString(), '2026-03-01T00:00:00.000Z');
     assert.equal(usage.periodEnd.toISOString(), '2026-04-01T00:00:00.000Z');
     assert.equal(countCalls.length, 1);
@@ -246,7 +246,7 @@ test('getUsage returns zero available usage when no active Pro subscription exis
     const usecase = new BillingUsecase(
       {
         findSubscriptionByUserId: async () => null,
-        findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }) as never,
+        findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }) as never,
       } as unknown as BillingRepository,
       {} as unknown as StripeRepository,
       {

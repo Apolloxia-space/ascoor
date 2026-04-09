@@ -178,7 +178,7 @@ test('process succeeds and marks design as succeeded', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }),
+      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -279,7 +279,7 @@ test('process marks failed when AI returns no executable code', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }),
+      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -400,7 +400,7 @@ test('process succeeds without runtime execution and links generated design', as
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }),
+      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -522,7 +522,7 @@ test('process does not recover stale design when claimed by another worker', asy
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 30 }),
+      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -623,7 +623,7 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
       findPlanDesignLimit: async (planKey: PlanKey) => ({
         planKey,
-        monthlyDesignLimit: 30,
+        monthlyDesignLimit: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -713,7 +713,7 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => 30,
+      countSucceededByUserInPeriod: async () => 100,
       countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
@@ -732,7 +732,7 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
       findPlanDesignLimit: async () => ({
         planKey: 'pro',
-        monthlyDesignLimit: 30,
+        monthlyDesignLimit: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -847,7 +847,7 @@ test('enqueue resolves only the Pro plan limit', async () => {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
       findPlanDesignLimit: async (planKey: PlanKey) => {
         planLookups.push(planKey);
-        return { planKey: 'pro', monthlyDesignLimit: 30, concurrentDesignLimit: 3 };
+        return { planKey: 'pro', monthlyDesignLimit: 100, concurrentDesignLimit: 3 };
       },
     } as unknown as BillingRepository,
     {
@@ -950,7 +950,7 @@ test('enqueue throws concurrency exceeded error when active design workflows rea
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
       findPlanDesignLimit: async () => ({
         planKey: 'pro',
-        monthlyDesignLimit: 30,
+        monthlyDesignLimit: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -1064,7 +1064,7 @@ test('reap stale also recovers queued designs', async () => {
       findSubscriptionByUserId: async () => null,
       findPlanDesignLimit: async (planKey: PlanKey) => ({
         planKey,
-        monthlyDesignLimit: 30,
+        monthlyDesignLimit: 100,
       }),
     } as unknown as BillingRepository,
     undefined,
@@ -1174,7 +1174,7 @@ test('enqueue creates a design when monthly generated design count is below limi
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
       findPlanDesignLimit: async (planKey: PlanKey) => ({
         planKey,
-        monthlyDesignLimit: 30,
+        monthlyDesignLimit: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -1277,7 +1277,7 @@ test('enqueue requires an active Pro subscription', async () => {
       findSubscriptionByUserId: async () => null,
       findPlanDesignLimit: async () => ({
         planKey: 'pro',
-        monthlyDesignLimit: 30,
+        monthlyDesignLimit: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,

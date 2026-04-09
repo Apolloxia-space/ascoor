@@ -21,7 +21,7 @@ export const planDefinitions = {
       'Export GLB, STL, and JavaScript assets',
       'Save edited models back to the design',
       'Manage project-based design history',
-      '30 generated designs per month',
+      '100 generated designs per month',
     ],
     limitResetNote: '* Generated design limits reset monthly (UTC).',
   },
