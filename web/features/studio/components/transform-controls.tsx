@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react';
 
 import type { ResetTransformTarget, SelectedNode, TransformAxis } from './three-viewer';
 import { Button } from '@shared/components/ui/button';
@@ -9,6 +17,9 @@ import { Input } from '@shared/components/ui/input';
 export const MOVE_STEP_OPTIONS = [0.01, 0.2, 0.5] as const;
 export const ROTATE_STEP_OPTIONS = [5, 15, 45] as const;
 export const SCALE_STEP_OPTIONS = [0.01, 0.1, 0.25] as const;
+
+const HOLD_DELAY_MS = 300;
+const HOLD_INTERVAL_MS = 75;
 
 type TransformControlsProps = {
   selectedNodes?: Array<SelectedNode>;
@@ -29,6 +40,91 @@ type TransformControlsProps = {
   onHideSelectedNode?: () => void;
   onRestoreNode?: (nodeId: string) => void;
 };
+
+type RepeatButtonProps = Omit<ComponentProps<typeof Button>, 'onClick'> & {
+  onPress?: () => void;
+};
+
+function RepeatButton({ onPress, ...props }: RepeatButtonProps) {
+  const holdDelayRef = useRef<number | null>(null);
+  const holdIntervalRef = useRef<number | null>(null);
+  const pointerIdRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const clearRepeat = useCallback(() => {
+    if (holdDelayRef.current !== null) {
+      window.clearTimeout(holdDelayRef.current);
+      holdDelayRef.current = null;
+    }
+    if (holdIntervalRef.current !== null) {
+      window.clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    pointerIdRef.current = null;
+  }, []);
+
+  useEffect(() => clearRepeat, [clearRepeat]);
+
+  const handlePointerDown = useCallback(
+    (event: PointerEvent<HTMLButtonElement>) => {
+      if (!onPress) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+      clearRepeat();
+      suppressClickRef.current = true;
+      pointerIdRef.current = event.pointerId;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      onPress();
+
+      holdDelayRef.current = window.setTimeout(() => {
+        holdIntervalRef.current = window.setInterval(() => {
+          onPress();
+        }, HOLD_INTERVAL_MS);
+      }, HOLD_DELAY_MS);
+    },
+    [clearRepeat, onPress],
+  );
+
+  const handlePointerUp = useCallback(
+    (event: PointerEvent<HTMLButtonElement>) => {
+      if (pointerIdRef.current !== event.pointerId) return;
+      clearRepeat();
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [clearRepeat],
+  );
+
+  const handlePointerCancel = useCallback(() => {
+    suppressClickRef.current = false;
+    clearRepeat();
+  }, [clearRepeat]);
+
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      if (!onPress) return;
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        event.preventDefault();
+        return;
+      }
+      onPress();
+    },
+    [onPress],
+  );
+
+  return (
+    <Button
+      {...props}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onLostPointerCapture={handlePointerCancel}
+      onClick={handleClick}
+    />
+  );
+}
 
 export function TransformControls({
   selectedNodes = [],
@@ -215,15 +311,15 @@ export function TransformControls({
                 <span className="w-5 text-xs font-semibold uppercase text-muted-foreground">
                   {axis}
                 </span>
-                <Button
+                <RepeatButton
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 w-8 px-0"
-                  onClick={() => onNudgeNode?.(axis, -moveStep)}
+                  onPress={() => onNudgeNode?.(axis, -moveStep)}
                 >
                   -
-                </Button>
+                </RepeatButton>
                 <Input
                   value={positionDraft[axis]}
                   inputMode="decimal"
@@ -237,15 +333,15 @@ export function TransformControls({
                   onBlur={() => commitPositionInput(axis)}
                   onKeyDown={handleTransformInputKeyDown}
                 />
-                <Button
+                <RepeatButton
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 w-8 px-0"
-                  onClick={() => onNudgeNode?.(axis, moveStep)}
+                  onPress={() => onNudgeNode?.(axis, moveStep)}
                 >
                   +
-                </Button>
+                </RepeatButton>
               </div>
             ))}
           </div>
@@ -273,15 +369,15 @@ export function TransformControls({
                 <span className="w-5 text-xs font-semibold uppercase text-muted-foreground">
                   {axis}
                 </span>
-                <Button
+                <RepeatButton
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 w-8 px-0"
-                  onClick={() => onRotateNode?.(axis, (-rotateStep * Math.PI) / 180)}
+                  onPress={() => onRotateNode?.(axis, (-rotateStep * Math.PI) / 180)}
                 >
                   -
-                </Button>
+                </RepeatButton>
                 <Input
                   value={rotationDraft[axis]}
                   inputMode="decimal"
@@ -295,15 +391,15 @@ export function TransformControls({
                   onBlur={() => commitRotationInput(axis)}
                   onKeyDown={handleTransformInputKeyDown}
                 />
-                <Button
+                <RepeatButton
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 w-8 px-0"
-                  onClick={() => onRotateNode?.(axis, (rotateStep * Math.PI) / 180)}
+                  onPress={() => onRotateNode?.(axis, (rotateStep * Math.PI) / 180)}
                 >
                   +
-                </Button>
+                </RepeatButton>
               </div>
             ))}
           </div>
@@ -331,15 +427,15 @@ export function TransformControls({
                 <span className="w-5 text-xs font-semibold uppercase text-muted-foreground">
                   {axis}
                 </span>
-                <Button
+                <RepeatButton
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 w-8 px-0"
-                  onClick={() => onNudgeNodeScale?.(axis, -scaleStep)}
+                  onPress={() => onNudgeNodeScale?.(axis, -scaleStep)}
                 >
                   -
-                </Button>
+                </RepeatButton>
                 <Input
                   value={scaleDraft[axis]}
                   inputMode="decimal"
@@ -353,15 +449,15 @@ export function TransformControls({
                   onBlur={() => commitScaleInput(axis)}
                   onKeyDown={handleTransformInputKeyDown}
                 />
-                <Button
+                <RepeatButton
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 w-8 px-0"
-                  onClick={() => onNudgeNodeScale?.(axis, scaleStep)}
+                  onPress={() => onNudgeNodeScale?.(axis, scaleStep)}
                 >
                   +
-                </Button>
+                </RepeatButton>
               </div>
             ))}
           </div>

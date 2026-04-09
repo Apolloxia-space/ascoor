@@ -1338,8 +1338,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     camera.position.set(6, 4, 6);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
+    controls.enableDamping = false;
     controls.target.set(0, 0, 0);
 
     const viewHelper = new ViewHelper(camera, renderer.domElement) as unknown as ViewHelperInstance;

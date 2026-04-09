@@ -501,25 +501,25 @@ export function StudioPage() {
         return;
       }
 
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && event.code === 'BracketLeft') {
+      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'a') {
         event.preventDefault();
         handleMoveStepChange(cyclePreset(MOVE_STEP_OPTIONS, moveStep, -1));
         return;
       }
 
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && event.code === 'BracketRight') {
+      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'd') {
         event.preventDefault();
         handleMoveStepChange(cyclePreset(MOVE_STEP_OPTIONS, moveStep, 1));
         return;
       }
 
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && event.code === 'Comma') {
+      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'q') {
         event.preventDefault();
         handleRotateStepChange(cyclePreset(ROTATE_STEP_OPTIONS, rotateStep, -1));
         return;
       }
 
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && event.code === 'Period') {
+      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'e') {
         event.preventDefault();
         handleRotateStepChange(cyclePreset(ROTATE_STEP_OPTIONS, rotateStep, 1));
         return;

@@ -954,15 +954,15 @@ export function ViewerPanel({
                     <div className="flex items-center justify-between gap-4">
                       <span>Adjust move step</span>
                       <KbdGroup>
-                        <Kbd>[</Kbd>
-                        <Kbd>]</Kbd>
+                        <Kbd>A</Kbd>
+                        <Kbd>D</Kbd>
                       </KbdGroup>
                     </div>
                     <div className="flex items-center justify-between gap-4">
                       <span>Adjust rotate step</span>
                       <KbdGroup>
-                        <Kbd>,</Kbd>
-                        <Kbd>.</Kbd>
+                        <Kbd>Q</Kbd>
+                        <Kbd>E</Kbd>
                       </KbdGroup>
                     </div>
                     <div className="flex items-center justify-between gap-4">
