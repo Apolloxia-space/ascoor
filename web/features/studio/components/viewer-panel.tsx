@@ -91,6 +91,7 @@ type ViewerPanelProps = {
 };
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+const isDevelopmentEnvironment = process.env.NODE_ENV === 'development';
 
 const resolveAssetContentUrl = (designId: string | null | undefined, type: 'ts') => {
   if (!designId || !API_BASE_URL) return null;
@@ -162,7 +163,10 @@ export function ViewerPanel({
     return resolveAssetContentUrl(designId, 'ts');
   }, [designId, assetUriTs]);
 
-  const exportUrlTs = useMemo(() => resolveAssetContentUrl(designId, 'ts'), [designId]);
+  const exportUrlTs = useMemo(() => {
+    if (!isDevelopmentEnvironment) return null;
+    return resolveAssetContentUrl(designId, 'ts');
+  }, [designId]);
 
   const editedModelUrl = useMemo(() => {
     if (!editedAssetUriGlb) return null;
@@ -189,7 +193,9 @@ export function ViewerPanel({
       !isRevertingEditedModel,
   );
 
-  const canExportTs = Boolean(designId && exportUrlTs && assetUriTs && !isExportingTs);
+  const canExportTs = Boolean(
+    isDevelopmentEnvironment && designId && exportUrlTs && assetUriTs && !isExportingTs,
+  );
   const canOpenPrompt = Boolean(designId);
   const hasViewerError = Boolean(
     parseError ||
@@ -513,6 +519,10 @@ export function ViewerPanel({
   };
 
   const handleExportTs = async () => {
+    if (!isDevelopmentEnvironment) {
+      toast.error('JavaScript download is only available in development.');
+      return;
+    }
     if (!designId) {
       toast.warning('Please select a design.');
       return;
@@ -791,24 +801,26 @@ export function ViewerPanel({
               </IconButton>
             </PopoverTrigger>
             <PopoverContent className="w-48 space-y-1 p-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => {
-                  handleExportTs();
-                  setDownloadOpen(false);
-                }}
-                disabled={!canExportTs}
-              >
-                {isExportingTs ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                <span>JavaScript</span>
-              </Button>
+              {isDevelopmentEnvironment ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    void handleExportTs();
+                    setDownloadOpen(false);
+                  }}
+                  disabled={!canExportTs}
+                >
+                  {isExportingTs ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  <span>JavaScript</span>
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
