@@ -129,6 +129,7 @@ export function ViewerPanel({
   const [parseError, setParseError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExportingGlb, setIsExportingGlb] = useState(false);
+  const [isExportingObj, setIsExportingObj] = useState(false);
   const [isExportingStl, setIsExportingStl] = useState(false);
   const [isExportingTs, setIsExportingTs] = useState(false);
   const [isSavingEditedModel, setIsSavingEditedModel] = useState(false);
@@ -181,6 +182,7 @@ export function ViewerPanel({
     designId && !isLoading && !loadError && !parseError && (modelCode || modelData),
   );
   const canExportGlb = Boolean(hasRenderableModel && !isExportingGlb);
+  const canExportObj = Boolean(hasRenderableModel && !isExportingObj);
   const canExportStl = Boolean(hasRenderableModel && !isExportingStl);
   const canSaveEditedModel = Boolean(
     isAssemblyMode && designId && hasRenderableModel && hasUnsavedChanges && !isSavingEditedModel,
@@ -460,11 +462,14 @@ export function ViewerPanel({
     setHasUnsavedChanges(true);
   }, []);
 
-  const buildDownloadName = (name: string | null | undefined, extension: string) => {
+  const buildDownloadBaseName = (name: string | null | undefined) => {
     const trimmed = name?.trim();
-    if (!trimmed) return `model${extension}`;
-    const base = trimmed.replace(/\.[^/.]+$/, '');
-    return `${base}${extension}`;
+    if (!trimmed) return 'model';
+    return trimmed.replace(/\.[^/.]+$/, '');
+  };
+
+  const buildDownloadName = (name: string | null | undefined, extension: string) => {
+    return `${buildDownloadBaseName(name)}${extension}`;
   };
 
   const downloadBlob = (blob: Blob, filename: string) => {
@@ -515,6 +520,28 @@ export function ViewerPanel({
       toast.error('Failed to export STL.');
     } finally {
       setIsExportingStl(false);
+    }
+  };
+
+  const handleExportObj = async () => {
+    if (!hasRenderableModel) {
+      toast.warning('3D preview is not ready yet.');
+      return;
+    }
+    try {
+      setIsExportingObj(true);
+      const baseName = buildDownloadBaseName(designName);
+      const files = viewerRef.current?.exportObj(`${baseName}.mtl`);
+      if (!files) {
+        throw new Error('No model loaded');
+      }
+      downloadBlob(files.obj, `${baseName}.obj`);
+      downloadBlob(files.mtl, `${baseName}.mtl`);
+      toast.success('OBJ + MTL (preview) exported.');
+    } catch (_error) {
+      toast.error('Failed to export OBJ + MTL (preview).');
+    } finally {
+      setIsExportingObj(false);
     }
   };
 
@@ -838,6 +865,24 @@ export function ViewerPanel({
                   <Download className="size-4" />
                 )}
                 <span>GLB</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  void handleExportObj();
+                  setDownloadOpen(false);
+                }}
+                disabled={!canExportObj}
+              >
+                {isExportingObj ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                <span>OBJ + MTL (preview)</span>
               </Button>
               <Button
                 type="button"

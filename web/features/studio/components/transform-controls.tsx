@@ -14,9 +14,12 @@ import type { ResetTransformTarget, SelectedNode, TransformAxis } from './three-
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 
-export const MOVE_STEP_OPTIONS = [0.01, 0.2, 0.5] as const;
-export const ROTATE_STEP_OPTIONS = [5, 15, 45] as const;
-export const SCALE_STEP_OPTIONS = [0.01, 0.1, 0.25] as const;
+export const MOVE_STEP_OPTIONS = [0.001, 0.01, 0.2, 0.5] as const;
+export const ROTATE_STEP_OPTIONS = [0.001, 5, 15, 45] as const;
+export const SCALE_STEP_OPTIONS = [0.001, 0.01, 0.1, 0.25] as const;
+export const DEFAULT_MOVE_STEP = 0.2;
+export const DEFAULT_ROTATE_STEP = 15;
+export const DEFAULT_SCALE_STEP = 0.1;
 
 const HOLD_DELAY_MS = 300;
 const HOLD_INTERVAL_MS = 75;
@@ -96,8 +99,16 @@ function RepeatButton({ onPress, ...props }: RepeatButtonProps) {
     [clearRepeat],
   );
 
-  const handlePointerCancel = useCallback(() => {
-    suppressClickRef.current = false;
+  const handlePointerCancel = useCallback(
+    (event: PointerEvent<HTMLButtonElement>) => {
+      if (pointerIdRef.current !== event.pointerId) return;
+      suppressClickRef.current = false;
+      clearRepeat();
+    },
+    [clearRepeat],
+  );
+
+  const handleLostPointerCapture = useCallback(() => {
     clearRepeat();
   }, [clearRepeat]);
 
@@ -120,7 +131,7 @@ function RepeatButton({ onPress, ...props }: RepeatButtonProps) {
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
-      onLostPointerCapture={handlePointerCancel}
+      onLostPointerCapture={handleLostPointerCapture}
       onClick={handleClick}
     />
   );
@@ -169,9 +180,9 @@ export function TransformControls({
         ? `${activeSelectedNode.name} · ${activeSelectedNode.nodeType}`
         : `${selectionCount} nodes selected`;
 
-  const formatCoordinate = (value: number) => value.toFixed(2);
-  const formatDegreesValue = (value: number) => ((value * 180) / Math.PI).toFixed(1);
-  const formatScaleValue = (value: number) => value.toFixed(2);
+  const formatCoordinate = (value: number) => value.toFixed(3);
+  const formatDegreesValue = (value: number) => ((value * 180) / Math.PI).toFixed(3);
+  const formatScaleValue = (value: number) => value.toFixed(3);
 
   useEffect(() => {
     if (!activeSelectedNode) {

@@ -54,9 +54,11 @@ import type {
   TransformAxis,
 } from './components/three-viewer';
 import {
+  DEFAULT_MOVE_STEP,
+  DEFAULT_ROTATE_STEP,
+  DEFAULT_SCALE_STEP,
   MOVE_STEP_OPTIONS,
   ROTATE_STEP_OPTIONS,
-  SCALE_STEP_OPTIONS,
 } from './components/transform-controls';
 import { ViewerPanel } from './components/viewer-panel';
 import { useDesignMonitor } from './hooks/use-design-monitor';
@@ -157,9 +159,9 @@ export function StudioPage() {
   const [selectedNodes, setSelectedNodes] = useState<Array<SelectedNode>>([]);
   const [activeSelectedNodeId, setActiveSelectedNodeId] = useState<string | null>(null);
   const [activeTransformAxis, setActiveTransformAxis] = useState<TransformAxis>('x');
-  const [moveStep, setMoveStep] = useState<number>(MOVE_STEP_OPTIONS[1]);
-  const [rotateStep, setRotateStep] = useState<number>(ROTATE_STEP_OPTIONS[1]);
-  const [scaleStep, setScaleStep] = useState<number>(SCALE_STEP_OPTIONS[1]);
+  const [moveStep, setMoveStep] = useState<number>(DEFAULT_MOVE_STEP);
+  const [rotateStep, setRotateStep] = useState<number>(DEFAULT_ROTATE_STEP);
+  const [scaleStep, setScaleStep] = useState<number>(DEFAULT_SCALE_STEP);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [shortcutHudMessage, setShortcutHudMessage] = useState<string | null>(null);
   const shortcutHudTimerRef = useRef<number | null>(null);
@@ -241,9 +243,9 @@ export function StudioPage() {
     structureTree.length > 0 ||
     selectedNodes.length > 0 ||
     activeTransformAxis !== 'x' ||
-    moveStep !== MOVE_STEP_OPTIONS[1] ||
-    rotateStep !== ROTATE_STEP_OPTIONS[1] ||
-    scaleStep !== SCALE_STEP_OPTIONS[1] ||
+    moveStep !== DEFAULT_MOVE_STEP ||
+    rotateStep !== DEFAULT_ROTATE_STEP ||
+    scaleStep !== DEFAULT_SCALE_STEP ||
     shortcutHelpOpen ||
     shortcutHudMessage !== null;
 
@@ -256,9 +258,9 @@ export function StudioPage() {
     setSelectedNodes([]);
     setActiveSelectedNodeId(null);
     setActiveTransformAxis('x');
-    setMoveStep(MOVE_STEP_OPTIONS[1]);
-    setRotateStep(ROTATE_STEP_OPTIONS[1]);
-    setScaleStep(SCALE_STEP_OPTIONS[1]);
+    setMoveStep(DEFAULT_MOVE_STEP);
+    setRotateStep(DEFAULT_ROTATE_STEP);
+    setScaleStep(DEFAULT_SCALE_STEP);
     setShortcutHelpOpen(false);
     setShortcutHudMessage(null);
   }, [
@@ -302,9 +304,9 @@ export function StudioPage() {
       setSelectedNodes([]);
       setActiveSelectedNodeId(null);
       setActiveTransformAxis('x');
-      setMoveStep(MOVE_STEP_OPTIONS[1]);
-      setRotateStep(ROTATE_STEP_OPTIONS[1]);
-      setScaleStep(SCALE_STEP_OPTIONS[1]);
+      setMoveStep(DEFAULT_MOVE_STEP);
+      setRotateStep(DEFAULT_ROTATE_STEP);
+      setScaleStep(DEFAULT_SCALE_STEP);
       setShortcutHelpOpen(false);
       setShortcutHudMessage(null);
       setRightPanelMode('edit');

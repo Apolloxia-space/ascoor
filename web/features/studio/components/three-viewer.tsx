@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
 import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js';
@@ -17,7 +18,6 @@ import {
 import { cn } from '@shared/lib/utils';
 
 const VIEW_HELPER_DRAG_THRESHOLD = 4;
-const WORLD_AXES_HELPER_SIZE = 1.5;
 
 type ThreeViewerProps = {
   modelData: ArrayBuffer | null;
@@ -103,6 +103,7 @@ export type ThreeViewerHandle = {
   setSelectedNodeRoughness: (value: number) => void;
   resetSelectedNodeRoughness: () => void;
   exportGlb: (target?: 'download' | 'edited-model') => Promise<Blob | null>;
+  exportObj: (mtlFilename: string) => { obj: Blob; mtl: Blob } | null;
   exportStl: () => Blob | null;
 };
 
@@ -169,6 +170,110 @@ const exportObjectToStl = (object: THREE.Object3D): Blob => {
     return new Blob([toArrayBuffer(result)], { type: 'model/stl' });
   }
   throw new Error('STL exporter returned unsupported output.');
+};
+
+const sanitizeObjToken = (value: string, fallback: string) => {
+  const normalized = value.trim().replace(/[^\w.-]+/g, '_');
+  return normalized || fallback;
+};
+
+const formatObjFloat = (value: number) => {
+  if (!Number.isFinite(value)) return '0';
+  const formatted = value.toFixed(6);
+  return formatted.replace(/\.?0+$/, '') || '0';
+};
+
+const hasMaterialOpacity = (
+  material: THREE.Material,
+): material is THREE.Material & {
+  opacity: number;
+} => {
+  return 'opacity' in material && typeof material.opacity === 'number';
+};
+
+const toSrgbColorComponents = (color: THREE.Color) => {
+  const converted = color.clone();
+  THREE.ColorManagement.workingToColorSpace(converted, THREE.SRGBColorSpace);
+  return [converted.r, converted.g, converted.b] as const;
+};
+
+const buildMtlText = (materials: Array<THREE.Material>) => {
+  const lines = ['# Exported by Ascoor'];
+
+  materials.forEach((material) => {
+    const [r, g, b] = hasMaterialColor(material)
+      ? toSrgbColorComponents(material.color)
+      : ([0.8, 0.8, 0.8] as const);
+
+    lines.push(`newmtl ${material.name}`);
+    lines.push('Ka 0 0 0');
+    lines.push(`Kd ${formatObjFloat(r)} ${formatObjFloat(g)} ${formatObjFloat(b)}`);
+
+    if (hasMaterialEmissive(material)) {
+      const emissive = material.emissive.clone().multiplyScalar(material.emissiveIntensity);
+      const [er, eg, eb] = toSrgbColorComponents(emissive);
+      if (er > 0 || eg > 0 || eb > 0) {
+        lines.push(`Ke ${formatObjFloat(er)} ${formatObjFloat(eg)} ${formatObjFloat(eb)}`);
+      }
+    }
+
+    if (hasMaterialOpacity(material)) {
+      lines.push(`d ${formatObjFloat(material.opacity)}`);
+    }
+
+    lines.push('illum 2');
+    lines.push('');
+  });
+
+  return `${lines.join('\n')}\n`;
+};
+
+const prepareObjectForObjExport = (object: THREE.Object3D) => {
+  const exportedMaterials: Array<THREE.Material> = [];
+  const usedNames = new Set<string>();
+  let unnamedMaterialIndex = 1;
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+
+    const nextMaterial = Array.isArray(child.material)
+      ? (child.material[0] ?? createFallbackMaterial())
+      : child.material;
+    const material = isMaterialLike(nextMaterial) ? nextMaterial : createFallbackMaterial();
+
+    child.material = material;
+
+    const baseName = sanitizeObjToken(material.name, `material_${unnamedMaterialIndex}`);
+    let uniqueName = baseName;
+    let duplicateIndex = 2;
+    while (usedNames.has(uniqueName)) {
+      uniqueName = `${baseName}_${duplicateIndex}`;
+      duplicateIndex += 1;
+    }
+    usedNames.add(uniqueName);
+    material.name = uniqueName;
+    exportedMaterials.push(material);
+    unnamedMaterialIndex += 1;
+  });
+
+  return exportedMaterials;
+};
+
+const exportObjectToObj = (
+  object: THREE.Object3D,
+  mtlFilename: string,
+): { obj: Blob; mtl: Blob } => {
+  const exporter = new OBJExporter();
+  object.updateWorldMatrix(true, true);
+  const exportedMaterials = prepareObjectForObjExport(object);
+  const result = exporter.parse(object);
+  const objText = `mtllib ${mtlFilename}\n${result}`;
+  const mtlText = buildMtlText(exportedMaterials);
+
+  return {
+    obj: new Blob([objText], { type: 'text/plain;charset=utf-8' }),
+    mtl: new Blob([mtlText], { type: 'text/plain;charset=utf-8' }),
+  };
 };
 
 const createFallbackMaterial = () =>
@@ -1307,6 +1412,16 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
           disposeObject(object);
         }
       },
+      exportObj: (mtlFilename: string) => {
+        const source = sourceModelRef.current ?? modelRef.current;
+        if (!source) return null;
+        const object = createEditedModelExportObject(source, { onlyVisible: true });
+        try {
+          return exportObjectToObj(object, mtlFilename);
+        } finally {
+          disposeObject(object);
+        }
+      },
     }),
     [],
   );
@@ -1353,17 +1468,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     keyLight.position.set(6, 8, 6);
     const rimLight = new THREE.DirectionalLight(0x94a3b8, 0.35);
     rimLight.position.set(-5, 4, -4);
-    const worldAxesHelper = new THREE.AxesHelper(WORLD_AXES_HELPER_SIZE);
-    worldAxesHelper.renderOrder = 3;
-    if (Array.isArray(worldAxesHelper.material)) {
-      worldAxesHelper.material.forEach((material) => {
-        material.depthTest = false;
-      });
-    } else {
-      worldAxesHelper.material.depthTest = false;
-    }
 
-    scene.add(hemi, keyLight, rimLight, worldAxesHelper);
+    scene.add(hemi, keyLight, rimLight);
 
     container.appendChild(renderer.domElement);
 
@@ -1493,8 +1599,6 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       timer.dispose();
       controls.dispose();
       viewHelper.dispose();
-      worldAxesHelper.geometry.dispose();
-      disposeMaterial(worldAxesHelper.material);
       disposeRenderer(renderer);
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);

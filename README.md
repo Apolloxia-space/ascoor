@@ -48,7 +48,7 @@ npm run dev --prefix ai-agents   # http://localhost:8080
 ```
 
 Key environment variables:
-- `AI_AGENT_PRIMARY_MODEL` (required)
+- `AI_AGENT_PRIMARY_MODEL` (default: `gpt-5.4-nano`)
 - `AI_AGENT_PRIMARY_MODEL_TEMPERATURE` (default: `0.2`)
 - `AI_AGENT_SECONDARY_MODEL` (default: `gpt-4o-mini`, used for title design)
 - `AI_AGENT_SECONDARY_MODEL_TEMPERATURE` (default: `0.2`)

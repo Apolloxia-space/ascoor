@@ -33,7 +33,7 @@ SQL_PROXY_PORT ?= 5432
 
 GCP_PROJECT_ID ?= $(if $(filter $(GCP_ENV),prod),ascoor,ascoor-dev)
 GCP_REGION ?= asia-northeast1
-GCP_ENV ?= dev
+GCP_ENV ?= prod
 WEB_APP_ENV ?= $(if $(filter $(GCP_ENV),prod),production,development)
 TERRAFORM_DIR ?= infrastructure/terraform/$(GCP_ENV)
 REGISTRY_URL ?= $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT_ID)/ascoor-$(GCP_ENV)
