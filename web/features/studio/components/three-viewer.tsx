@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { zipSync } from 'fflate';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
@@ -9,12 +10,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
 import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js';
 
-import type { RightPanelMode, ViewMode } from '../types';
-import {
-  buildStructureTree,
-  collectObjectNodeMap,
-  type StructureTreeNode,
-} from '../lib/structure-tree';
+import type { ViewMode } from '../types';
+import { collectPartNodes, type PartNode } from '../lib/model-parts';
 import { cn } from '@shared/lib/utils';
 
 const VIEW_HELPER_DRAG_THRESHOLD = 4;
@@ -23,12 +20,9 @@ type ThreeViewerProps = {
   modelData: ArrayBuffer | null;
   modelCode: string | null;
   viewModeKey: ViewMode['key'];
-  interactionMode?: RightPanelMode;
   className?: string;
-  onStructureTreeChange?: (tree: Array<StructureTreeNode>) => void;
-  onSelectionChange?: (selection: NodeSelection) => void;
+  onPartsChange?: (parts: Array<PartNode>) => void;
   onModelParseError?: (message: string | null) => void;
-  onSceneMutated?: () => void;
 };
 
 type ViewHelperInstance = THREE.Object3D & {
@@ -48,68 +42,14 @@ type ViewHelperInstance = THREE.Object3D & {
   dispose: () => void;
 };
 
-export type TransformAxis = 'x' | 'y' | 'z';
-
-export type SelectedNode = {
-  id: string;
-  name: string;
-  nodeType: string;
-  selectionKind: 'structure-node';
-  hidden?: boolean;
-  colorHex: string | null;
-  colorEditable: boolean;
-  colorMixed: boolean;
-  emissiveHex: string | null;
-  emissiveEditable: boolean;
-  emissiveMixed: boolean;
-  emissiveIntensity: number | null;
-  emissiveIntensityMixed: boolean;
-  roughness: number | null;
-  roughnessEditable: boolean;
-  roughnessMixed: boolean;
-  position: Record<TransformAxis, number>;
-  rotation: Record<TransformAxis, number>;
-  scale: Record<TransformAxis, number>;
-};
-
-export type NodeSelection = {
-  selectedNodes: Array<SelectedNode>;
-  activeNodeId: string | null;
-};
-
-export type ResetTransformTarget = 'position' | 'rotation' | 'scale' | 'all';
-
-const MIN_NODE_SCALE = 0.01;
-
 export type ThreeViewerHandle = {
-  listStructureTree: () => Array<StructureTreeNode>;
-  focusStructureNode: (id: string, options?: { additive?: boolean }) => void;
   focusFullModel: () => void;
-  clearSelection: () => void;
-  setStructureNodeHidden: (id: string, hidden: boolean) => void;
-  nudgeSelectedNode: (axis: TransformAxis, delta: number) => void;
-  rotateSelectedNode: (axis: TransformAxis, deltaRadians: number) => void;
-  setSelectedNodeRotation: (axis: TransformAxis, radians: number) => void;
-  nudgeSelectedNodeScale: (axis: TransformAxis, delta: number) => void;
-  setSelectedNodeScale: (axis: TransformAxis, value: number) => void;
-  resetSelectedNode: (target: ResetTransformTarget) => void;
-  hideSelectedNode: () => void;
-  restoreNode: (id: string) => void;
-  setSelectedNodeColor: (hex: string) => void;
-  resetSelectedNodeColor: () => void;
-  setSelectedNodeEmissiveColor: (hex: string) => void;
-  setSelectedNodeEmissiveIntensity: (value: number) => void;
-  resetSelectedNodeEmissive: () => void;
-  setSelectedNodeRoughness: (value: number) => void;
-  resetSelectedNodeRoughness: () => void;
-  exportGlb: (target?: 'download' | 'edited-model') => Promise<Blob | null>;
+  previewPart: (id: string) => void;
+  clearPartPreview: () => void;
+  exportGlb: () => Promise<Blob | null>;
+  exportPartsZip: () => Promise<Blob | null>;
   exportObj: (mtlFilename: string) => { obj: Blob; mtl: Blob } | null;
   exportStl: () => Blob | null;
-};
-
-type SelectedNodeState = {
-  id: string;
-  selectionKind: 'structure-node';
 };
 
 const toArrayBuffer = (data: ArrayBuffer | ArrayBufferView) => {
@@ -175,6 +115,32 @@ const exportObjectToStl = (object: THREE.Object3D): Blob => {
 const sanitizeObjToken = (value: string, fallback: string) => {
   const normalized = value.trim().replace(/[^\w.-]+/g, '_');
   return normalized || fallback;
+};
+
+const sanitizeFilenameStem = (value: string, fallback: string) => {
+  const normalized = value
+    .trim()
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[^\w.-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return normalized || fallback;
+};
+
+const createUniqueFilename = (
+  value: string,
+  fallback: string,
+  extension: string,
+  usedNames: Set<string>,
+) => {
+  const baseName = sanitizeFilenameStem(value, fallback);
+  let filename = `${baseName}${extension}`;
+  let index = 2;
+  while (usedNames.has(filename)) {
+    filename = `${baseName}_${index}${extension}`;
+    index += 1;
+  }
+  usedNames.add(filename);
+  return filename;
 };
 
 const formatObjFloat = (value: number) => {
@@ -345,17 +311,6 @@ const hasMaterialEmissive = (
   );
 };
 
-const hasMaterialRoughness = (
-  material: THREE.Material,
-): material is THREE.Material & {
-  roughness: number;
-} => {
-  return 'roughness' in material && typeof material.roughness === 'number';
-};
-
-const materialSetToArray = (material: THREE.Material | Array<THREE.Material>) =>
-  Array.isArray(material) ? material : [material];
-
 const isSameMaterialReference = (
   left: THREE.Material | Array<THREE.Material> | null,
   right: unknown,
@@ -387,77 +342,6 @@ const ensureMeshMaterialSnapshots = (mesh: THREE.Mesh) => {
   return {
     original,
     base,
-  };
-};
-
-const getObjectColorState = (object: THREE.Object3D) => {
-  const colors = new Set<string>();
-  let editableMaterialCount = 0;
-
-  object.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    const { original } = ensureMeshMaterialSnapshots(child);
-    materialSetToArray(original).forEach((material) => {
-      if (!hasMaterialColor(material)) return;
-      editableMaterialCount += 1;
-      colors.add(`#${material.color.getHexString()}`);
-    });
-  });
-
-  return {
-    colorEditable: editableMaterialCount > 0,
-    colorMixed: colors.size > 1,
-    colorHex: colors.size === 1 ? [...colors][0] : null,
-  };
-};
-
-const toRoundedIntensity = (value: number) => Number(value.toFixed(3));
-
-const getObjectEmissiveState = (object: THREE.Object3D) => {
-  const colors = new Set<string>();
-  const intensities = new Set<string>();
-  let editableMaterialCount = 0;
-
-  object.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    const { original } = ensureMeshMaterialSnapshots(child);
-    materialSetToArray(original).forEach((material) => {
-      if (!hasMaterialEmissive(material)) return;
-      editableMaterialCount += 1;
-      colors.add(`#${material.emissive.getHexString()}`);
-      intensities.add(String(toRoundedIntensity(material.emissiveIntensity)));
-    });
-  });
-
-  return {
-    emissiveEditable: editableMaterialCount > 0,
-    emissiveMixed: colors.size > 1,
-    emissiveHex: colors.size === 1 ? [...colors][0] : null,
-    emissiveIntensityMixed: intensities.size > 1,
-    emissiveIntensity:
-      intensities.size === 1 ? Number.parseFloat([...intensities][0] ?? '0') : null,
-  };
-};
-
-const getObjectRoughnessState = (object: THREE.Object3D) => {
-  const roughnessValues = new Set<string>();
-  let editableMaterialCount = 0;
-
-  object.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-    const { original } = ensureMeshMaterialSnapshots(child);
-    materialSetToArray(original).forEach((material) => {
-      if (!hasMaterialRoughness(material)) return;
-      editableMaterialCount += 1;
-      roughnessValues.add(String(toRoundedIntensity(material.roughness)));
-    });
-  });
-
-  return {
-    roughnessEditable: editableMaterialCount > 0,
-    roughnessMixed: roughnessValues.size > 1,
-    roughness:
-      roughnessValues.size === 1 ? Number.parseFloat([...roughnessValues][0] ?? '0') : null,
   };
 };
 
@@ -593,28 +477,6 @@ const focusCameraOnObject = (
   controls.update();
 };
 
-const captureInitialTransforms = (root: THREE.Object3D) => {
-  root.traverse((child) => {
-    child.userData.initialPosition = child.position.clone();
-    child.userData.initialQuaternion = child.quaternion.clone();
-    child.userData.initialScale = child.scale.clone();
-  });
-};
-
-const getPointerInNdc = (
-  event: {
-    clientX: number;
-    clientY: number;
-  },
-  element: HTMLElement,
-) => {
-  const bounds = element.getBoundingClientRect();
-  return new THREE.Vector2(
-    ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-    -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
-  );
-};
-
 const sanitizeGeneratedCode = (input: string) => {
   const trimmed = input.trim();
   const fenced = trimmed.match(/```(?:javascript|js|typescript|ts)?\s*([\s\S]*?)```/i);
@@ -698,7 +560,7 @@ const hasIdentityTransform = (object: THREE.Object3D) => {
   );
 };
 
-// Older exports may already contain an aux wrapper scene. Strip it so edits target the actual model.
+// Older exports may already contain an aux wrapper scene. Strip it before rendering/exporting.
 const unwrapAuxiliarySceneRoot = (object: THREE.Object3D) => {
   let current = object;
 
@@ -738,27 +600,11 @@ const assertWithoutConsoleError = (run: () => void, message: string) => {
   }
 };
 
-const findStructureTreeNode = (
-  nodes: Array<StructureTreeNode>,
-  id: string,
-): StructureTreeNode | null => {
-  for (const node of nodes) {
-    if (node.id === id) {
-      return node;
-    }
-    const found = findStructureTreeNode(node.children, id);
-    if (found) {
-      return found;
-    }
-  }
-  return null;
-};
-
-const createEditedModelExportObject = (
+const createModelExportObject = (
   source: THREE.Object3D,
-  options?: { onlyVisible?: boolean },
+  options?: { onlyVisible?: boolean; forceVisible?: boolean },
 ) => {
-  if (options?.onlyVisible && !source.visible) {
+  if (options?.onlyVisible && !options.forceVisible && !source.visible) {
     return new THREE.Group();
   }
 
@@ -770,12 +616,12 @@ const createEditedModelExportObject = (
   while (stack.length > 0) {
     const current = stack.pop() as { source: THREE.Object3D; target: THREE.Object3D };
 
-    if (options?.onlyVisible && !current.source.visible) {
+    if (options?.onlyVisible && !options.forceVisible && !current.source.visible) {
       current.target.parent?.remove(current.target);
       continue;
     }
 
-    current.target.visible = current.source.visible;
+    current.target.visible = options?.forceVisible ? true : current.source.visible;
     delete current.target.userData.originalMaterial;
     delete current.target.userData.baseMaterial;
 
@@ -813,12 +659,9 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     modelData,
     modelCode,
     viewModeKey,
-    interactionMode = 'create',
     className,
-    onStructureTreeChange,
-    onSelectionChange,
+    onPartsChange,
     onModelParseError,
-    onSceneMutated,
   }: ThreeViewerProps,
   ref,
 ) {
@@ -844,467 +687,31 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     active: false,
   });
   const frameRef = useRef<number | null>(null);
-  const structureTreeRef = useRef<Array<StructureTreeNode>>([]);
-  const selectionHelpersRef = useRef<Map<string, THREE.BoxHelper>>(new Map());
-  const structureNodeMapRef = useRef<Map<string, THREE.Object3D>>(new Map());
-  const selectedNodeIdsRef = useRef<Array<string>>([]);
-  const activeSelectedNodeIdRef = useRef<string | null>(null);
-  const interactionModeRef = useRef<RightPanelMode>(interactionMode);
+  const partsRef = useRef<Array<PartNode>>([]);
+  const partObjectMapRef = useRef<Map<string, THREE.Object3D>>(new Map());
   const viewModeKeyRef = useRef<ViewMode['key']>(viewModeKey);
-  const structureSelectionCycleRef = useRef<{
-    signature: string;
-    index: number;
-  } | null>(null);
-  const raycasterRef = useRef(new THREE.Raycaster());
-
-  useEffect(() => {
-    interactionModeRef.current = interactionMode;
-    if (interactionMode !== 'create') return;
-    structureSelectionCycleRef.current = null;
-  }, [interactionMode]);
 
   useEffect(() => {
     viewModeKeyRef.current = viewModeKey;
   }, [viewModeKey]);
 
-  const updateStructureTree = (tree: Array<StructureTreeNode>) => {
-    structureTreeRef.current = tree;
-    onStructureTreeChange?.(tree);
-  };
-
-  const syncStructureTree = () => {
+  const syncParts = () => {
     const sourceModel = sourceModelRef.current;
     if (!sourceModel) {
-      structureNodeMapRef.current = new Map();
-      updateStructureTree([]);
+      partsRef.current = [];
+      partObjectMapRef.current = new Map();
+      onPartsChange?.([]);
       return;
     }
-    structureNodeMapRef.current = collectObjectNodeMap(sourceModel);
-    updateStructureTree(buildStructureTree(sourceModel));
-  };
-
-  const getSelectedSourceNodes = () => {
-    return selectedNodeIdsRef.current
-      .map((id) => structureNodeMapRef.current.get(id) ?? null)
-      .filter((node): node is THREE.Object3D => node !== null);
-  };
-
-  const getSelectedNodeSnapshot = (id: string): SelectedNode | null => {
-    const activeNode = structureNodeMapRef.current.get(id) ?? null;
-    if (!activeNode) return null;
-    const sourceTreeNode =
-      structureTreeRef.current.length > 0
-        ? findStructureTreeNode(structureTreeRef.current, id)
-        : null;
-    const colorState = getObjectColorState(activeNode);
-    const emissiveState = getObjectEmissiveState(activeNode);
-    const roughnessState = getObjectRoughnessState(activeNode);
-    return {
-      id,
-      name: sourceTreeNode?.displayName ?? activeNode.name ?? 'Node',
-      nodeType: sourceTreeNode?.nodeType ?? activeNode.type ?? 'Object3D',
-      selectionKind: 'structure-node',
-      hidden: sourceTreeNode?.hidden ?? !activeNode.visible,
-      colorHex: colorState.colorHex,
-      colorEditable: colorState.colorEditable,
-      colorMixed: colorState.colorMixed,
-      emissiveHex: emissiveState.emissiveHex,
-      emissiveEditable: emissiveState.emissiveEditable,
-      emissiveMixed: emissiveState.emissiveMixed,
-      emissiveIntensity: emissiveState.emissiveIntensity,
-      emissiveIntensityMixed: emissiveState.emissiveIntensityMixed,
-      roughness: roughnessState.roughness,
-      roughnessEditable: roughnessState.roughnessEditable,
-      roughnessMixed: roughnessState.roughnessMixed,
-      position: {
-        x: activeNode.position.x,
-        y: activeNode.position.y,
-        z: activeNode.position.z,
-      },
-      rotation: {
-        x: activeNode.rotation.x,
-        y: activeNode.rotation.y,
-        z: activeNode.rotation.z,
-      },
-      scale: {
-        x: activeNode.scale.x,
-        y: activeNode.scale.y,
-        z: activeNode.scale.z,
-      },
-    };
-  };
-
-  const getSelectionSnapshot = (): NodeSelection => {
-    const selectedNodes = selectedNodeIdsRef.current
-      .map((id) => getSelectedNodeSnapshot(id))
-      .filter((node): node is SelectedNode => node !== null);
-    const validIds = new Set(selectedNodes.map((node) => node.id));
-    const activeNodeId =
-      activeSelectedNodeIdRef.current && validIds.has(activeSelectedNodeIdRef.current)
-        ? activeSelectedNodeIdRef.current
-        : (selectedNodes[selectedNodes.length - 1]?.id ?? null);
-
-    selectedNodeIdsRef.current = selectedNodes.map((node) => node.id);
-    activeSelectedNodeIdRef.current = activeNodeId;
-
-    return {
-      selectedNodes,
-      activeNodeId,
-    };
-  };
-
-  const clearSelectionHighlights = () => {
-    selectionHelpersRef.current.forEach((helper) => {
-      helper.parent?.remove(helper);
-      helper.geometry.dispose();
-      disposeMaterial(helper.material);
-    });
-    selectionHelpersRef.current.clear();
-  };
-
-  const updateSelectionHighlights = () => {
-    const scene = sceneRef.current;
-    const activeNodeId = activeSelectedNodeIdRef.current;
-    clearSelectionHighlights();
-    if (!scene) return;
-
-    selectedNodeIdsRef.current.forEach((id) => {
-      const node = structureNodeMapRef.current.get(id);
-      if (!node) return;
-      node.updateWorldMatrix(true, true);
-      const box = new THREE.Box3().setFromObject(node);
-      if (box.isEmpty()) return;
-      const helper = new THREE.BoxHelper(node, id === activeNodeId ? 0x2563eb : 0x38bdf8);
-      helper.renderOrder = 2;
-      if (!Array.isArray(helper.material)) {
-        if ('depthTest' in helper.material) {
-          helper.material.depthTest = false;
-        }
-        if ('transparent' in helper.material) {
-          helper.material.transparent = true;
-        }
-        if ('opacity' in helper.material) {
-          helper.material.opacity = id === activeNodeId ? 1 : 0.8;
-        }
-      }
-      scene.add(helper);
-      selectionHelpersRef.current.set(id, helper);
-    });
-  };
-
-  const emitSelectionChange = () => {
-    updateSelectionHighlights();
-    onSelectionChange?.(getSelectionSnapshot());
-  };
-
-  const emitSceneMutated = () => {
-    onSceneMutated?.();
-  };
-
-  const setSelectionState = (
-    selectedNodeIds: Array<string>,
-    activeNodeId: string | null,
-    options?: { resetCycle?: boolean },
-  ) => {
-    const nextSelectedNodeIds = selectedNodeIds.filter(
-      (id, index, array) => array.indexOf(id) === index && structureNodeMapRef.current.has(id),
-    );
-    const nextActiveNodeId =
-      activeNodeId && nextSelectedNodeIds.includes(activeNodeId)
-        ? activeNodeId
-        : (nextSelectedNodeIds[nextSelectedNodeIds.length - 1] ?? null);
-    if (options?.resetCycle || nextSelectedNodeIds.length === 0) {
-      structureSelectionCycleRef.current = null;
-    }
-    selectedNodeIdsRef.current = nextSelectedNodeIds;
-    activeSelectedNodeIdRef.current = nextActiveNodeId;
-    emitSelectionChange();
-  };
-
-  const selectNode = (
-    selection: SelectedNodeState | null,
-    options?: { mode?: 'replace' | 'toggle'; resetCycle?: boolean },
-  ) => {
-    if (!selection) {
-      setSelectionState([], null, { resetCycle: true });
-      return;
-    }
-
-    if (options?.mode === 'toggle') {
-      const currentNodeIds = selectedNodeIdsRef.current;
-      if (currentNodeIds.includes(selection.id)) {
-        setSelectionState(
-          currentNodeIds.filter((id) => id !== selection.id),
-          activeSelectedNodeIdRef.current === selection.id ? null : activeSelectedNodeIdRef.current,
-          options,
-        );
-        return;
-      }
-      setSelectionState([...currentNodeIds, selection.id], selection.id, options);
-      return;
-    }
-
-    setSelectionState([selection.id], selection.id, options);
-  };
-
-  const getStructureSelectionPath = (object: THREE.Object3D | null) => {
-    const ids: Array<string> = [];
-    let current = object;
-    while (current) {
-      const sourceNodeId =
-        typeof current.userData.sourceNodeId === 'string'
-          ? current.userData.sourceNodeId
-          : current.uuid;
-      if (structureNodeMapRef.current.has(sourceNodeId) && !ids.includes(sourceNodeId)) {
-        ids.push(sourceNodeId);
-      }
-      current = current.parent;
-    }
-    const path = ids.reverse();
-    const rootId = structureTreeRef.current[0]?.id;
-    if (rootId && path[0] === rootId && path.length > 1) {
-      return path.slice(1);
-    }
-    return path;
-  };
-
-  const selectClickTargetFromHit = (
-    object: THREE.Object3D | null,
-    options?: { additive?: boolean },
-  ) => {
-    const targets = getStructureSelectionPath(object).map(
-      (id) => ({ id, selectionKind: 'structure-node' }) satisfies SelectedNodeState,
-    );
-    if (targets.length === 0) return false;
-
-    const signature = targets.map((target) => target.id).join('>');
-    const cycle = structureSelectionCycleRef.current;
-    const activeSelectedNodeId = activeSelectedNodeIdRef.current;
-
-    let nextIndex = 0;
-    if (options?.additive) {
-      nextIndex = cycle && cycle.signature === signature ? cycle.index : 0;
-    } else if (cycle && cycle.signature === signature) {
-      nextIndex = (cycle.index + 1) % targets.length;
-    } else if (activeSelectedNodeId) {
-      const currentIndex = targets.findIndex((target) => target.id === activeSelectedNodeId);
-      if (currentIndex >= 0) {
-        nextIndex = (currentIndex + 1) % targets.length;
-      }
-    }
-
-    structureSelectionCycleRef.current = {
-      signature,
-      index: nextIndex,
-    };
-    selectNode(targets[nextIndex], { mode: options?.additive ? 'toggle' : 'replace' });
-    return true;
-  };
-
-  const updateSelectedNodes = (
-    updater: (node: THREE.Object3D) => void,
-    options?: { syncStructureTree?: boolean },
-  ) => {
-    const selectedNodes = getSelectedSourceNodes();
-    if (selectedNodes.length === 0) return;
-    selectedNodes.forEach((node) => {
-      updater(node);
-      node.updateWorldMatrix(true, true);
-    });
-    if (options?.syncStructureTree !== false) {
-      syncStructureTree();
-    }
-    emitSelectionChange();
-    emitSceneMutated();
-  };
-
-  const refreshViewModeMaterials = () => {
-    const source = sourceModelRef.current ?? modelRef.current;
-    if (!source) return;
-    applyViewMode(source, viewModeKeyRef.current);
-  };
-
-  const setSelectedNodeColor = (hex: string) => {
-    const normalizedHex = hex.trim();
-    if (!/^#?[0-9a-f]{6}$/i.test(normalizedHex)) return;
-    const nextHex = normalizedHex.startsWith('#') ? normalizedHex : `#${normalizedHex}`;
-
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original } = ensureMeshMaterialSnapshots(child);
-          materialSetToArray(original).forEach((material) => {
-            if (!hasMaterialColor(material)) return;
-            material.color.set(nextHex);
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
-  };
-
-  const resetSelectedNodeColor = () => {
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original, base } = ensureMeshMaterialSnapshots(child);
-          const originalMaterials = materialSetToArray(original);
-          const baseMaterials = materialSetToArray(base);
-          originalMaterials.forEach((material, index) => {
-            const baseMaterial = baseMaterials[index];
-            if (!baseMaterial || !hasMaterialColor(material) || !hasMaterialColor(baseMaterial)) {
-              return;
-            }
-            material.color.copy(baseMaterial.color);
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
-  };
-
-  const setSelectedNodeEmissiveColor = (hex: string) => {
-    const normalizedHex = hex.trim();
-    if (!/^#?[0-9a-f]{6}$/i.test(normalizedHex)) return;
-    const nextHex = normalizedHex.startsWith('#') ? normalizedHex : `#${normalizedHex}`;
-
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original } = ensureMeshMaterialSnapshots(child);
-          materialSetToArray(original).forEach((material) => {
-            if (!hasMaterialEmissive(material)) return;
-            material.emissive.set(nextHex);
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
-  };
-
-  const setSelectedNodeEmissiveIntensity = (value: number) => {
-    if (!Number.isFinite(value)) return;
-    const nextValue = Math.min(Math.max(value, 0), 3);
-
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original } = ensureMeshMaterialSnapshots(child);
-          materialSetToArray(original).forEach((material) => {
-            if (!hasMaterialEmissive(material)) return;
-            material.emissiveIntensity = nextValue;
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
-  };
-
-  const resetSelectedNodeEmissive = () => {
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original, base } = ensureMeshMaterialSnapshots(child);
-          const originalMaterials = materialSetToArray(original);
-          const baseMaterials = materialSetToArray(base);
-          originalMaterials.forEach((material, index) => {
-            const baseMaterial = baseMaterials[index];
-            if (
-              !baseMaterial ||
-              !hasMaterialEmissive(material) ||
-              !hasMaterialEmissive(baseMaterial)
-            ) {
-              return;
-            }
-            material.emissive.copy(baseMaterial.emissive);
-            material.emissiveIntensity = baseMaterial.emissiveIntensity;
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
-  };
-
-  const setSelectedNodeRoughness = (value: number) => {
-    if (!Number.isFinite(value)) return;
-    const nextValue = Math.min(Math.max(value, 0), 1);
-
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original } = ensureMeshMaterialSnapshots(child);
-          materialSetToArray(original).forEach((material) => {
-            if (!hasMaterialRoughness(material)) return;
-            material.roughness = nextValue;
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
-  };
-
-  const resetSelectedNodeRoughness = () => {
-    updateSelectedNodes(
-      (node) => {
-        node.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const { original, base } = ensureMeshMaterialSnapshots(child);
-          const originalMaterials = materialSetToArray(original);
-          const baseMaterials = materialSetToArray(base);
-          originalMaterials.forEach((material, index) => {
-            const baseMaterial = baseMaterials[index];
-            if (
-              !baseMaterial ||
-              !hasMaterialRoughness(material) ||
-              !hasMaterialRoughness(baseMaterial)
-            ) {
-              return;
-            }
-            material.roughness = baseMaterial.roughness;
-            material.needsUpdate = true;
-          });
-        });
-        refreshViewModeMaterials();
-      },
-      { syncStructureTree: false },
-    );
+    const { parts, partObjectMap } = collectPartNodes(sourceModel);
+    partsRef.current = parts;
+    partObjectMapRef.current = partObjectMap;
+    onPartsChange?.(parts);
   };
 
   useImperativeHandle(
     ref,
     () => ({
-      listStructureTree: () => structureTreeRef.current,
-      focusStructureNode: (id: string, options?: { additive?: boolean }) => {
-        const node = structureNodeMapRef.current.get(id);
-        if (!node) return;
-        selectNode(
-          { id, selectionKind: 'structure-node' },
-          { mode: options?.additive ? 'toggle' : 'replace' },
-        );
-        if (options?.additive) return;
-        const camera = cameraRef.current;
-        const controls = controlsRef.current;
-        if (!camera || !controls) return;
-        focusCameraOnObject(camera, controls, node);
-      },
       focusFullModel: () => {
         const camera = cameraRef.current;
         const controls = controlsRef.current;
@@ -1312,100 +719,90 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         if (!camera || !controls || !source) return;
         focusCameraOnObject(camera, controls, source);
       },
-      clearSelection: () => {
-        selectNode(null);
-      },
-      setStructureNodeHidden: (id: string, hidden: boolean) => {
-        const node = structureNodeMapRef.current.get(id);
-        if (!node) return;
-        node.visible = !hidden;
-        node.updateWorldMatrix(true, true);
-        syncStructureTree();
-        emitSelectionChange();
-        emitSceneMutated();
-      },
-      nudgeSelectedNode: (axis: TransformAxis, delta: number) => {
-        updateSelectedNodes((node) => {
-          node.position[axis] += delta;
+      previewPart: (id: string) => {
+        const source = sourceModelRef.current ?? modelRef.current;
+        const target = partObjectMapRef.current.get(id);
+        if (!source || !target) return;
+
+        const visibleNodes = new Set<THREE.Object3D>();
+        let ancestor: THREE.Object3D | null = target;
+        while (ancestor) {
+          visibleNodes.add(ancestor);
+          ancestor = ancestor.parent;
+        }
+        target.traverse((child) => {
+          visibleNodes.add(child);
         });
-      },
-      rotateSelectedNode: (axis: TransformAxis, deltaRadians: number) => {
-        updateSelectedNodes((node) => {
-          if (axis === 'x') {
-            node.rotateX(deltaRadians);
-          } else if (axis === 'y') {
-            node.rotateY(deltaRadians);
-          } else {
-            node.rotateZ(deltaRadians);
-          }
+
+        source.traverse((child) => {
+          child.visible = visibleNodes.has(child);
         });
+        source.updateWorldMatrix(true, true);
+
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (camera && controls) {
+          focusCameraOnObject(camera, controls, target);
+        }
       },
-      setSelectedNodeRotation: (axis: TransformAxis, radians: number) => {
-        updateSelectedNodes((node) => {
-          node.rotation[axis] = radians;
+      clearPartPreview: () => {
+        const source = sourceModelRef.current ?? modelRef.current;
+        if (!source) return;
+        source.traverse((child) => {
+          child.visible = true;
         });
+        source.updateWorldMatrix(true, true);
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (camera && controls) {
+          focusCameraOnObject(camera, controls, source);
+        }
       },
-      nudgeSelectedNodeScale: (axis: TransformAxis, delta: number) => {
-        updateSelectedNodes((node) => {
-          node.scale[axis] = Math.max(MIN_NODE_SCALE, node.scale[axis] + delta);
-        });
-      },
-      setSelectedNodeScale: (axis: TransformAxis, value: number) => {
-        updateSelectedNodes((node) => {
-          node.scale[axis] = Math.max(MIN_NODE_SCALE, value);
-        });
-      },
-      resetSelectedNode: (target: ResetTransformTarget) => {
-        updateSelectedNodes((node) => {
-          const initialPosition = node.userData.initialPosition as THREE.Vector3 | undefined;
-          const initialQuaternion = node.userData.initialQuaternion as THREE.Quaternion | undefined;
-          const initialScale = node.userData.initialScale as THREE.Vector3 | undefined;
-          if ((target === 'position' || target === 'all') && initialPosition) {
-            node.position.copy(initialPosition);
-          }
-          if ((target === 'rotation' || target === 'all') && initialQuaternion) {
-            node.quaternion.copy(initialQuaternion);
-          }
-          if ((target === 'scale' || target === 'all') && initialScale) {
-            node.scale.copy(initialScale);
-          }
-        });
-      },
-      hideSelectedNode: () => {
-        updateSelectedNodes((node) => {
-          node.visible = false;
-        });
-      },
-      restoreNode: (id: string) => {
-        const node = structureNodeMapRef.current.get(id);
-        if (!node) return;
-        node.visible = true;
-        node.updateWorldMatrix(true, true);
-        syncStructureTree();
-        emitSelectionChange();
-        emitSceneMutated();
-      },
-      setSelectedNodeColor,
-      resetSelectedNodeColor,
-      setSelectedNodeEmissiveColor,
-      setSelectedNodeEmissiveIntensity,
-      resetSelectedNodeEmissive,
-      setSelectedNodeRoughness,
-      resetSelectedNodeRoughness,
-      exportGlb: async (_target = 'download') => {
+      exportGlb: async () => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
-        const object = createEditedModelExportObject(source);
+        const object = createModelExportObject(source, { forceVisible: true });
         try {
           return await exportObjectToGlb(object);
         } finally {
           disposeObject(object);
         }
       },
+      exportPartsZip: async () => {
+        const parts = partsRef.current;
+        if (parts.length === 0) return null;
+
+        const files: Record<string, Uint8Array> = {};
+        const usedNames = new Set<string>();
+
+        for (const part of parts) {
+          const source = partObjectMapRef.current.get(part.id);
+          if (!source) continue;
+
+          const object = createModelExportObject(source, { forceVisible: true });
+          try {
+            const blob = await exportObjectToGlb(object);
+            const filename = createUniqueFilename(
+              part.displayName || part.name,
+              `part_${usedNames.size + 1}`,
+              '.glb',
+              usedNames,
+            );
+            files[filename] = new Uint8Array(await blob.arrayBuffer());
+          } finally {
+            disposeObject(object);
+          }
+        }
+
+        if (Object.keys(files).length === 0) return null;
+        const zipped = zipSync(files);
+        const zipBytes = zipped.slice();
+        return new Blob([zipBytes.buffer], { type: 'application/zip' });
+      },
       exportStl: () => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
-        const object = createEditedModelExportObject(source, { onlyVisible: true });
+        const object = createModelExportObject(source, { onlyVisible: true });
         try {
           return exportObjectToStl(object);
         } finally {
@@ -1415,7 +812,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       exportObj: (mtlFilename: string) => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
-        const object = createEditedModelExportObject(source, { onlyVisible: true });
+        const object = createModelExportObject(source, { onlyVisible: true });
         try {
           return exportObjectToObj(object, mtlFilename);
         } finally {
@@ -1490,21 +887,6 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
 
-    const getStructureNodeIdFromObject = (object: THREE.Object3D | null) => {
-      let current = object;
-      while (current) {
-        const sourceNodeId =
-          typeof current.userData.sourceNodeId === 'string'
-            ? current.userData.sourceNodeId
-            : current.uuid;
-        if (structureNodeMapRef.current.has(sourceNodeId)) {
-          return sourceNodeId;
-        }
-        current = current.parent;
-      }
-      return null;
-    };
-
     const handlePointerDown = (event: PointerEvent) => {
       const state = viewHelperPointerRef.current;
       renderer.domElement.focus({ preventScroll: true });
@@ -1536,21 +918,6 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         if (handledByViewHelper) {
           event.preventDefault();
           event.stopPropagation();
-        } else if (interactionModeRef.current !== 'create') {
-          const model = modelRef.current;
-          const pointer = getPointerInNdc(clickEvent, renderer.domElement);
-          const raycaster = raycasterRef.current;
-          raycaster.setFromCamera(pointer, camera);
-          const intersections = model ? raycaster.intersectObject(model, true) : [];
-          const hitObject = intersections[0]?.object ?? null;
-          const structureNodeId = getStructureNodeIdFromObject(hitObject);
-          if (structureNodeId) {
-            selectClickTargetFromHit(hitObject, {
-              additive: event.metaKey || event.ctrlKey,
-            });
-          } else {
-            selectNode(null);
-          }
         }
       }
       state.pointerId = null;
@@ -1576,9 +943,6 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       }
       controls.enabled = !viewHelper.animating;
       controls.update();
-      selectionHelpersRef.current.forEach((helper) => {
-        helper.update();
-      });
       renderer.clear();
       renderer.render(scene, camera);
       viewHelper.render(renderer);
@@ -1611,14 +975,11 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       viewHelperRef.current = null;
       modelRef.current = null;
       sourceModelRef.current = null;
-      clearSelectionHighlights();
-      structureNodeMapRef.current = new Map();
-      selectedNodeIdsRef.current = [];
-      activeSelectedNodeIdRef.current = null;
-      updateStructureTree([]);
-      emitSelectionChange();
+      partsRef.current = [];
+      partObjectMapRef.current = new Map();
+      onPartsChange?.([]);
     };
-  }, []);
+  }, [onPartsChange]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -1638,12 +999,9 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       });
       modelRef.current = null;
       sourceModelRef.current = null;
-      structureNodeMapRef.current = new Map();
-      structureSelectionCycleRef.current = null;
-      selectedNodeIdsRef.current = [];
-      activeSelectedNodeIdRef.current = null;
-      updateStructureTree([]);
-      emitSelectionChange();
+      partsRef.current = [];
+      partObjectMapRef.current = new Map();
+      onPartsChange?.([]);
     };
 
     const applyLoadedModel = (object: THREE.Object3D) => {
@@ -1668,13 +1026,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         });
         sourceModelRef.current = object;
         modelRef.current = object;
-        structureSelectionCycleRef.current = null;
-        selectedNodeIdsRef.current = [];
-        activeSelectedNodeIdRef.current = null;
-        syncStructureTree();
-        captureInitialTransforms(object);
+        syncParts();
         onModelParseError?.(null);
-        emitSelectionChange();
       } catch (error) {
         object.parent?.remove(object);
         disposeObject(object);
@@ -1728,7 +1081,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     return () => {
       disposed = true;
     };
-  }, [modelCode, modelData, onModelParseError]);
+  }, [modelCode, modelData, onModelParseError, onPartsChange]);
 
   useEffect(() => {
     if (!modelRef.current) return;

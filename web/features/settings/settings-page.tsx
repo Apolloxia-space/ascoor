@@ -134,7 +134,6 @@ export function SettingsPage() {
   const setUser = useAuthStore((state) => state.setUser);
   const projectMenuOpen = useStudioStore((state) => state.projectMenuOpen);
   const setProjectMenuOpen = useStudioStore((state) => state.setProjectMenuOpen);
-  const setNewProjectModalOpen = useStudioStore((state) => state.setNewProjectModalOpen);
   const projectId = useStudioStore((state) => state.projectId);
   const projectName = useStudioStore((state) => state.projectName);
   const projects = useStudioStore((state) => state.projects);
@@ -285,11 +284,6 @@ export function SettingsPage() {
   const handleClose = () => {
     setUsername(user?.displayName ?? '');
   };
-  const handleOpenNewProject = () => {
-    setNewProjectModalOpen(true);
-    router.push(paths.studio);
-  };
-
   const handleSave = async () => {
     if (!user) {
       toast.error('Please sign in.');
@@ -405,7 +399,6 @@ export function SettingsPage() {
       <AppHeader
         projectMenuOpen={projectMenuOpen}
         onProjectMenuChange={setProjectMenuOpen}
-        onOpenNewProject={handleOpenNewProject}
         projectName={projectName}
         projectId={projectId}
         projects={projects}

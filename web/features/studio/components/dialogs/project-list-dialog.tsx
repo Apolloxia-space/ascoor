@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { File, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, Loader2, MoreHorizontal, Pencil, Search, Trash2 } from 'lucide-react';
 
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
@@ -39,11 +39,15 @@ import { listProjects } from '@/shared/api/generated/client';
 import { DEFAULT_FORM_MAX_CHARS } from '@/shared/constants/form-limits';
 import { useStudioStore } from '../../stores/use-studio-store';
 import { useStudioApi } from '../../hooks/use-studio-api';
+import { getWorkspaceGenerationStatuses, type WorkspaceGenerationStatus } from '../../lib/workspace-generation-status';
+
+const formatWorkspaceListName = (name: string) => {
+  return name.length > 30 ? `${name.slice(0, 27)}...` : name;
+};
 
 type ProjectListDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenNewProject: () => void;
   onSelectProject: (id: string, name: string) => void;
   onDeleteCurrentProject: () => void;
 };
@@ -51,12 +55,11 @@ type ProjectListDialogProps = {
 export function ProjectListDialog({
   open,
   onOpenChange,
-  onOpenNewProject,
   onSelectProject,
   onDeleteCurrentProject,
 }: ProjectListDialogProps) {
   const PROJECTS_PAGE_SIZE = 20;
-  const { projects, projectId, setProject, setProjects } = useStudioStore();
+  const { projects, projectId, pendingDesigns, setProject, setProjects } = useStudioStore();
   const [query, setQuery] = useState('');
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
@@ -96,6 +99,32 @@ export function ProjectListDialog({
     () => projectPagesQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [projectPagesQuery.data],
   );
+  const projectGenerationStatuses = useMemo(
+    () => getWorkspaceGenerationStatuses(pendingDesigns),
+    [pendingDesigns],
+  );
+
+  const renderGenerationStatus = (generationStatus?: WorkspaceGenerationStatus) => {
+    if (!generationStatus) return null;
+    const isFailed = generationStatus.kind === 'failed';
+    const isGenerating = generationStatus.kind === 'queued' || generationStatus.kind === 'running';
+
+    return (
+      <Badge
+        variant={isFailed ? 'destructive' : 'outline'}
+        className="max-w-[140px] gap-1 truncate"
+        title={
+          isFailed
+            ? (generationStatus.errorMessage ?? generationStatus.promptPreview)
+            : generationStatus.promptPreview
+        }
+      >
+        {isFailed ? <AlertTriangle className="size-3" /> : null}
+        {isGenerating ? <Loader2 className="size-3 animate-spin" /> : null}
+        <span className="truncate">{generationStatus.label}</span>
+      </Badge>
+    );
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -142,7 +171,7 @@ export function ProjectListDialog({
     if (!renameTarget) return;
     const normalized = renameValue.trim();
     if (!normalized) {
-      toast.error('Please enter a project name.');
+      toast.error('Please enter a workspace name.');
       return;
     }
     if (normalized === renameTarget.name) {
@@ -161,9 +190,9 @@ export function ProjectListDialog({
       queryClient.invalidateQueries({ queryKey: ['projects-manager'] });
       invalidateProjects();
       handleRenameDialogChange(false);
-      toast.success('Project name updated.');
+      toast.success('Workspace name updated.');
     } catch (_error) {
-      toast.error('Failed to update project name.');
+      toast.error('Failed to update workspace name.');
     }
   };
 
@@ -179,9 +208,9 @@ export function ProjectListDialog({
       queryClient.invalidateQueries({ queryKey: ['projects-manager'] });
       invalidateProjects();
       handleDeleteDialogChange(false);
-      toast.success('Project deleted.');
+      toast.success('Workspace deleted.');
     } catch (_error) {
-      toast.error('Failed to delete project.');
+      toast.error('Failed to delete workspace.');
     }
   };
 
@@ -189,8 +218,8 @@ export function ProjectListDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0">
         <div className="sr-only">
-          <DialogTitle>Select a project</DialogTitle>
-          <DialogDescription>Select a project to get started.</DialogDescription>
+          <DialogTitle>Select a workspace</DialogTitle>
+          <DialogDescription>Select a workspace to get started.</DialogDescription>
         </div>
         <div
           className="flex min-h-[520px] flex-col bg-[color:var(--background-panel)] text-[color:var(--text-primary)]"
@@ -198,7 +227,7 @@ export function ProjectListDialog({
         >
           <div className="flex flex-col gap-3 border-b border-white/10 px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
-              Projects
+              Workspaces
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-[220px] flex-1">
@@ -207,16 +236,12 @@ export function ProjectListDialog({
                     <Search className="size-4" />
                   </InputGroupAddon>
                   <InputGroupInput
-                    placeholder="Search projects"
+                    placeholder="Search workspaces"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </InputGroup>
               </div>
-              <Button variant="outline" size="sm" onClick={onOpenNewProject}>
-                <Plus className="size-4" />
-                New project
-              </Button>
             </div>
           </div>
 
@@ -235,7 +260,7 @@ export function ProjectListDialog({
               </div>
             ) : projectPagesQuery.isError ? (
               <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-[color:var(--text-muted)]">
-                <p>Could not load projects.</p>
+                <p>Could not load workspaces.</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -250,9 +275,9 @@ export function ProjectListDialog({
             ) : pagedProjects.length === 0 ? (
               <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-[color:var(--text-muted)]">
                 {normalizedQuery.length === 0 ? (
-                  <p>No projects yet. Create a new project to get started.</p>
+                  <p>No workspaces yet. Create an asset pack to get started.</p>
                 ) : (
-                  <p>No projects match your search.</p>
+                  <p>No workspaces match your search.</p>
                 )}
               </div>
             ) : (
@@ -268,16 +293,19 @@ export function ProjectListDialog({
                           onOpenChange(false);
                         }}
                       >
-                        <File className="size-4 text-[color:var(--text-secondary)]" />
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[color:var(--text-primary)]">
-                          {project.name}
+                        <span
+                          className="min-w-0 flex-1 truncate text-sm font-semibold text-[color:var(--text-primary)]"
+                          title={project.name}
+                        >
+                          {formatWorkspaceListName(project.name)}
                         </span>
+                        {renderGenerationStatus(projectGenerationStatuses[project.id])}
                         {projectId === project.id && <Badge variant="secondary">Selected</Badge>}
                       </Button>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Project actions">
+                        <Button variant="ghost" size="icon" aria-label="Workspace actions">
                           <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -312,7 +340,7 @@ export function ProjectListDialog({
                 >
                   {projectPagesQuery.isFetchingNextPage ? (
                     <div className="flex items-center justify-center">
-                      <Loader2 className="size-4 animate-spin" aria-label="Loading more projects" />
+                      <Loader2 className="size-4 animate-spin" aria-label="Loading more workspaces" />
                     </div>
                   ) : projectPagesQuery.hasNextPage ? (
                     'Scroll to load more'
@@ -327,13 +355,13 @@ export function ProjectListDialog({
       <Dialog open={renameOpen} onOpenChange={handleRenameDialogChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename project</DialogTitle>
+            <DialogTitle>Rename workspace</DialogTitle>
             <DialogDescription>Enter a new name.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pb-2">
             <Input
               autoFocus
-              placeholder="Enter a project name"
+              placeholder="Enter a workspace name"
               value={renameValue}
               onChange={(event) =>
                 setRenameValue(event.target.value.slice(0, DEFAULT_FORM_MAX_CHARS))
@@ -356,9 +384,9 @@ export function ProjectListDialog({
       <AlertDialog open={deleteOpen} onOpenChange={handleDeleteDialogChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deleting {deleteTarget?.name ?? 'this project'} cannot be undone.
+              Deleting {deleteTarget?.name ?? 'this workspace'} cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

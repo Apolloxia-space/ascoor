@@ -1,15 +1,15 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { AppHeader } from '@shared/components/layout/app-header';
 import { useStudioStore } from '../stores/use-studio-store';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signOutUser } from '@/features/auth/use-auth-init';
+import { getWorkspaceGenerationStatuses } from '../lib/workspace-generation-status';
 
 type StudioHeaderProps = {
   projectMenuOpen: boolean;
   onProjectMenuChange: (open: boolean) => void;
-  onOpenNewProject: () => void;
   onSelectProject: (id: string, name: string) => void;
   onCloseProject: () => void;
   onOpenProjectManager?: () => void;
@@ -22,7 +22,6 @@ type StudioHeaderProps = {
 export function StudioHeader({
   projectMenuOpen,
   onProjectMenuChange,
-  onOpenNewProject,
   onSelectProject,
   onCloseProject,
   onOpenProjectManager,
@@ -31,17 +30,21 @@ export function StudioHeader({
   projectMenuRightSlot,
   hideProjectMenuOnMobile,
 }: StudioHeaderProps) {
-  const { projectId, projectName, projects } = useStudioStore();
+  const { projectId, projectName, projects, pendingDesigns } = useStudioStore();
   const { user, status } = useAuthStore();
+  const projectGenerationStatuses = useMemo(
+    () => getWorkspaceGenerationStatuses(pendingDesigns),
+    [pendingDesigns],
+  );
 
   return (
     <AppHeader
       projectMenuOpen={projectMenuOpen}
       onProjectMenuChange={onProjectMenuChange}
-      onOpenNewProject={onOpenNewProject}
       projectName={projectName}
       projectId={projectId}
       projects={projects}
+      projectGenerationStatuses={projectGenerationStatuses}
       onSelectProject={onSelectProject}
       onCloseProject={onCloseProject}
       onOpenProjectManager={onOpenProjectManager}

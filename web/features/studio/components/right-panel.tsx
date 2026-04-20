@@ -1,46 +1,19 @@
 'use client';
 
-import { AppearancePanelContent } from './appearance-panel';
 import { CreatePanelContent } from './chat-panel';
-import { EditPanelContent } from './edit-panel';
+import { PartsPanelContent } from './parts-panel';
 import { StudioSidePanel } from './studio-side-panel';
-import type { ResetTransformTarget, SelectedNode, TransformAxis } from './three-viewer';
-import type { StructureTreeNode } from '../lib/structure-tree';
+import type { PartNode } from '../lib/model-parts';
 import type { RightPanelMode } from '../types';
 
 type RightPanelProps = {
   open: boolean;
   mode: RightPanelMode;
-  projectId: string | null;
-  structureTree: Array<StructureTreeNode>;
-  selectedNodes?: Array<SelectedNode>;
-  activeSelectedNode?: SelectedNode | null;
-  activeSelectedNodeId?: string | null;
-  selectedNodeIds?: ReadonlySet<string>;
-  moveStep: number;
-  onMoveStepChange?: (step: number) => void;
-  rotateStep: number;
-  onRotateStepChange?: (step: number) => void;
-  scaleStep: number;
-  onScaleStepChange?: (step: number) => void;
+  parts: Array<PartNode>;
+  activePartIds?: ReadonlySet<string>;
+  activePartId?: string | null;
   onToggle?: () => void;
-  onFocusStructureNode?: (nodeId: string, options?: { additive?: boolean }) => void;
-  onSetStructureNodeHidden?: (nodeId: string, hidden: boolean) => void;
-  onNudgeNode?: (axis: TransformAxis, delta: number) => void;
-  onRotateNode?: (axis: TransformAxis, deltaRadians: number) => void;
-  onSetNodeRotation?: (axis: TransformAxis, radians: number) => void;
-  onNudgeNodeScale?: (axis: TransformAxis, delta: number) => void;
-  onSetNodeScale?: (axis: TransformAxis, value: number) => void;
-  onResetNode?: (target: ResetTransformTarget) => void;
-  onHideSelectedNode?: () => void;
-  onRestoreNode?: (nodeId: string) => void;
-  onSetSelectedNodeColor?: (hex: string) => void;
-  onResetSelectedNodeColor?: () => void;
-  onSetSelectedNodeEmissiveColor?: (hex: string) => void;
-  onSetSelectedNodeEmissiveIntensity?: (value: number) => void;
-  onResetSelectedNodeEmissive?: () => void;
-  onSetSelectedNodeRoughness?: (value: number) => void;
-  onResetSelectedNodeRoughness?: () => void;
+  onPreviewPart?: (nodeId: string) => void;
 };
 
 const PANEL_COPY: Record<
@@ -49,99 +22,36 @@ const PANEL_COPY: Record<
 > = {
   create: {
     title: 'Create',
-    description: 'Generate a design from a prompt.',
+    description: 'Generate an asset pack from a prompt.',
     resizeLabel: 'Resize create panel',
   },
-  edit: {
-    title: 'Edit',
-    resizeLabel: 'Resize edit panel',
-  },
-  appearance: {
-    title: 'Appearance',
-    description: 'Adjust part colors.',
-    resizeLabel: 'Resize appearance panel',
+  parts: {
+    title: 'Parts',
+    description: 'Preview one part at a time.',
+    resizeLabel: 'Resize parts panel',
   },
 };
 
 export function RightPanel({
   open,
   mode,
-  projectId,
-  structureTree,
-  selectedNodes = [],
-  activeSelectedNode = null,
-  activeSelectedNodeId = null,
-  selectedNodeIds = new Set<string>(),
-  moveStep,
-  onMoveStepChange,
-  rotateStep,
-  onRotateStepChange,
-  scaleStep,
-  onScaleStepChange,
+  parts,
+  activePartIds = new Set<string>(),
+  activePartId = null,
   onToggle,
-  onFocusStructureNode,
-  onSetStructureNodeHidden,
-  onNudgeNode,
-  onRotateNode,
-  onSetNodeRotation,
-  onNudgeNodeScale,
-  onSetNodeScale,
-  onResetNode,
-  onHideSelectedNode,
-  onRestoreNode,
-  onSetSelectedNodeColor,
-  onResetSelectedNodeColor,
-  onSetSelectedNodeEmissiveColor,
-  onSetSelectedNodeEmissiveIntensity,
-  onResetSelectedNodeEmissive,
-  onSetSelectedNodeRoughness,
-  onResetSelectedNodeRoughness,
+  onPreviewPart,
 }: RightPanelProps) {
-  const panelCopy = PANEL_COPY[mode];
+  const panelCopy = PANEL_COPY[mode] ?? PANEL_COPY.create;
   const content =
-    mode === 'create' ? (
-      <CreatePanelContent open={open} projectId={projectId} />
-    ) : mode === 'edit' ? (
-      <EditPanelContent
-        structureTree={structureTree}
-        selectedNodes={selectedNodes}
-        activeSelectedNode={activeSelectedNode}
-        activeSelectedNodeId={activeSelectedNodeId}
-        selectedNodeIds={selectedNodeIds}
-        moveStep={moveStep}
-        onMoveStepChange={onMoveStepChange}
-        rotateStep={rotateStep}
-        onRotateStepChange={onRotateStepChange}
-        scaleStep={scaleStep}
-        onScaleStepChange={onScaleStepChange}
-        onFocusStructureNode={onFocusStructureNode}
-        onSetStructureNodeHidden={onSetStructureNodeHidden}
-        onNudgeNode={onNudgeNode}
-        onRotateNode={onRotateNode}
-        onSetNodeRotation={onSetNodeRotation}
-        onNudgeNodeScale={onNudgeNodeScale}
-        onSetNodeScale={onSetNodeScale}
-        onResetNode={onResetNode}
-        onHideSelectedNode={onHideSelectedNode}
-        onRestoreNode={onRestoreNode}
+    mode === 'parts' ? (
+      <PartsPanelContent
+        parts={parts}
+        activePartIds={activePartIds}
+        activePartId={activePartId}
+        onPreviewPart={onPreviewPart}
       />
     ) : (
-      <AppearancePanelContent
-        structureTree={structureTree}
-        selectedNodes={selectedNodes}
-        activeSelectedNode={activeSelectedNode}
-        activeSelectedNodeId={activeSelectedNodeId}
-        selectedNodeIds={selectedNodeIds}
-        onFocusStructureNode={onFocusStructureNode}
-        onSetStructureNodeHidden={onSetStructureNodeHidden}
-        onSetSelectedNodeColor={onSetSelectedNodeColor}
-        onResetSelectedNodeColor={onResetSelectedNodeColor}
-        onSetSelectedNodeEmissiveColor={onSetSelectedNodeEmissiveColor}
-        onSetSelectedNodeEmissiveIntensity={onSetSelectedNodeEmissiveIntensity}
-        onResetSelectedNodeEmissive={onResetSelectedNodeEmissive}
-        onSetSelectedNodeRoughness={onSetSelectedNodeRoughness}
-        onResetSelectedNodeRoughness={onResetSelectedNodeRoughness}
-      />
+      <CreatePanelContent open={open} />
     );
 
   return (

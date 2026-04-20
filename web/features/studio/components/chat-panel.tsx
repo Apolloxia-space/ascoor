@@ -5,6 +5,7 @@ import { Loader2, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useChatConversationApi } from '../hooks/use-chat-api';
+import { useStudioApi } from '../hooks/use-studio-api';
 import { Button } from '@shared/components/ui/button';
 import { Textarea } from '@shared/components/ui/textarea';
 import { useGetBillingStatus } from '@/shared/api/generated/client';
@@ -21,6 +22,7 @@ import {
 import { paths } from '@/shared/constants/paths';
 import { CREATE_FORM_MAX_CHARS } from '@/shared/constants/form-limits';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from '../messages';
+import { buildStudioPath } from '../lib/paths';
 import { StudioSidePanel } from './studio-side-panel';
 
 type ChatPanelProps = {
@@ -30,28 +32,30 @@ type ChatPanelProps = {
 };
 
 export function ChatPanel({ open, variant = 'desktop', onToggle }: ChatPanelProps) {
-  const { projectId } = useStudioStore();
-
   return (
     <StudioSidePanel
       open={open}
       variant={variant}
       resizeAriaLabel="Resize create panel"
       title="Create"
-      description="Generate a design from a prompt."
+      description="Generate an asset pack from a prompt."
       onToggle={onToggle}
     >
-      <CreatePanelContent open={open} projectId={projectId} />
+      <CreatePanelContent open={open} />
     </StudioSidePanel>
   );
 }
 
 type CreatePanelContentProps = {
   open: boolean;
-  projectId: string | null;
 };
 
-export function CreatePanelContent({ open, projectId }: CreatePanelContentProps) {
+const buildWorkspaceName = (prompt: string) => {
+  const normalized = prompt.replace(/\s+/g, ' ').trim();
+  return normalized.slice(0, 20) || 'Untitled asset pack';
+};
+
+export function CreatePanelContent({ open }: CreatePanelContentProps) {
   const router = useRouter();
   const [messageInput, setMessageInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -60,8 +64,11 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
     'required' | 'limit' | 'concurrency' | null
   >(null);
   const [designErrorDialogOpen, setDesignErrorDialogOpen] = useState(false);
+  const addProject = useStudioStore((state) => state.addProject);
   const addPendingDesign = useStudioStore((state) => state.addPendingDesign);
-  const { createDesign, invalidateProjectDesigns } = useChatConversationApi(projectId);
+  const setProject = useStudioStore((state) => state.setProject);
+  const { createProject, invalidateProjects } = useStudioApi();
+  const { createDesign, invalidateProjectDesigns } = useChatConversationApi(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const isBusy = isSending || isGenerating;
@@ -93,7 +100,6 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
   const handleSend = async () => {
     if (isSendingRef.current) return;
     if (!messageInput.trim()) return;
-    if (!projectId) return;
     isSendingRef.current = true;
     setIsSending(true);
 
@@ -103,22 +109,29 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
 
     try {
       setIsGenerating(true);
+      const workspaceName = buildWorkspaceName(userPrompt);
+      const project = await createProject(workspaceName);
+      addProject({ id: project.id, name: project.name });
+      setProject(project.id, project.name);
+      invalidateProjects();
+      router.replace(buildStudioPath(project.id));
+
       const traceId = buildTraceId();
       const gen = await createDesign.mutateAsync({
         data: {
-          projectId,
+          projectId: project.id,
           userPrompt,
         },
         traceId,
       });
       addPendingDesign({
         designId: gen.designJobId,
-        projectId,
+        projectId: project.id,
         traceId,
         promptPreview: userPrompt,
         userPrompt,
       });
-      invalidateProjectDesigns(projectId);
+      invalidateProjectDesigns(project.id);
       setMessageInput('');
     } catch (error) {
       const apiError = error as ApiError<{ error?: string; code?: string }>;
@@ -161,7 +174,7 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
       <div className="space-y-3">
         <div className="relative rounded-md border border-input bg-transparent px-3 py-2 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
           <Textarea
-            placeholder="Describe what you want to create..."
+            placeholder="Describe the asset pack you want to create..."
             className="min-h-[240px] max-h-[440px] resize-none overflow-y-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
             value={messageInput}
             onChange={(event) =>
@@ -178,7 +191,7 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
             <Button
               size="icon"
               className="h-9 w-9 rounded-lg"
-              disabled={!projectId || !messageInput.trim() || isBusy || createDesign.isPending}
+              disabled={!messageInput.trim() || isBusy || createDesign.isPending}
               onClick={handleSend}
               aria-label="Send message"
             >
@@ -197,8 +210,8 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
               {upgradeDialogMode === 'required'
                 ? 'Paid plan required'
                 : upgradeDialogMode === 'concurrency'
-                  ? 'Concurrent Design Limit Reached'
-                  : 'Design limit reached'}
+                  ? 'Concurrent pack limit reached'
+                  : 'Pack limit reached'}
             </DialogTitle>
             <DialogDescription>
               {upgradeDialogMode === 'required'

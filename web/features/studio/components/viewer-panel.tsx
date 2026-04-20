@@ -2,19 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Download, FileText, Keyboard, Loader2, RotateCcw, Save } from 'lucide-react';
+import { ChevronDown, Download, FileText, Keyboard, Loader2 } from 'lucide-react';
 
 import { viewModes } from '@/mock/studio';
 import { IconButton } from './icon-button';
-import {
-  type NodeSelection,
-  ThreeViewer,
-  type ResetTransformTarget,
-  type ThreeViewerHandle,
-  type TransformAxis,
-} from './three-viewer';
-import type { StructureTreeNode } from '../lib/structure-tree';
-import type { RightPanelMode, ViewMode } from '../types';
+import { ThreeViewer, type ThreeViewerHandle } from './three-viewer';
+import type { PartNode } from '../lib/model-parts';
+import type { ViewMode } from '../types';
 import { Button } from '@shared/components/ui/button';
 import {
   Card,
@@ -35,15 +29,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/p
 import { Kbd, KbdGroup } from '@shared/components/ui/kbd';
 import { cn } from '@shared/lib/utils';
 import { buildTraceId } from '@shared/api/fetcher';
-import type { ApiError } from '@shared/api/fetcher';
 import {
   getDesignAssetContent,
   getGetBillingStatusQueryKey,
-  getEditedModel,
   getListProjectDesignsQueryKey,
   reportDesignPreviewResult,
 } from '@shared/api/generated/client';
-import { getFreshAuthToken } from '@/features/auth/token-store';
 import { useDesignDetail } from '../hooks/use-design-detail';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from '../messages';
 import { toast } from 'sonner';
@@ -53,38 +44,15 @@ type ViewerPanelProps = {
   viewModeOpen: boolean;
   onChangeView: (mode: ViewMode) => void;
   onViewModeOpenChange: (open: boolean) => void;
-  interactionMode?: RightPanelMode;
-  onStructureTreeChange?: (tree: Array<StructureTreeNode>) => void;
+  onPartsChange?: (parts: Array<PartNode>) => void;
   onAssemblyControlsReady?: (controls: {
-    focusStructureNode: (id: string, options?: { additive?: boolean }) => void;
     focusFullModel: () => void;
-    clearSelection: () => void;
-    setStructureNodeHidden: (id: string, hidden: boolean) => void;
-    nudgeNode: (axis: TransformAxis, delta: number) => void;
-    rotateNode: (axis: TransformAxis, deltaRadians: number) => void;
-    setNodeRotation: (axis: TransformAxis, radians: number) => void;
-    nudgeNodeScale: (axis: TransformAxis, delta: number) => void;
-    setNodeScale: (axis: TransformAxis, value: number) => void;
-    resetNode: (target: ResetTransformTarget) => void;
-    hideSelectedNode: () => void;
-    restoreNode: (id: string) => void;
-    setSelectedNodeColor: (hex: string) => void;
-    resetSelectedNodeColor: () => void;
-    setSelectedNodeEmissiveColor: (hex: string) => void;
-    setSelectedNodeEmissiveIntensity: (value: number) => void;
-    resetSelectedNodeEmissive: () => void;
-    setSelectedNodeRoughness: (value: number) => void;
-    resetSelectedNodeRoughness: () => void;
-    saveEditedModel: () => Promise<void>;
-    revertEditedModel: () => Promise<void>;
+    previewPart: (id: string) => void;
+    clearPartPreview: () => void;
   }) => void;
-  onSelectionChange?: (selection: NodeSelection) => void;
   designId?: string | null;
   designName?: string | null;
   traceId?: string | null;
-  activeTransformAxis?: TransformAxis;
-  moveStep?: number;
-  rotateStep?: number;
   shortcutHelpOpen?: boolean;
   onShortcutHelpOpenChange?: (open: boolean) => void;
   shortcutHudMessage?: string | null;
@@ -98,26 +66,16 @@ const resolveAssetContentUrl = (designId: string | null | undefined, type: 'ts')
   return `${API_BASE_URL}/designs/${designId}/assets/content?type=${type}`;
 };
 
-const resolveEditedModelUrl = (designId: string | null | undefined) => {
-  if (!designId || !API_BASE_URL) return null;
-  return `${API_BASE_URL}/designs/${designId}/edited-model`;
-};
-
 export function ViewerPanel({
   currentView,
   viewModeOpen,
   onChangeView,
   onViewModeOpenChange,
-  interactionMode = 'create',
-  onStructureTreeChange,
+  onPartsChange,
   onAssemblyControlsReady,
-  onSelectionChange,
   designId,
   designName,
   traceId,
-  activeTransformAxis = 'x',
-  moveStep = 0.05,
-  rotateStep = 15,
   shortcutHelpOpen = false,
   onShortcutHelpOpenChange,
   shortcutHudMessage = null,
@@ -129,36 +87,26 @@ export function ViewerPanel({
   const [parseError, setParseError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExportingGlb, setIsExportingGlb] = useState(false);
+  const [isExportingPartsZip, setIsExportingPartsZip] = useState(false);
   const [isExportingObj, setIsExportingObj] = useState(false);
   const [isExportingStl, setIsExportingStl] = useState(false);
   const [isExportingTs, setIsExportingTs] = useState(false);
-  const [isSavingEditedModel, setIsSavingEditedModel] = useState(false);
-  const [isRevertingEditedModel, setIsRevertingEditedModel] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [viewerReloadNonce, setViewerReloadNonce] = useState(0);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
-  const skipNextEditedModelReloadRef = useRef(false);
   const reportedPreviewResultRef = useRef<string | null>(null);
   const [renderSucceeded, setRenderSucceeded] = useState(false);
 
   const fileDetailQuery = useDesignDetail(designId);
   const refetchFileDetail = fileDetailQuery.refetch;
-
   const fileDetailResponse = fileDetailQuery.data;
   const fileDetail = fileDetailResponse?.status === 200 ? fileDetailResponse.data : undefined;
   const designData = fileDetail?.design;
   const latestDesignJob = fileDetail?.latestDesignJob ?? null;
   const previewStatus = designData?.previewStatus;
   const assetUriTs = designData?.assetUriTs ?? null;
-  const editedAssetUriGlb = designData?.editedAssetUriGlb ?? null;
-  const editedAssetUpdatedAt = designData?.editedAssetUpdatedAt ?? null;
-  const isAssemblyMode = interactionMode !== 'create';
-  const hasSavedEditedModel = Boolean(editedAssetUriGlb);
 
-  const assetVersion = fileDetailQuery.dataUpdatedAt;
   const tsContentUrl = useMemo(() => {
     if (!assetUriTs) return null;
     return resolveAssetContentUrl(designId, 'ts');
@@ -169,32 +117,13 @@ export function ViewerPanel({
     return resolveAssetContentUrl(designId, 'ts');
   }, [designId]);
 
-  const editedModelUrl = useMemo(() => {
-    if (!editedAssetUriGlb) return null;
-    const base = resolveEditedModelUrl(designId);
-    if (!base) return null;
-    const version = editedAssetUpdatedAt ?? assetVersion;
-    if (!version) return base;
-    return `${base}?v=${encodeURIComponent(String(version))}`;
-  }, [assetVersion, editedAssetUpdatedAt, editedAssetUriGlb, designId]);
-
   const hasRenderableModel = Boolean(
     designId && !isLoading && !loadError && !parseError && (modelCode || modelData),
   );
   const canExportGlb = Boolean(hasRenderableModel && !isExportingGlb);
+  const canExportPartsZip = Boolean(hasRenderableModel && !isExportingPartsZip);
   const canExportObj = Boolean(hasRenderableModel && !isExportingObj);
   const canExportStl = Boolean(hasRenderableModel && !isExportingStl);
-  const canSaveEditedModel = Boolean(
-    isAssemblyMode && designId && hasRenderableModel && hasUnsavedChanges && !isSavingEditedModel,
-  );
-  const canRevertEditedModel = Boolean(
-    isAssemblyMode &&
-      designId &&
-      hasRenderableModel &&
-      (hasUnsavedChanges || hasSavedEditedModel) &&
-      !isRevertingEditedModel,
-  );
-
   const canExportTs = Boolean(
     isDevelopmentEnvironment && designId && exportUrlTs && assetUriTs && !isExportingTs,
   );
@@ -207,17 +136,17 @@ export function ViewerPanel({
 
   const promptContent = useMemo(() => {
     if (!designId) {
-      return 'Select a design to view its prompt.';
+      return 'Select a pack to view its prompt.';
     }
     if (fileDetailQuery.isPending) {
       return 'Loading prompt...';
     }
     if (fileDetailQuery.isError) {
-      return 'Failed to load prompt for this design.';
+      return 'Failed to load prompt for this pack.';
     }
     const userPrompt = latestDesignJob?.userPrompt?.trim() ?? '';
     if (!userPrompt) {
-      return 'No design prompt is linked to this design yet.';
+      return 'No prompt is linked to this pack yet.';
     }
     return `User Prompt\n${userPrompt}`;
   }, [designId, fileDetailQuery.isError, fileDetailQuery.isPending, latestDesignJob?.userPrompt]);
@@ -234,46 +163,25 @@ export function ViewerPanel({
   useEffect(() => {
     setLoadError(null);
     setParseError(null);
-    setHasUnsavedChanges(false);
     setRenderSucceeded(false);
     setIsLoading(Boolean(designId));
-    skipNextEditedModelReloadRef.current = false;
     reportedPreviewResultRef.current = null;
   }, [designId]);
 
-  const buildAuthHeaders = useCallback(async () => {
-    const requestTraceId = traceId ?? buildTraceId();
-    const headers = new Headers({
-      'X-Trace-Id': requestTraceId,
-    });
-    const token = await getFreshAuthToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    return headers;
-  }, [traceId]);
-
   useEffect(() => {
-    if (skipNextEditedModelReloadRef.current && editedModelUrl) {
-      skipNextEditedModelReloadRef.current = false;
-      return;
-    }
-
-    if (!editedModelUrl && !tsContentUrl) {
+    if (!tsContentUrl) {
       const waitingForDesignDetail = Boolean(designId) && fileDetailQuery.isPending;
       if (waitingForDesignDetail) {
         setIsLoading(true);
         setLoadError(null);
         setParseError(null);
         setRenderSucceeded(false);
-        setHasUnsavedChanges(false);
         return;
       }
       setModelData(null);
       setModelCode(null);
       setLoadError(null);
       setParseError(null);
-      setHasUnsavedChanges(false);
       setIsLoading(false);
       return;
     }
@@ -291,18 +199,6 @@ export function ViewerPanel({
             'X-Trace-Id': traceId ?? buildTraceId(),
           },
         } satisfies RequestInit;
-        if (editedModelUrl) {
-          const response = await getEditedModel(designId ?? '', requestInit);
-          if (response.status === 200) {
-            const data = await response.data.arrayBuffer();
-            if (!controller.signal.aborted) {
-              setModelData(data);
-              setModelCode(null);
-              setHasUnsavedChanges(false);
-            }
-            return;
-          }
-        }
         if (tsContentUrl) {
           const response = await getDesignAssetContent(designId ?? '', { type: 'ts' }, requestInit);
           if (response.status !== 200) {
@@ -312,42 +208,14 @@ export function ViewerPanel({
           if (!controller.signal.aborted) {
             setModelCode(code);
             setModelData(null);
-            setHasUnsavedChanges(false);
           }
           return;
         }
       } catch (error) {
-        let resolvedError = error;
-        const status = (error as Partial<ApiError>)?.status;
-        if (editedModelUrl && tsContentUrl && status === 404) {
-          try {
-            const response = await getDesignAssetContent(
-              designId ?? '',
-              { type: 'ts' },
-              {
-                signal: controller.signal,
-                headers: {
-                  'X-Trace-Id': traceId ?? buildTraceId(),
-                },
-              },
-            );
-            if (response.status !== 200) {
-              throw new Error(`HTTP ${response.status}`);
-            }
-            if (!controller.signal.aborted) {
-              setModelCode(response.data);
-              setModelData(null);
-              setHasUnsavedChanges(false);
-            }
-            return;
-          } catch (fallbackError) {
-            resolvedError = fallbackError;
-          }
-        }
         if (!controller.signal.aborted) {
           setModelData(null);
           setModelCode(null);
-          setLoadError(resolvedError instanceof Error ? resolvedError.message : 'unknown error');
+          setLoadError(error instanceof Error ? error.message : 'unknown error');
           setParseError(null);
         }
       } finally {
@@ -361,10 +229,9 @@ export function ViewerPanel({
     return () => controller.abort();
   }, [
     designId,
-    editedModelUrl,
     fileDetailQuery.isPending,
     tsContentUrl,
-    viewerReloadNonce,
+    traceId,
   ]);
 
   const handleModelParseError = useCallback((message: string | null) => {
@@ -451,17 +318,6 @@ export function ViewerPanel({
     traceId,
   ]);
 
-  const handleStructureTreeChange = useCallback(
-    (tree: Array<StructureTreeNode>) => {
-      onStructureTreeChange?.(tree);
-    },
-    [onStructureTreeChange],
-  );
-
-  const handleSceneMutated = useCallback(() => {
-    setHasUnsavedChanges(true);
-  }, []);
-
   const buildDownloadBaseName = (name: string | null | undefined) => {
     const trimmed = name?.trim();
     if (!trimmed) return 'model';
@@ -470,6 +326,10 @@ export function ViewerPanel({
 
   const buildDownloadName = (name: string | null | undefined, extension: string) => {
     return `${buildDownloadBaseName(name)}${extension}`;
+  };
+
+  const buildPartsZipDownloadName = (name: string | null | undefined) => {
+    return `${buildDownloadBaseName(name)}_parts.zip`;
   };
 
   const downloadBlob = (blob: Blob, filename: string) => {
@@ -500,6 +360,26 @@ export function ViewerPanel({
       toast.error('Failed to export GLB.');
     } finally {
       setIsExportingGlb(false);
+    }
+  };
+
+  const handleExportPartsZip = async () => {
+    if (!hasRenderableModel) {
+      toast.warning('3D preview is not ready yet.');
+      return;
+    }
+    try {
+      setIsExportingPartsZip(true);
+      const blob = await viewerRef.current?.exportPartsZip();
+      if (!blob) {
+        throw new Error('No parts loaded');
+      }
+      downloadBlob(blob, buildPartsZipDownloadName(designName));
+      toast.success('Parts ZIP exported.');
+    } catch (_error) {
+      toast.error('Failed to export parts ZIP.');
+    } finally {
+      setIsExportingPartsZip(false);
     }
   };
 
@@ -551,7 +431,7 @@ export function ViewerPanel({
       return;
     }
     if (!designId) {
-      toast.warning('Please select a design.');
+      toast.warning('Please select a pack.');
       return;
     }
     if (!assetUriTs) {
@@ -593,150 +473,20 @@ export function ViewerPanel({
     }
   };
 
-  const handleSaveEditedModel = async () => {
-    if (!designId) {
-      toast.warning('Please select a design.');
-      return;
-    }
-    if (!hasRenderableModel) {
-      toast.warning('3D preview is not ready yet.');
-      return;
-    }
-
-    const editedModelEndpoint = resolveEditedModelUrl(designId);
-    if (!editedModelEndpoint) {
-      toast.error('API configuration is missing.');
-      return;
-    }
-
-    try {
-      setIsSavingEditedModel(true);
-      const blob = await viewerRef.current?.exportGlb('edited-model');
-      if (!blob) {
-        throw new Error('No model loaded');
-      }
-      const headers = await buildAuthHeaders();
-      headers.set('Content-Type', 'model/gltf-binary');
-      const response = await fetch(editedModelEndpoint, {
-        method: 'PUT',
-        headers,
-        body: blob,
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      skipNextEditedModelReloadRef.current = true;
-      await refetchFileDetail();
-      setHasUnsavedChanges(false);
-      toast.success('Edited model saved.');
-    } catch (_error) {
-      toast.error('Failed to save edited model.');
-    } finally {
-      setIsSavingEditedModel(false);
-    }
-  };
-
-  const handleRevertEditedModel = async () => {
-    if (!designId) {
-      toast.warning('Please select a design.');
-      return;
-    }
-
-    const editedModelEndpoint = resolveEditedModelUrl(designId);
-    if (!editedModelEndpoint) {
-      toast.error('API configuration is missing.');
-      return;
-    }
-
-    try {
-      setIsRevertingEditedModel(true);
-      if (hasSavedEditedModel) {
-        const headers = await buildAuthHeaders();
-        const response = await fetch(editedModelEndpoint, {
-          method: 'DELETE',
-          headers,
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        await refetchFileDetail();
-      }
-      setViewerReloadNonce((current) => current + 1);
-      setHasUnsavedChanges(false);
-      toast.success(
-        hasSavedEditedModel ? 'Reverted to generated model.' : 'Unsaved edits discarded.',
-      );
-    } catch (_error) {
-      toast.error('Failed to revert edits.');
-    } finally {
-      setIsRevertingEditedModel(false);
-    }
-  };
-
   useEffect(() => {
     if (!onAssemblyControlsReady) return;
     onAssemblyControlsReady({
-      focusStructureNode: (id: string, options?: { additive?: boolean }) => {
-        viewerRef.current?.focusStructureNode(id, options);
-      },
       focusFullModel: () => {
         viewerRef.current?.focusFullModel();
       },
-      clearSelection: () => {
-        viewerRef.current?.clearSelection();
+      previewPart: (id: string) => {
+        viewerRef.current?.previewPart(id);
       },
-      setStructureNodeHidden: (id: string, hidden: boolean) => {
-        viewerRef.current?.setStructureNodeHidden(id, hidden);
+      clearPartPreview: () => {
+        viewerRef.current?.clearPartPreview();
       },
-      nudgeNode: (axis, delta) => {
-        viewerRef.current?.nudgeSelectedNode(axis, delta);
-      },
-      rotateNode: (axis, deltaRadians) => {
-        viewerRef.current?.rotateSelectedNode(axis, deltaRadians);
-      },
-      setNodeRotation: (axis, radians) => {
-        viewerRef.current?.setSelectedNodeRotation(axis, radians);
-      },
-      nudgeNodeScale: (axis, delta) => {
-        viewerRef.current?.nudgeSelectedNodeScale(axis, delta);
-      },
-      setNodeScale: (axis, value) => {
-        viewerRef.current?.setSelectedNodeScale(axis, value);
-      },
-      resetNode: (target) => {
-        viewerRef.current?.resetSelectedNode(target);
-      },
-      hideSelectedNode: () => {
-        viewerRef.current?.hideSelectedNode();
-      },
-      restoreNode: (id) => {
-        viewerRef.current?.restoreNode(id);
-      },
-      setSelectedNodeColor: (hex) => {
-        viewerRef.current?.setSelectedNodeColor(hex);
-      },
-      resetSelectedNodeColor: () => {
-        viewerRef.current?.resetSelectedNodeColor();
-      },
-      setSelectedNodeEmissiveColor: (hex) => {
-        viewerRef.current?.setSelectedNodeEmissiveColor(hex);
-      },
-      setSelectedNodeEmissiveIntensity: (value) => {
-        viewerRef.current?.setSelectedNodeEmissiveIntensity(value);
-      },
-      resetSelectedNodeEmissive: () => {
-        viewerRef.current?.resetSelectedNodeEmissive();
-      },
-      setSelectedNodeRoughness: (value) => {
-        viewerRef.current?.setSelectedNodeRoughness(value);
-      },
-      resetSelectedNodeRoughness: () => {
-        viewerRef.current?.resetSelectedNodeRoughness();
-      },
-      saveEditedModel: handleSaveEditedModel,
-      revertEditedModel: handleRevertEditedModel,
     });
-  }, [handleRevertEditedModel, handleSaveEditedModel, onAssemblyControlsReady]);
+  }, [onAssemblyControlsReady]);
 
   return (
     <div className="relative flex w-full min-w-0 flex-1 flex-col bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -790,37 +540,6 @@ export function ViewerPanel({
           >
             <FileText className="size-4" />
           </IconButton>
-          {isAssemblyMode && (
-            <IconButton
-              label="Save edited model"
-              onClick={() => {
-                void handleSaveEditedModel();
-              }}
-              disabled={!canSaveEditedModel}
-              className={hasUnsavedChanges ? 'text-emerald-300' : undefined}
-            >
-              {isSavingEditedModel ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Save className="size-4" />
-              )}
-            </IconButton>
-          )}
-          {isAssemblyMode && (
-            <IconButton
-              label="Revert edits"
-              onClick={() => {
-                void handleRevertEditedModel();
-              }}
-              disabled={!canRevertEditedModel}
-            >
-              {isRevertingEditedModel ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RotateCcw className="size-4" />
-              )}
-            </IconButton>
-          )}
           <Popover open={downloadOpen} onOpenChange={setDownloadOpen}>
             <PopoverTrigger asChild>
               <IconButton label="Download">
@@ -865,6 +584,24 @@ export function ViewerPanel({
                   <Download className="size-4" />
                 )}
                 <span>GLB</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  void handleExportPartsZip();
+                  setDownloadOpen(false);
+                }}
+                disabled={!canExportPartsZip}
+              >
+                {isExportingPartsZip ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                <span>All parts ZIP</span>
               </Button>
               <Button
                 type="button"
@@ -924,16 +661,12 @@ export function ViewerPanel({
 
       <div className="relative flex flex-1 overflow-hidden">
         <ThreeViewer
-          key={viewerReloadNonce}
           ref={viewerRef}
           modelData={modelData}
           modelCode={modelCode}
           viewModeKey={currentView.key}
-          interactionMode={interactionMode}
-          onStructureTreeChange={handleStructureTreeChange}
-          onSelectionChange={onSelectionChange}
+          onPartsChange={onPartsChange}
           onModelParseError={handleModelParseError}
-          onSceneMutated={handleSceneMutated}
           className="absolute inset-0"
         />
 
@@ -952,7 +685,7 @@ export function ViewerPanel({
                   <Kbd>?</Kbd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span>Frame selected or full model</span>
+                  <span>Frame full model</span>
                   <Kbd>F</Kbd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -960,17 +693,6 @@ export function ViewerPanel({
                   <KbdGroup>
                     <Kbd>Shift</Kbd>
                     <Kbd>F</Kbd>
-                  </KbdGroup>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span>Clear selection</span>
-                  <Kbd>Esc</Kbd>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span>Add or remove node from selection</span>
-                  <KbdGroup>
-                    <Kbd>Cmd/Ctrl</Kbd>
-                    <Kbd>Click</Kbd>
                   </KbdGroup>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -983,68 +705,6 @@ export function ViewerPanel({
                     <Kbd>5</Kbd>
                   </KbdGroup>
                 </div>
-                {isAssemblyMode && (
-                  <>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Active axis</span>
-                      <KbdGroup>
-                        <Kbd>X</Kbd>
-                        <Kbd>Y</Kbd>
-                        <Kbd>Z</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Move along active axis</span>
-                      <KbdGroup>
-                        <Kbd>←</Kbd>
-                        <Kbd>→</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Rotate on active axis</span>
-                      <KbdGroup>
-                        <Kbd>Shift</Kbd>
-                        <Kbd>←</Kbd>
-                        <Kbd>→</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Adjust move step</span>
-                      <KbdGroup>
-                        <Kbd>A</Kbd>
-                        <Kbd>D</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Adjust rotate step</span>
-                      <KbdGroup>
-                        <Kbd>Q</Kbd>
-                        <Kbd>E</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Reset transforms</span>
-                      <KbdGroup>
-                        <Kbd>R</Kbd>
-                        <Kbd>Shift</Kbd>
-                        <Kbd>R</Kbd>
-                        <Kbd>Alt</Kbd>
-                        <Kbd>R</Kbd>
-                      </KbdGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Hide or restore selected node</span>
-                      <Kbd>H</Kbd>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span>Save edited model</span>
-                      <KbdGroup>
-                        <Kbd>Cmd/Ctrl</Kbd>
-                        <Kbd>S</Kbd>
-                      </KbdGroup>
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -1057,8 +717,7 @@ export function ViewerPanel({
         <div className="pointer-events-none absolute bottom-5 left-5 z-20 rounded-lg border border-white/10 bg-slate-950/82 px-3 py-2 text-xs text-slate-100 shadow-xl backdrop-blur">
           <p className="font-medium uppercase tracking-[0.18em] text-slate-400">Keyboard</p>
           <p className="mt-1">
-            {shortcutHudMessage} · Axis {activeTransformAxis.toUpperCase()} · Move {moveStep} ·
-            Rotate {rotateStep}deg
+            {shortcutHudMessage}
           </p>
         </div>
       ) : null}
@@ -1068,7 +727,7 @@ export function ViewerPanel({
           <DialogHeader>
             <DialogTitle>Prompt</DialogTitle>
             <DialogDescription>
-              Displays the prompt used for the currently selected design.
+              Displays the prompt used for the currently selected pack.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[55vh] overflow-auto rounded-md border border-border bg-muted/40 p-3">

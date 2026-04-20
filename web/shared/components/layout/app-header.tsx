@@ -1,12 +1,11 @@
 'use client';
 
 import {
+  AlertTriangle,
   ChevronDown,
-  File,
   FolderOpen,
   Loader2,
   LogOut,
-  PlusCircle,
   User,
   XCircle,
 } from 'lucide-react';
@@ -14,6 +13,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,13 +24,24 @@ import {
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { cn } from '@shared/lib/utils';
 
+type ProjectGenerationStatus = {
+  kind: 'queued' | 'running' | 'failed';
+  label: string;
+  promptPreview?: string | null;
+  errorMessage?: string | null;
+};
+
+const formatWorkspaceListName = (name: string) => {
+  return name.length > 30 ? `${name.slice(0, 27)}...` : name;
+};
+
 type AppHeaderProps = {
   projectMenuOpen: boolean;
   onProjectMenuChange: (open: boolean) => void;
-  onOpenNewProject: () => void;
   projectName?: string | null;
   projectId?: string | null;
   projects: Array<{ id: string; name: string }>;
+  projectGenerationStatuses?: Record<string, ProjectGenerationStatus>;
   onSelectProject: (id: string, name: string) => void;
   onCloseProject: () => void;
   onOpenProjectManager?: () => void;
@@ -50,10 +61,10 @@ type AppHeaderProps = {
 export function AppHeader({
   projectMenuOpen,
   onProjectMenuChange,
-  onOpenNewProject,
   projectName,
   projectId,
   projects,
+  projectGenerationStatuses = {},
   onSelectProject,
   onCloseProject,
   onOpenProjectManager,
@@ -76,9 +87,27 @@ export function AppHeader({
   const showProjectSkeleton = projectsLoading && recentProjects.length === 0;
   const projectLabel = showProjectSkeleton
     ? projectId
-      ? 'Loading project...'
-      : 'Loading projects...'
-    : projectName || 'No project selected';
+      ? 'Loading workspace...'
+      : 'Loading workspaces...'
+    : projectName || 'No workspace selected';
+
+  const renderGenerationStatus = (status?: ProjectGenerationStatus) => {
+    if (!status) return null;
+    const isFailed = status.kind === 'failed';
+    const isGenerating = status.kind === 'queued' || status.kind === 'running';
+
+    return (
+      <Badge
+        variant={isFailed ? 'destructive' : 'outline'}
+        className="ml-auto max-w-[120px] gap-1 truncate"
+        title={isFailed ? (status.errorMessage ?? status.promptPreview ?? status.label) : status.promptPreview ?? status.label}
+      >
+        {isFailed ? <AlertTriangle className="size-3" /> : null}
+        {isGenerating ? <Loader2 className="size-3 animate-spin" /> : null}
+        <span className="truncate">{status.label}</span>
+      </Badge>
+    );
+  };
 
   return (
     <header className="flex items-center justify-between border-b border-white/10 bg-background/70 px-4 py-3 backdrop-blur md:px-6">
@@ -106,31 +135,22 @@ export function AppHeader({
               <DropdownMenuContent>
                 <DropdownMenuItem
                   onSelect={() => {
-                    onOpenNewProject();
-                    onProjectMenuChange(false);
-                  }}
-                >
-                  <PlusCircle className="size-4" />
-                  New project
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => {
                     onCloseProject();
                     onProjectMenuChange(false);
                   }}
                   disabled={!canCloseProject}
                 >
                   <XCircle className="size-4" />
-                  Close Project
+                  Close workspace
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="max-h-60 overflow-y-auto py-1 pr-1">
                   <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium tracking-wide text-muted-foreground">
-                    <span>Recent project</span>
+                    <span>Recent workspace</span>
                     {projectsRefreshing && !showProjectSkeleton ? (
                       <Loader2
                         className="size-3.5 animate-spin"
-                        aria-label="Refreshing recent projects"
+                        aria-label="Refreshing recent workspaces"
                       />
                     ) : null}
                   </div>
@@ -144,7 +164,7 @@ export function AppHeader({
                       ))}
                     </div>
                   ) : recentProjects.length === 0 ? (
-                    <p className="px-2 py-2 text-sm text-muted-foreground">No projects</p>
+                    <p className="px-2 py-2 text-sm text-muted-foreground">No workspaces</p>
                   ) : (
                     recentProjects.map((project) => (
                       <DropdownMenuItem
@@ -154,10 +174,12 @@ export function AppHeader({
                           onProjectMenuChange(false);
                         }}
                       >
-                        <File className="size-4" />
-                        <span className="truncate">{project.name}</span>
+                        <span className="min-w-0 flex-1 truncate" title={project.name}>
+                          {formatWorkspaceListName(project.name)}
+                        </span>
+                        {renderGenerationStatus(projectGenerationStatuses[project.id])}
                         {projectId === project.id && (
-                          <span className="ml-auto text-xs text-primary">Current</span>
+                          <span className="text-xs text-primary">Current</span>
                         )}
                       </DropdownMenuItem>
                     ))
@@ -173,7 +195,7 @@ export function AppHeader({
                       }}
                     >
                       <FolderOpen className="size-4" />
-                      Manage projects
+                      Manage workspaces
                     </DropdownMenuItem>
                   </>
                 )}

@@ -69,7 +69,7 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
         designId: payload.designId ?? null,
         title: payload.title ?? null,
       });
-      toast.success('Design completed.');
+      toast.success('Pack completed.');
     },
     [
       markNotified,

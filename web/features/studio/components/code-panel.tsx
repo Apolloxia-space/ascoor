@@ -53,7 +53,7 @@ export function CodePanel({
         <div className="flex items-center gap-2">
           <SquareMenu className="size-4 text-[color:var(--accent-emphasis)]" />
           <span className="text-sm font-medium text-[color:var(--text-primary)]">
-            {fileName ?? 'No design selected'}
+            {fileName ?? 'No pack selected'}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export function CodePanel({
             </pre>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Select a design to view.
+              Select a pack to view.
             </div>
           )}
         </div>

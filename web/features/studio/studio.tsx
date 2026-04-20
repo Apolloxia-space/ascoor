@@ -2,26 +2,24 @@
 
 import {
   ArrowUpCircle,
+  AlertTriangle,
   CreditCard,
-  File,
   FolderOpen,
+  List,
   Loader2,
   Menu,
-  Palette,
-  PlusCircle,
   Settings,
-  SlidersHorizontal,
   Sparkles,
   XCircle,
 } from 'lucide-react';
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { viewModes } from '@/mock/studio';
 import type { ApiError } from '@/shared/api/fetcher';
-import { useListProjectDesigns, useListProjects } from '@/shared/api/generated/client';
+import { getDesign, useListProjectDesigns, useListProjects } from '@/shared/api/generated/client';
 import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -30,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerTitle } from '@/shared/components/ui/drawer';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/shared/components/ui/sheet';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { paths } from '@/shared/constants/paths';
@@ -38,43 +35,49 @@ import { useIsMobile } from '@/shared/hooks/use-mobile';
 import { cn } from '@/shared/lib/utils';
 import { ActionSidebar } from './components/action-sidebar';
 import { ChatPanel } from './components/chat-panel';
-import { NewDesignDialog } from './components/dialogs/new-design-dialog';
-import { NewProjectDialog } from './components/dialogs/new-project-dialog';
 import { ProjectListDialog } from './components/dialogs/project-list-dialog';
-import { AppearancePanel } from './components/appearance-panel';
-import { EditPanel } from './components/edit-panel';
-import { ProjectPanel } from './components/project-panel';
-import { ProjectSidebar } from './components/project-sidebar';
+import { PartsPanelContent } from './components/parts-panel';
 import { RightPanel } from './components/right-panel';
 import { StudioHeader } from './components/studio-header';
-import type {
-  NodeSelection,
-  ResetTransformTarget,
-  SelectedNode,
-  TransformAxis,
-} from './components/three-viewer';
-import {
-  DEFAULT_MOVE_STEP,
-  DEFAULT_ROTATE_STEP,
-  DEFAULT_SCALE_STEP,
-  MOVE_STEP_OPTIONS,
-  ROTATE_STEP_OPTIONS,
-} from './components/transform-controls';
 import { ViewerPanel } from './components/viewer-panel';
 import { useDesignMonitor } from './hooks/use-design-monitor';
 import { useStudioApi } from './hooks/use-studio-api';
 import { useStudioPersist } from './hooks/use-studio-persist';
-import { buildStudioPath, getStudioDesignId } from './lib/paths';
-import type { StructureTreeNode } from './lib/structure-tree';
+import { buildStudioPath } from './lib/paths';
+import { getWorkspaceGenerationStatuses } from './lib/workspace-generation-status';
+import type { PartNode } from './lib/model-parts';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from './messages';
 import { useStudioStore } from './stores/use-studio-store';
 import type { RightPanelMode } from './types';
-import type { ProjectResponseData } from '@/shared/api/generated/schemas';
+import type { ProjectDesignSummary, ProjectResponseData } from '@/shared/api/generated/schemas';
 
 const isApiNotFoundError = (error: unknown): error is ApiError<{ error?: string }> => {
   if (!error || typeof error !== 'object') return false;
   if (!('status' in error)) return false;
   return (error as { status?: unknown }).status === 404;
+};
+
+const getDesignTimestamp = (design: ProjectDesignSummary) => {
+  return Date.parse(design.updatedAt || design.createdAt) || 0;
+};
+
+const getProjectFileDesign = (designs: Array<ProjectDesignSummary>) => {
+  return [...designs].sort((a, b) => getDesignTimestamp(b) - getDesignTimestamp(a))[0] ?? null;
+};
+
+const normalizeWorkspaceTitle = (title?: string | null) => {
+  const normalized = (title ?? '').replace(/\s+/g, ' ').trim();
+  return normalized ? normalized.slice(0, 300) : null;
+};
+
+const formatWorkspaceListName = (name: string) => {
+  return name.length > 30 ? `${name.slice(0, 27)}...` : name;
+};
+
+const getGeneratedDesignTitle = async (designId: string) => {
+  const response = await getDesign(designId);
+  if (response.status !== 200) return null;
+  return response.data.latestDesignJob?.title ?? null;
 };
 
 const SHORTCUT_BLOCK_SELECTOR = [
@@ -87,23 +90,8 @@ const SHORTCUT_BLOCK_SELECTOR = [
   '[data-radix-popper-content-wrapper]',
 ].join(', ');
 
-const cyclePreset = (values: ReadonlyArray<number>, current: number, direction: -1 | 1) => {
-  const currentIndex = Math.max(values.indexOf(current), 0);
-  const nextIndex = Math.min(Math.max(currentIndex + direction, 0), values.length - 1);
-  return values[nextIndex] ?? current;
-};
-
 const getSingleRouteParam = (value: string | Array<string> | undefined) =>
   Array.isArray(value) ? value[0] : value;
-
-const formatSelectionSummary = (
-  selectedNodes: Array<SelectedNode>,
-  activeSelectedNode: SelectedNode | null,
-) => {
-  if (selectedNodes.length === 0) return 'No selection';
-  if (selectedNodes.length === 1 && activeSelectedNode) return activeSelectedNode.name;
-  return `${selectedNodes.length} nodes`;
-};
 
 export function StudioPage() {
   useStudioPersist();
@@ -111,35 +99,24 @@ export function StudioPage() {
     projectId,
     projectName,
     projects,
+    pendingDesigns,
     setProject,
     setProjects,
     clearProject,
-    addProject,
     chatPanelOpen,
     currentView,
-    newDesignModalOpen,
-    newDesignName,
-    newProjectModalOpen,
-    newProjectName,
     projectMenuOpen,
-    projectPanelOpen,
     rightPanelMode,
     viewModeOpen,
     toggleChatPanel,
-    toggleProjectPanel,
     setRightPanelMode,
     setCurrentView,
-    setNewDesignModalOpen,
-    setNewDesignName,
-    setNewProjectModalOpen,
-    setNewProjectName,
     setProjectMenuOpen,
     setViewModeOpen,
   } = useStudioStore();
   const status = useAuthStore((state) => state.status);
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const params = useParams<{
     projectId?: string | Array<string>;
   }>();
@@ -150,48 +127,24 @@ export function StudioPage() {
   const [designErrorDialogOpen, setDesignErrorDialogOpen] = useState(false);
   const [designErrorMessage, setDesignErrorMessage] = useState(DESIGN_FAILED_MESSAGE);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileProjectOpen, setMobileProjectOpen] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [mobileEditOpen, setMobileEditOpen] = useState(false);
+  const [mobilePartsOpen, setMobilePartsOpen] = useState(false);
   const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
   const [invalidRouteProjectId, setInvalidRouteProjectId] = useState<string | null>(null);
-  const [structureTree, setStructureTree] = useState<Array<StructureTreeNode>>([]);
-  const [selectedNodes, setSelectedNodes] = useState<Array<SelectedNode>>([]);
-  const [activeSelectedNodeId, setActiveSelectedNodeId] = useState<string | null>(null);
-  const [activeTransformAxis, setActiveTransformAxis] = useState<TransformAxis>('x');
-  const [moveStep, setMoveStep] = useState<number>(DEFAULT_MOVE_STEP);
-  const [rotateStep, setRotateStep] = useState<number>(DEFAULT_ROTATE_STEP);
-  const [scaleStep, setScaleStep] = useState<number>(DEFAULT_SCALE_STEP);
+  const [parts, setParts] = useState<Array<PartNode>>([]);
+  const [activePartId, setActivePartId] = useState<string | null>(null);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [shortcutHudMessage, setShortcutHudMessage] = useState<string | null>(null);
   const shortcutHudTimerRef = useRef<number | null>(null);
+  const workspaceTitleSyncProjectIdsRef = useRef<Set<string>>(new Set());
+  const workspaceTitleSyncInFlightRef = useRef<Set<string>>(new Set());
   const assemblyControlsRef = useRef<{
-    focusStructureNode: (id: string, options?: { additive?: boolean }) => void;
     focusFullModel: () => void;
-    clearSelection: () => void;
-    setStructureNodeHidden: (id: string, hidden: boolean) => void;
-    nudgeNode: (axis: TransformAxis, delta: number) => void;
-    rotateNode: (axis: TransformAxis, deltaRadians: number) => void;
-    setNodeRotation: (axis: TransformAxis, radians: number) => void;
-    nudgeNodeScale: (axis: TransformAxis, delta: number) => void;
-    setNodeScale: (axis: TransformAxis, value: number) => void;
-    resetNode: (target: ResetTransformTarget) => void;
-    hideSelectedNode: () => void;
-    restoreNode: (id: string) => void;
-    setSelectedNodeColor: (hex: string) => void;
-    resetSelectedNodeColor: () => void;
-    setSelectedNodeEmissiveColor: (hex: string) => void;
-    setSelectedNodeEmissiveIntensity: (value: number) => void;
-    resetSelectedNodeEmissive: () => void;
-    setSelectedNodeRoughness: (value: number) => void;
-    resetSelectedNodeRoughness: () => void;
-    saveEditedModel: () => Promise<void>;
-    revertEditedModel: () => Promise<void>;
+    previewPart: (id: string) => void;
+    clearPartPreview: () => void;
   } | null>(null);
-  const { createProject, createDesign, invalidateProjects, invalidateProjectDesigns } =
-    useStudioApi();
+  const { updateProject, invalidateProjects, invalidateProjectDesigns } = useStudioApi();
   const routeProjectId = getSingleRouteParam(params.projectId) ?? null;
-  const routeDesignId = getStudioDesignId(searchParams);
   const activeRouteProjectId =
     routeProjectId && routeProjectId !== invalidRouteProjectId ? routeProjectId : null;
   const activeProjectId = activeRouteProjectId ?? projectId ?? '';
@@ -214,38 +167,24 @@ export function StudioPage() {
   const projectItems: Array<ProjectResponseData> =
     projectsQuery.data?.status === 200 ? projectsQuery.data.data.items : [];
   const designs = designsQuery.data?.status === 200 ? designsQuery.data.data.designs : [];
+  const projectFileDesign = useMemo(() => getProjectFileDesign(designs), [designs]);
+  const workspaceGenerationStatuses = useMemo(
+    () => getWorkspaceGenerationStatuses(pendingDesigns),
+    [pendingDesigns],
+  );
   const projectsLoading = status === 'authenticated' && projectsQuery.isPending;
   const projectsRefreshing =
     status === 'authenticated' && projectsQuery.isFetching && !projectsQuery.isPending;
-  const designsLoading =
-    status === 'authenticated' && Boolean(activeProjectId) && designsQuery.isPending;
-  const designsRefreshing =
-    status === 'authenticated' &&
-    Boolean(activeProjectId) &&
-    designsQuery.isFetching &&
-    !designsQuery.isPending;
-  const currentStudioPath = buildStudioPath(routeProjectId, routeDesignId);
-  const selectedNodeIds = useMemo(
-    () => new Set(selectedNodes.map((node) => node.id)),
-    [selectedNodes],
-  );
-  const activeSelectedNode = useMemo(
-    () =>
-      selectedNodes.find((node) => node.id === activeSelectedNodeId) ??
-      selectedNodes[selectedNodes.length - 1] ??
-      null,
-    [activeSelectedNodeId, selectedNodes],
+  const activePartIds = useMemo(
+    () => (activePartId ? new Set([activePartId]) : new Set<string>()),
+    [activePartId],
   );
   const hasSelectedDesignState =
     selectedDesignId !== null ||
     selectedDesignName !== null ||
     selectedDesignTraceId !== null ||
-    structureTree.length > 0 ||
-    selectedNodes.length > 0 ||
-    activeTransformAxis !== 'x' ||
-    moveStep !== DEFAULT_MOVE_STEP ||
-    rotateStep !== DEFAULT_ROTATE_STEP ||
-    scaleStep !== DEFAULT_SCALE_STEP ||
+    parts.length > 0 ||
+    activePartId !== null ||
     shortcutHelpOpen ||
     shortcutHudMessage !== null;
 
@@ -254,35 +193,28 @@ export function StudioPage() {
     setSelectedDesignId(null);
     setSelectedDesignName(null);
     setSelectedDesignTraceId(null);
-    setStructureTree([]);
-    setSelectedNodes([]);
-    setActiveSelectedNodeId(null);
-    setActiveTransformAxis('x');
-    setMoveStep(DEFAULT_MOVE_STEP);
-    setRotateStep(DEFAULT_ROTATE_STEP);
-    setScaleStep(DEFAULT_SCALE_STEP);
+    setParts([]);
+    setActivePartId(null);
     setShortcutHelpOpen(false);
     setShortcutHudMessage(null);
   }, [
-    activeTransformAxis,
+    activePartId,
     hasSelectedDesignState,
-    moveStep,
-    rotateStep,
-    scaleStep,
-    selectedNodes.length,
+    parts.length,
     shortcutHelpOpen,
     shortcutHudMessage,
-    structureTree.length,
   ]);
 
   const handleSelectProject = useCallback(
     (nextProjectId: string, _nextProjectName: string) => {
+      clearSelectedDesign();
+      setRightPanelMode('create');
       const nextPath = buildStudioPath(nextProjectId);
       if (pathname !== nextPath) {
         router.replace(nextPath);
       }
     },
-    [pathname, router],
+    [clearSelectedDesign, pathname, router, setRightPanelMode],
   );
 
   const handleCloseProject = useCallback(() => {
@@ -300,58 +232,90 @@ export function StudioPage() {
       setSelectedDesignId(designId);
       setSelectedDesignName(name);
       setSelectedDesignTraceId(traceId);
-      setStructureTree([]);
-      setSelectedNodes([]);
-      setActiveSelectedNodeId(null);
-      setActiveTransformAxis('x');
-      setMoveStep(DEFAULT_MOVE_STEP);
-      setRotateStep(DEFAULT_ROTATE_STEP);
-      setScaleStep(DEFAULT_SCALE_STEP);
+      setParts([]);
+      setActivePartId(null);
       setShortcutHelpOpen(false);
       setShortcutHudMessage(null);
-      setRightPanelMode('edit');
+      setRightPanelMode('create');
     },
     [setRightPanelMode],
   );
 
-  const handleSelectDesign = useCallback(
-    (designId: string, _name: string) => {
-      if (!projectId) return;
-      const nextPath = buildStudioPath(projectId, designId);
-      if (currentStudioPath !== nextPath) {
-        router.replace(nextPath);
+  const syncWorkspaceName = useCallback(
+    async (targetProjectId: string, title?: string | null) => {
+      const nextWorkspaceName = normalizeWorkspaceTitle(title);
+      if (!nextWorkspaceName) return false;
+
+      const currentState = useStudioStore.getState();
+      const currentProjectName =
+        currentState.projects.find((project) => project.id === targetProjectId)?.name ??
+        (currentState.projectId === targetProjectId ? currentState.projectName : '');
+      if (currentProjectName === nextWorkspaceName) {
+        return true;
+      }
+
+      const syncKey = `${targetProjectId}:${nextWorkspaceName}`;
+      if (workspaceTitleSyncInFlightRef.current.has(syncKey)) {
+        return false;
+      }
+      workspaceTitleSyncInFlightRef.current.add(syncKey);
+
+      try {
+        const updatedProject = await updateProject(targetProjectId, nextWorkspaceName);
+        const projectSummary = { id: updatedProject.id, name: updatedProject.name };
+        const currentProjects = useStudioStore.getState().projects;
+        const hasProject = currentProjects.some((project) => project.id === updatedProject.id);
+        const nextProjects = hasProject
+          ? currentProjects.map((project) =>
+              project.id === updatedProject.id ? projectSummary : project,
+            )
+          : [projectSummary, ...currentProjects];
+        const projectsChanged =
+          currentProjects.length !== nextProjects.length ||
+          currentProjects.some(
+            (project, index) =>
+              project.id !== nextProjects[index]?.id || project.name !== nextProjects[index]?.name,
+          );
+        if (projectsChanged) {
+          setProjects(nextProjects);
+        }
+        if (useStudioStore.getState().projectId === updatedProject.id) {
+          setProject(updatedProject.id, updatedProject.name);
+        }
+        invalidateProjects();
+        return true;
+      } catch (_error) {
+        return false;
+      } finally {
+        workspaceTitleSyncInFlightRef.current.delete(syncKey);
       }
     },
-    [currentStudioPath, projectId, router],
+    [invalidateProjects, setProject, setProjects, updateProject],
   );
-
-  const handleMobileSelectDesign = (designId: string, name: string) => {
-    handleSelectDesign(designId, name);
-    setMobileProjectOpen(false);
-  };
 
   useDesignMonitor({
     enabled: status === 'authenticated',
     onInvalidateProjectDesigns: invalidateProjectDesigns,
     onDesignSucceeded: (payload) => {
       if (!payload.designId) return;
+      const generatedDesignId = payload.designId;
+      workspaceTitleSyncProjectIdsRef.current.add(payload.projectId);
+
+      void (async () => {
+        const detailTitle = await getGeneratedDesignTitle(generatedDesignId);
+        const generatedTitle = normalizeWorkspaceTitle(detailTitle) ? detailTitle : payload.title;
+        return syncWorkspaceName(payload.projectId, generatedTitle);
+      })().then((synced) => {
+        if (synced) {
+          workspaceTitleSyncProjectIdsRef.current.delete(payload.projectId);
+        }
+      });
     },
     onDesignFailed: (_payload) => {
       setDesignErrorMessage(DESIGN_FAILED_MESSAGE);
       setDesignErrorDialogOpen(true);
     },
   });
-
-  const handleDeleteDesign = (designId: string) => {
-    if (selectedDesignId === designId) {
-      clearSelectedDesign();
-    }
-  };
-
-  const handleSelectionChange = useCallback((selection: NodeSelection) => {
-    setSelectedNodes(selection.selectedNodes);
-    setActiveSelectedNodeId(selection.activeNodeId);
-  }, []);
 
   const showShortcutHud = useCallback((message: string) => {
     setShortcutHudMessage(message);
@@ -372,39 +336,10 @@ export function StudioPage() {
     };
   }, []);
 
-  const handleMoveStepChange = useCallback(
-    (step: number) => {
-      setMoveStep(step);
-      showShortcutHud(`Move step ${step}`);
-    },
-    [showShortcutHud],
-  );
-
-  const handleRotateStepChange = useCallback(
-    (step: number) => {
-      setRotateStep(step);
-      showShortcutHud(`Rotate step ${step}deg`);
-    },
-    [showShortcutHud],
-  );
-
-  const handleScaleStepChange = useCallback(
-    (step: number) => {
-      setScaleStep(step);
-      showShortcutHud(`Scale step ${step}`);
-    },
-    [showShortcutHud],
-  );
-
   const handleShortcutScopeKeyDownCapture = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (!(event.target instanceof HTMLElement)) return;
       if (event.target.closest(SHORTCUT_BLOCK_SELECTOR)) return;
-
-      const isTreeTarget = Boolean(event.target.closest('[data-structure-tree]'));
-      if (isTreeTarget) {
-        return;
-      }
 
       const lowerKey = event.key.toLowerCase();
       const metaOrCtrl = event.metaKey || event.ctrlKey;
@@ -425,9 +360,10 @@ export function StudioPage() {
           setShortcutHelpOpen(false);
           return;
         }
-        if (selectedNodes.length > 0) {
+        if (activePartId) {
           event.preventDefault();
-          assemblyControlsRef.current?.clearSelection();
+          assemblyControlsRef.current?.clearPartPreview();
+          setActivePartId(null);
         }
         return;
       }
@@ -460,149 +396,11 @@ export function StudioPage() {
           }
           return;
         }
-        if (activeSelectedNode) {
-          assemblyControlsRef.current?.focusStructureNode(activeSelectedNode.id);
-          if (!event.repeat) {
-            showShortcutHud(`Framed ${formatSelectionSummary(selectedNodes, activeSelectedNode)}`);
-          }
-          return;
-        }
-        const rootNodeId = structureTree[0]?.id;
-        if (rootNodeId) {
-          assemblyControlsRef.current?.focusStructureNode(rootNodeId);
-          if (!event.repeat) {
-            showShortcutHud('Framed full model');
-          }
-          return;
-        }
         assemblyControlsRef.current?.focusFullModel();
         return;
       }
-
-      if (rightPanelMode === 'create') {
-        return;
-      }
-
-      if (metaOrCtrl && !event.shiftKey && !event.altKey && lowerKey === 's') {
-        event.preventDefault();
-        void assemblyControlsRef.current?.saveEditedModel();
-        return;
-      }
-
-      if (metaOrCtrl && event.shiftKey && !event.altKey && lowerKey === 'r') {
-        event.preventDefault();
-        void assemblyControlsRef.current?.revertEditedModel();
-        return;
-      }
-
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && ['x', 'y', 'z'].includes(lowerKey)) {
-        event.preventDefault();
-        const nextAxis = lowerKey as TransformAxis;
-        setActiveTransformAxis(nextAxis);
-        showShortcutHud(`Axis ${nextAxis.toUpperCase()}`);
-        return;
-      }
-
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'a') {
-        event.preventDefault();
-        handleMoveStepChange(cyclePreset(MOVE_STEP_OPTIONS, moveStep, -1));
-        return;
-      }
-
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'd') {
-        event.preventDefault();
-        handleMoveStepChange(cyclePreset(MOVE_STEP_OPTIONS, moveStep, 1));
-        return;
-      }
-
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'q') {
-        event.preventDefault();
-        handleRotateStepChange(cyclePreset(ROTATE_STEP_OPTIONS, rotateStep, -1));
-        return;
-      }
-
-      if (!event.shiftKey && !event.altKey && !metaOrCtrl && lowerKey === 'e') {
-        event.preventDefault();
-        handleRotateStepChange(cyclePreset(ROTATE_STEP_OPTIONS, rotateStep, 1));
-        return;
-      }
-
-      if (!activeSelectedNode) {
-        return;
-      }
-
-      if (!metaOrCtrl && !event.shiftKey && !event.altKey && lowerKey === 'h') {
-        event.preventDefault();
-        const allSelectedHidden = selectedNodes.every((node) => node.hidden);
-        if (allSelectedHidden) {
-          selectedNodes.forEach((node) => {
-            assemblyControlsRef.current?.restoreNode(node.id);
-          });
-          showShortcutHud(`Restored ${formatSelectionSummary(selectedNodes, activeSelectedNode)}`);
-          return;
-        }
-        assemblyControlsRef.current?.hideSelectedNode();
-        showShortcutHud(`Hid ${formatSelectionSummary(selectedNodes, activeSelectedNode)}`);
-        return;
-      }
-
-      if (!metaOrCtrl && lowerKey === 'r') {
-        event.preventDefault();
-        const target = event.altKey ? 'position' : event.shiftKey ? 'rotation' : 'all';
-        assemblyControlsRef.current?.resetNode(target);
-        if (!event.repeat) {
-          const label =
-            target === 'all'
-              ? 'Reset transforms'
-              : target === 'rotation'
-                ? 'Reset rotation'
-                : 'Reset position';
-          showShortcutHud(label);
-        }
-        return;
-      }
-
-      if (
-        !metaOrCtrl &&
-        !event.altKey &&
-        (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
-      ) {
-        event.preventDefault();
-        const direction = event.key === 'ArrowLeft' ? -1 : 1;
-        if (event.shiftKey) {
-          assemblyControlsRef.current?.rotateNode(
-            activeTransformAxis,
-            ((rotateStep * Math.PI) / 180) * direction,
-          );
-          if (!event.repeat) {
-            showShortcutHud(
-              `Rotate ${activeTransformAxis.toUpperCase()} ${direction > 0 ? '+' : '-'}${rotateStep}deg`,
-            );
-          }
-          return;
-        }
-        assemblyControlsRef.current?.nudgeNode(activeTransformAxis, moveStep * direction);
-        if (!event.repeat) {
-          showShortcutHud(
-            `Move ${activeTransformAxis.toUpperCase()} ${direction > 0 ? '+' : '-'}${moveStep}`,
-          );
-        }
-      }
     },
-    [
-      activeTransformAxis,
-      handleMoveStepChange,
-      handleRotateStepChange,
-      moveStep,
-      rightPanelMode,
-      rotateStep,
-      activeSelectedNode,
-      selectedNodes,
-      setCurrentView,
-      shortcutHelpOpen,
-      showShortcutHud,
-      structureTree,
-    ],
+    [activePartId, setCurrentView, shortcutHelpOpen, showShortcutHud],
   );
 
   useEffect(() => {
@@ -719,18 +517,10 @@ export function StudioPage() {
 
   useEffect(() => {
     if (!isMobile) {
-      setMobileProjectOpen(false);
       setMobileChatOpen(false);
-      setMobileEditOpen(false);
+      setMobilePartsOpen(false);
     }
   }, [isMobile]);
-
-  const handleNewProjectChange = (open: boolean) => {
-    setNewProjectModalOpen(open);
-    if (!open) {
-      setNewProjectName('');
-    }
-  };
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -775,84 +565,55 @@ export function StudioPage() {
     if (status !== 'authenticated') return;
     if (!routeProjectId) return;
     if (projectId !== routeProjectId) return;
-    if (routeDesignId) return;
-    if (hasSelectedDesignState) {
-      clearSelectedDesign();
-    }
-  }, [
-    status,
-    pathname,
-    routeProjectId,
-    routeDesignId,
-    projectId,
-    selectedDesignId,
-    hasSelectedDesignState,
-    clearSelectedDesign,
-  ]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (!routeProjectId || !routeDesignId) return;
-    if (projectId !== routeProjectId) return;
     if (!designsQuery.isSuccess) return;
 
-    const routeDesign = designs.find((design) => design.id === routeDesignId) ?? null;
-    if (!routeDesign) {
+    if (!projectFileDesign) {
       if (hasSelectedDesignState) {
         clearSelectedDesign();
+      }
+      if (rightPanelMode !== 'create') {
+        setRightPanelMode('create');
       }
       return;
     }
 
-    const routeDesignName = routeDesign.displayName ?? 'Untitled';
-    if (selectedDesignId !== routeDesign.id || selectedDesignName !== routeDesignName) {
-      applySelectedDesign(routeDesign.id, routeDesignName);
+    const projectFileDesignName = projectFileDesign.displayName ?? projectName ?? 'Untitled';
+    if (
+      selectedDesignId !== projectFileDesign.id ||
+      selectedDesignName !== projectFileDesignName
+    ) {
+      applySelectedDesign(projectFileDesign.id, projectFileDesignName);
+    }
+
+    if (workspaceTitleSyncProjectIdsRef.current.has(routeProjectId)) {
+      workspaceTitleSyncProjectIdsRef.current.delete(routeProjectId);
+      void (async () => {
+        const generatedTitle = await getGeneratedDesignTitle(projectFileDesign.id);
+        return syncWorkspaceName(routeProjectId, generatedTitle);
+      })();
     }
   }, [
     status,
     routeProjectId,
-    routeDesignId,
     projectId,
+    projectName,
     designsQuery.isSuccess,
-    designs,
+    projectFileDesign,
+    selectedDesignId,
+    selectedDesignName,
     hasSelectedDesignState,
     clearSelectedDesign,
     applySelectedDesign,
+    syncWorkspaceName,
+    rightPanelMode,
+    setRightPanelMode,
   ]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (routeProjectId && projectId !== routeProjectId) return;
-
-    if (!routeDesignId) return;
-    if (!designsQuery.isSuccess) return;
-
-    const routeDesignExists = designs.some((design) => design.id === routeDesignId);
-    if (!routeDesignExists) {
-      const projectPath = buildStudioPath(routeProjectId ?? projectId);
-      if (currentStudioPath !== projectPath) {
-        router.replace(projectPath);
-      }
-    }
-  }, [
-    status,
-    routeProjectId,
-    routeDesignId,
-    projectId,
-    designsQuery.isSuccess,
-    designs,
-    currentStudioPath,
-    router,
-  ]);
-
-  const handleNewDesignChange = (open: boolean) => {
-    setNewDesignModalOpen(open);
-    if (!open) {
-      setNewDesignName('');
-    }
-  };
 
   const handleSelectRightPanelMode = (mode: RightPanelMode) => {
+    if (mode === 'create') {
+      assemblyControlsRef.current?.clearPartPreview();
+      setActivePartId(null);
+    }
     if (rightPanelMode === mode) {
       toggleChatPanel();
       return;
@@ -862,6 +623,7 @@ export function StudioPage() {
       toggleChatPanel();
     }
   };
+  const visibleRightPanelMode: RightPanelMode = rightPanelMode === 'parts' ? 'parts' : 'create';
 
   const mobileMenuSectionTitleClass =
     'px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground';
@@ -879,16 +641,11 @@ export function StudioPage() {
         onOpenChange={setProjectListDialogOpen}
         onSelectProject={handleSelectProject}
         onDeleteCurrentProject={handleCloseProject}
-        onOpenNewProject={() => {
-          setProjectListDialogOpen(false);
-          setNewProjectModalOpen(true);
-        }}
       />
       <div className={cn('flex h-full min-h-0 flex-col transition-all')}>
         <StudioHeader
           projectMenuOpen={projectMenuOpen}
           onProjectMenuChange={setProjectMenuOpen}
-          onOpenNewProject={() => setNewProjectModalOpen(true)}
           onSelectProject={handleSelectProject}
           onCloseProject={handleCloseProject}
           onOpenProjectManager={() => setProjectListDialogOpen(true)}
@@ -912,7 +669,7 @@ export function StudioPage() {
                   <div className="sr-only">
                     <SheetTitle>Navigation menu</SheetTitle>
                     <SheetDescription>
-                      Navigate between design tools, project lists, settings, and billing pages.
+                      Navigate between pack tools, workspace lists, settings, and billing pages.
                     </SheetDescription>
                   </div>
                   <div className="border-b border-border px-4 py-4 pr-12">
@@ -921,27 +678,15 @@ export function StudioPage() {
 
                   <div className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
                     <section className="space-y-1">
-                      <p className={mobileMenuSectionTitleClass}>Design</p>
+                      <p className={mobileMenuSectionTitleClass}>Pack</p>
                       <button
                         type="button"
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobileChatOpen(false);
-                          setMobileEditOpen(false);
-                          setMobileProjectOpen(true);
-                        }}
-                      >
-                        <File className="size-4" />
-                        Designs
-                      </button>
-                      <button
-                        type="button"
-                        className={mobileMenuItemClass}
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
-                          setMobileEditOpen(false);
+                          setMobilePartsOpen(false);
+                          assemblyControlsRef.current?.clearPartPreview();
+                          setActivePartId(null);
                           setRightPanelMode('create');
                           setMobileChatOpen(true);
                         }}
@@ -954,80 +699,49 @@ export function StudioPage() {
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
                           setMobileChatOpen(false);
-                          setMobileEditOpen(true);
-                          setRightPanelMode('edit');
+                          setRightPanelMode('parts');
+                          setMobilePartsOpen(true);
                         }}
                       >
-                        <SlidersHorizontal className="size-4" />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className={mobileMenuItemClass}
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
-                          setMobileChatOpen(false);
-                          setMobileEditOpen(true);
-                          setRightPanelMode('appearance');
-                        }}
-                      >
-                        <Palette className="size-4" />
-                        Appearance
+                        <List className="size-4" />
+                        Parts
                       </button>
                     </section>
 
                     <section className="space-y-1 border-t border-border pt-3">
-                      <p className={mobileMenuSectionTitleClass}>Project</p>
-                      <button
-                        type="button"
-                        className={mobileMenuItemClass}
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
-                          setMobileChatOpen(false);
-                          setMobileEditOpen(false);
-                          setNewProjectModalOpen(true);
-                        }}
-                      >
-                        <PlusCircle className="size-4" />
-                        New project
-                      </button>
+                      <p className={mobileMenuSectionTitleClass}>Workspace</p>
                       <button
                         type="button"
                         className={mobileMenuItemClass}
                         onClick={() => {
                           handleCloseProject();
                           setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
                           setMobileChatOpen(false);
-                          setMobileEditOpen(false);
+                          setMobilePartsOpen(false);
                         }}
                         disabled={!projectId}
                       >
                         <XCircle className="size-4" />
-                        Close Project
+                        Close workspace
                       </button>
                       <button
                         type="button"
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
                           setMobileChatOpen(false);
-                          setMobileEditOpen(false);
+                          setMobilePartsOpen(false);
                           setProjectListDialogOpen(true);
                         }}
                       >
                         <FolderOpen className="size-4" />
-                        Manage projects
+                        Manage workspaces
                       </button>
                       <div
                         className={cn(mobileMenuSectionTitleClass, 'flex items-center gap-2 pt-2')}
                       >
-                        <span>Recent project</span>
+                        <span>Recent workspace</span>
                         {projectsRefreshing && !projectsLoading ? (
                           <Loader2
                             className="size-3.5 animate-spin"
@@ -1046,31 +760,59 @@ export function StudioPage() {
                             ))}
                           </div>
                         ) : projects.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-muted-foreground">No projects</p>
+                          <p className="px-3 py-2 text-sm text-muted-foreground">No workspaces</p>
                         ) : (
-                          projects.slice(0, 10).map((project) => (
-                            <button
-                              type="button"
-                              key={project.id}
-                              className={cn(
-                                mobileMenuItemClass,
-                                projectId === project.id && 'bg-accent text-accent-foreground',
-                              )}
-                              onClick={() => {
-                                handleSelectProject(project.id, project.name);
-                                setMobileMenuOpen(false);
-                                setMobileProjectOpen(false);
-                                setMobileChatOpen(false);
-                                setMobileEditOpen(false);
-                              }}
-                            >
-                              <File className="size-4" />
-                              <span className="truncate">{project.name}</span>
-                              {projectId === project.id && (
-                                <span className="ml-auto text-xs text-primary">Current</span>
-                              )}
-                            </button>
-                          ))
+                          projects.slice(0, 10).map((project) => {
+                            const generationStatus = workspaceGenerationStatuses[project.id];
+                            const isFailedGeneration = generationStatus?.kind === 'failed';
+                            const isActiveGeneration =
+                              generationStatus?.kind === 'queued' ||
+                              generationStatus?.kind === 'running';
+
+                            return (
+                              <button
+                                type="button"
+                                key={project.id}
+                                className={cn(
+                                  mobileMenuItemClass,
+                                  projectId === project.id && 'bg-accent text-accent-foreground',
+                                )}
+                                onClick={() => {
+                                  handleSelectProject(project.id, project.name);
+                                  setMobileMenuOpen(false);
+                                  setMobileChatOpen(false);
+                                  setMobilePartsOpen(false);
+                                }}
+                              >
+                                <span className="min-w-0 flex-1 truncate" title={project.name}>
+                                  {formatWorkspaceListName(project.name)}
+                                </span>
+                                {generationStatus ? (
+                                  <Badge
+                                    variant={isFailedGeneration ? 'destructive' : 'outline'}
+                                    className="max-w-[110px] gap-1 truncate"
+                                    title={
+                                      isFailedGeneration
+                                        ? (generationStatus.errorMessage ??
+                                          generationStatus.promptPreview)
+                                        : generationStatus.promptPreview
+                                    }
+                                  >
+                                    {isFailedGeneration ? (
+                                      <AlertTriangle className="size-3" />
+                                    ) : null}
+                                    {isActiveGeneration ? (
+                                      <Loader2 className="size-3 animate-spin" />
+                                    ) : null}
+                                    <span className="truncate">{generationStatus.label}</span>
+                                  </Badge>
+                                ) : null}
+                                {projectId === project.id && (
+                                  <span className="text-xs text-primary">Current</span>
+                                )}
+                              </button>
+                            );
+                          })
                         )}
                       </div>
                     </section>
@@ -1082,9 +824,8 @@ export function StudioPage() {
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
                           setMobileChatOpen(false);
-                          setMobileEditOpen(false);
+                          setMobilePartsOpen(false);
                         }}
                       >
                         <Settings className="size-4" />
@@ -1095,9 +836,8 @@ export function StudioPage() {
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
                           setMobileChatOpen(false);
-                          setMobileEditOpen(false);
+                          setMobilePartsOpen(false);
                         }}
                       >
                         <CreditCard className="size-4" />
@@ -1108,9 +848,8 @@ export function StudioPage() {
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobileProjectOpen(false);
                           setMobileChatOpen(false);
-                          setMobileEditOpen(false);
+                          setMobilePartsOpen(false);
                         }}
                       >
                         <ArrowUpCircle className="size-4" />
@@ -1124,19 +863,6 @@ export function StudioPage() {
           }
         />
         <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible bg-[color:var(--background-panel)]/80 md:flex-row">
-          <ProjectSidebar open={projectPanelOpen} onToggle={toggleProjectPanel} />
-          <ProjectPanel
-            designs={designs}
-            loading={designsLoading}
-            refreshing={designsRefreshing}
-            open={projectPanelOpen}
-            onToggle={toggleProjectPanel}
-            onOpenNewDesign={() => setNewDesignModalOpen(true)}
-            onSelectDesign={handleSelectDesign}
-            onDeleteDesign={handleDeleteDesign}
-            selectedDesignId={selectedDesignId}
-          />
-
           <section className="flex min-h-0 flex-1 min-w-0 overflow-hidden">
             <div
               className="flex min-h-0 flex-1 min-w-0"
@@ -1147,131 +873,47 @@ export function StudioPage() {
                 viewModeOpen={viewModeOpen}
                 onChangeView={setCurrentView}
                 onViewModeOpenChange={setViewModeOpen}
-                interactionMode={rightPanelMode}
-                onStructureTreeChange={setStructureTree}
+                onPartsChange={setParts}
                 onAssemblyControlsReady={(controls) => {
                   assemblyControlsRef.current = controls;
                 }}
-                onSelectionChange={handleSelectionChange}
                 designId={selectedDesignId}
                 designName={selectedDesignName}
                 traceId={selectedDesignTraceId}
-                activeTransformAxis={activeTransformAxis}
-                moveStep={moveStep}
-                rotateStep={rotateStep}
                 shortcutHelpOpen={shortcutHelpOpen}
                 onShortcutHelpOpenChange={setShortcutHelpOpen}
                 shortcutHudMessage={shortcutHudMessage}
               />
               <RightPanel
                 open={chatPanelOpen}
-                mode={rightPanelMode}
-                projectId={projectId}
-                structureTree={structureTree}
-                selectedNodes={selectedNodes}
-                activeSelectedNode={activeSelectedNode}
-                activeSelectedNodeId={activeSelectedNodeId}
-                selectedNodeIds={selectedNodeIds}
-                moveStep={moveStep}
-                onMoveStepChange={handleMoveStepChange}
-                rotateStep={rotateStep}
-                onRotateStepChange={handleRotateStepChange}
-                scaleStep={scaleStep}
-                onScaleStepChange={handleScaleStepChange}
-                onFocusStructureNode={(id, options) =>
-                  assemblyControlsRef.current?.focusStructureNode(id, options)
-                }
-                onSetStructureNodeHidden={(id, hidden) =>
-                  assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
-                }
-                onNudgeNode={(axis, delta) => assemblyControlsRef.current?.nudgeNode(axis, delta)}
-                onRotateNode={(axis, deltaRadians) =>
-                  assemblyControlsRef.current?.rotateNode(axis, deltaRadians)
-                }
-                onSetNodeRotation={(axis, radians) =>
-                  assemblyControlsRef.current?.setNodeRotation(axis, radians)
-                }
-                onNudgeNodeScale={(axis, delta) =>
-                  assemblyControlsRef.current?.nudgeNodeScale(axis, delta)
-                }
-                onSetNodeScale={(axis, value) =>
-                  assemblyControlsRef.current?.setNodeScale(axis, value)
-                }
-                onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
-                onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
-                onRestoreNode={(id) => assemblyControlsRef.current?.restoreNode(id)}
-                onSetSelectedNodeColor={(hex) =>
-                  assemblyControlsRef.current?.setSelectedNodeColor(hex)
-                }
-                onResetSelectedNodeColor={() =>
-                  assemblyControlsRef.current?.resetSelectedNodeColor()
-                }
-                onSetSelectedNodeEmissiveColor={(hex) =>
-                  assemblyControlsRef.current?.setSelectedNodeEmissiveColor(hex)
-                }
-                onSetSelectedNodeEmissiveIntensity={(value) =>
-                  assemblyControlsRef.current?.setSelectedNodeEmissiveIntensity(value)
-                }
-                onResetSelectedNodeEmissive={() =>
-                  assemblyControlsRef.current?.resetSelectedNodeEmissive()
-                }
-                onSetSelectedNodeRoughness={(value) =>
-                  assemblyControlsRef.current?.setSelectedNodeRoughness(value)
-                }
-                onResetSelectedNodeRoughness={() =>
-                  assemblyControlsRef.current?.resetSelectedNodeRoughness()
-                }
+                mode={visibleRightPanelMode}
+                parts={parts}
+                activePartIds={activePartIds}
+                activePartId={activePartId}
+                onPreviewPart={(id) => {
+                  setActivePartId(id);
+                  assemblyControlsRef.current?.previewPart(id);
+                }}
                 onToggle={toggleChatPanel}
               />
             </div>
 
             <ActionSidebar
               rightPanelOpen={chatPanelOpen}
-              activeMode={rightPanelMode}
+              activeMode={visibleRightPanelMode}
               onSelectMode={handleSelectRightPanelMode}
             />
           </section>
         </main>
 
         <Sheet
-          open={mobileProjectOpen}
-          onOpenChange={(open) => {
-            setMobileProjectOpen(open);
-            if (open) {
-              setMobileChatOpen(false);
-              setMobileEditOpen(false);
-            }
-          }}
-        >
-          <SheetContent side="left" className="w-[90vw] max-w-sm p-0 [&>button]:hidden">
-            <div className="sr-only">
-              <SheetTitle>Designs panel</SheetTitle>
-              <SheetDescription>
-                Browse designs in the current project and open design actions.
-              </SheetDescription>
-            </div>
-            <ProjectPanel
-              designs={designs}
-              loading={designsLoading}
-              refreshing={designsRefreshing}
-              variant="mobile"
-              open={mobileProjectOpen}
-              onToggle={() => setMobileProjectOpen(false)}
-              onOpenNewDesign={() => setNewDesignModalOpen(true)}
-              onSelectDesign={handleMobileSelectDesign}
-              onDeleteDesign={handleDeleteDesign}
-              selectedDesignId={selectedDesignId}
-            />
-          </SheetContent>
-        </Sheet>
-
-        <Sheet
           open={mobileChatOpen}
           onOpenChange={(open) => {
             setMobileChatOpen(open);
             if (open) {
-              setMobileProjectOpen(false);
-              setMobileEditOpen(false);
+              setMobilePartsOpen(false);
+              assemblyControlsRef.current?.clearPartPreview();
+              setActivePartId(null);
               setRightPanelMode('create');
             }
           }}
@@ -1280,7 +922,7 @@ export function StudioPage() {
             <div className="sr-only">
               <SheetTitle>Create panel</SheetTitle>
               <SheetDescription>
-                Enter a prompt to generate a new design for the current project.
+                Enter a prompt to generate a new asset pack for the current workspace.
               </SheetDescription>
             </div>
             <ChatPanel
@@ -1290,151 +932,33 @@ export function StudioPage() {
             />
           </SheetContent>
         </Sheet>
-        <Drawer
-          open={mobileEditOpen}
-          modal={false}
-          direction="bottom"
+        <Sheet
+          open={mobilePartsOpen}
           onOpenChange={(open) => {
-            setMobileEditOpen(open);
+            setMobilePartsOpen(open);
             if (open) {
-              setMobileProjectOpen(false);
               setMobileChatOpen(false);
-              if (rightPanelMode === 'create') {
-                setRightPanelMode('edit');
-              }
+              setRightPanelMode('parts');
             }
           }}
         >
-          <DrawerContent showOverlay={false} className="h-[72svh] max-h-[72svh] p-0">
-            <DrawerTitle className="sr-only">
-              {rightPanelMode === 'appearance' ? 'Appearance panel' : 'Edit panel'}
-            </DrawerTitle>
-            {rightPanelMode === 'appearance' ? (
-              <AppearancePanel
-                variant="mobile"
-                open={mobileEditOpen}
-                structureTree={structureTree}
-                selectedNodes={selectedNodes}
-                activeSelectedNode={activeSelectedNode}
-                activeSelectedNodeId={activeSelectedNodeId}
-                selectedNodeIds={selectedNodeIds}
-                onFocusStructureNode={(id, options) =>
-                  assemblyControlsRef.current?.focusStructureNode(id, options)
-                }
-                onSetStructureNodeHidden={(id, hidden) =>
-                  assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
-                }
-                onSetSelectedNodeColor={(hex) =>
-                  assemblyControlsRef.current?.setSelectedNodeColor(hex)
-                }
-                onResetSelectedNodeColor={() =>
-                  assemblyControlsRef.current?.resetSelectedNodeColor()
-                }
-                onSetSelectedNodeEmissiveColor={(hex) =>
-                  assemblyControlsRef.current?.setSelectedNodeEmissiveColor(hex)
-                }
-                onSetSelectedNodeEmissiveIntensity={(value) =>
-                  assemblyControlsRef.current?.setSelectedNodeEmissiveIntensity(value)
-                }
-                onResetSelectedNodeEmissive={() =>
-                  assemblyControlsRef.current?.resetSelectedNodeEmissive()
-                }
-                onSetSelectedNodeRoughness={(value) =>
-                  assemblyControlsRef.current?.setSelectedNodeRoughness(value)
-                }
-                onResetSelectedNodeRoughness={() =>
-                  assemblyControlsRef.current?.resetSelectedNodeRoughness()
-                }
-                onToggle={() => setMobileEditOpen(false)}
-              />
-            ) : (
-              <EditPanel
-                variant="mobile"
-                open={mobileEditOpen}
-                structureTree={structureTree}
-                selectedNodes={selectedNodes}
-                activeSelectedNode={activeSelectedNode}
-                activeSelectedNodeId={activeSelectedNodeId}
-                selectedNodeIds={selectedNodeIds}
-                moveStep={moveStep}
-                onMoveStepChange={handleMoveStepChange}
-                rotateStep={rotateStep}
-                onRotateStepChange={handleRotateStepChange}
-                scaleStep={scaleStep}
-                onScaleStepChange={handleScaleStepChange}
-                onFocusStructureNode={(id, options) =>
-                  assemblyControlsRef.current?.focusStructureNode(id, options)
-                }
-                onSetStructureNodeHidden={(id, hidden) =>
-                  assemblyControlsRef.current?.setStructureNodeHidden(id, hidden)
-                }
-                onNudgeNode={(axis, delta) => assemblyControlsRef.current?.nudgeNode(axis, delta)}
-                onRotateNode={(axis, deltaRadians) =>
-                  assemblyControlsRef.current?.rotateNode(axis, deltaRadians)
-                }
-                onSetNodeRotation={(axis, radians) =>
-                  assemblyControlsRef.current?.setNodeRotation(axis, radians)
-                }
-                onNudgeNodeScale={(axis, delta) =>
-                  assemblyControlsRef.current?.nudgeNodeScale(axis, delta)
-                }
-                onSetNodeScale={(axis, value) =>
-                  assemblyControlsRef.current?.setNodeScale(axis, value)
-                }
-                onResetNode={(target) => assemblyControlsRef.current?.resetNode(target)}
-                onHideSelectedNode={() => assemblyControlsRef.current?.hideSelectedNode()}
-                onRestoreNode={(id) => assemblyControlsRef.current?.restoreNode(id)}
-                onToggle={() => setMobileEditOpen(false)}
-              />
-            )}
-          </DrawerContent>
-        </Drawer>
+          <SheetContent side="right" className="w-[90vw] max-w-sm overflow-y-auto p-4">
+            <div className="sr-only">
+              <SheetTitle>Parts panel</SheetTitle>
+              <SheetDescription>Preview individual parts in the current pack.</SheetDescription>
+            </div>
+            <PartsPanelContent
+              parts={parts}
+              activePartIds={activePartIds}
+              activePartId={activePartId}
+              onPreviewPart={(id) => {
+                setActivePartId(id);
+                assemblyControlsRef.current?.previewPart(id);
+              }}
+            />
+          </SheetContent>
+        </Sheet>
 
-        <NewProjectDialog
-          open={newProjectModalOpen}
-          projectName={newProjectName}
-          onOpenChange={handleNewProjectChange}
-          onChangeName={setNewProjectName}
-          onCreate={async () => {
-            if (!newProjectName.trim()) return;
-            try {
-              const created = await createProject(newProjectName);
-              addProject({ id: created.id, name: created.name });
-              handleSelectProject(created.id, created.name);
-              invalidateProjects();
-              invalidateProjectDesigns(created.id);
-              handleNewProjectChange(false);
-              toast.success('Project created.');
-            } catch (_error) {
-              toast.error('Failed to create project.');
-            }
-          }}
-        />
-
-        <NewDesignDialog
-          open={newDesignModalOpen}
-          designName={newDesignName}
-          onOpenChange={handleNewDesignChange}
-          onChangeName={setNewDesignName}
-          onCreate={async () => {
-            if (!projectId || !newDesignName.trim()) return;
-            try {
-              const created = await createDesign({
-                projectId,
-                displayName: newDesignName,
-              });
-              toast.success('Design created.');
-              const nextPath = buildStudioPath(projectId, created.id);
-              if (currentStudioPath !== nextPath) {
-                router.replace(nextPath);
-              }
-              invalidateProjectDesigns(projectId);
-              handleNewDesignChange(false);
-            } catch (_error) {
-              toast.error('Failed to create design.');
-            }
-          }}
-        />
         <Dialog open={designErrorDialogOpen} onOpenChange={setDesignErrorDialogOpen}>
           <DialogContent>
             <DialogHeader>
