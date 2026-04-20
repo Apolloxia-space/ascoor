@@ -8,11 +8,7 @@ import type { BillingRepository } from '../repositories/postgres/billing.reposit
 import type { DesignJobRepositoryPostgres } from '../repositories/postgres/design-job.repository';
 import type { ProjectRepository } from '../repositories/postgres/project.repository';
 import type { DesignTaskQueue } from '../infra/design-task-queue';
-import {
-  DesignConcurrencyLimitExceededError,
-  DesignQuotaExceededError,
-  ProSubscriptionRequiredError,
-} from './errors';
+import { DesignConcurrencyLimitExceededError, DesignQuotaExceededError } from './errors';
 
 type TestJob = {
   id: string;
@@ -64,7 +60,7 @@ type MarkFailedIfRunningStaleParams = {
   title?: string | null;
 };
 
-type PlanKey = 'pro';
+type PlanKey = 'free' | 'hobby' | 'pro';
 
 function inferErrorCodeForTest(
   usecase: DesignJobsUsecase,
@@ -844,10 +840,11 @@ test('enqueue resolves only the Pro plan limit', async () => {
       linkDesignIfMissing: async () => true,
     } as unknown as DesignJobRepositoryPostgres,
     {
-      findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
+      findSubscriptionByUserId: async () => ({ status: 'active', planId: 'plan-pro' }) as never,
+      findPlanById: async () => ({ key: 'pro' }) as never,
       findPlanDesignLimit: async (planKey: PlanKey) => {
         planLookups.push(planKey);
-        return { planKey: 'pro', monthlyDesignLimit: 100, concurrentDesignLimit: 3 };
+        return { planKey, monthlyDesignLimit: 100, concurrentDesignLimit: 3 };
       },
     } as unknown as BillingRepository,
     {
@@ -1197,7 +1194,10 @@ test('enqueue creates a design when monthly generated design count is below limi
   assert.equal(createCalls, 1);
 });
 
-test('enqueue requires an active Pro subscription', async () => {
+test('enqueue uses the free plan when no paid subscription exists', async () => {
+  const planLookups: Array<PlanKey> = [];
+  let createCalls = 0;
+
   const usecase = new DesignJobsUsecase(
     {
       design: async () => ({ title: 'n/a', message: 'n/a', code: 'n/a' }),
@@ -1264,7 +1264,10 @@ test('enqueue requires an active Pro subscription', async () => {
       get: async () => createJob({ status: 'running' }),
       markSucceededIfRunning: async () => true,
       markFailedIfRunning: async () => true,
-      create: async () => createJob({ status: 'queued' }),
+      create: async () => {
+        createCalls += 1;
+        return createJob({ status: 'queued' });
+      },
       getOwned: async () => null,
       markFailed: async () => createJob({ status: 'failed' }),
       markFailedIfRunningStale: async () => false,
@@ -1275,31 +1278,29 @@ test('enqueue requires an active Pro subscription', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({
-        planKey: 'pro',
-        monthlyDesignLimit: 100,
-        concurrentDesignLimit: 3,
-      }),
+      findPlanDesignLimit: async (planKey: PlanKey) => {
+        planLookups.push(planKey);
+        return {
+          planKey,
+          monthlyDesignLimit: 5,
+          concurrentDesignLimit: 1,
+        };
+      },
     } as unknown as BillingRepository,
     undefined,
   );
 
-  await assert.rejects(
-    () =>
-      usecase.execute({
-        type: 'enqueue',
-        input: {
-          projectId: 'proj-1',
-          userPrompt: 'make bracket',
-          userId: 'user-1',
-        },
-      }),
-    (error: unknown) => {
-      assert(error instanceof ProSubscriptionRequiredError);
-      assert.equal(error.code, 'pro_subscription_required');
-      return true;
+  await usecase.execute({
+    type: 'enqueue',
+    input: {
+      projectId: 'proj-1',
+      userPrompt: 'make bracket',
+      userId: 'user-1',
     },
-  );
+  });
+
+  assert.deepEqual(planLookups, ['free']);
+  assert.equal(createCalls, 1);
 });
 
 test('get returns server-generated user-facing error message', async () => {

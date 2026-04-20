@@ -13,6 +13,7 @@ import { cancelBodySchema } from './request-schemas';
 
 const checkoutSessionBody = z.object({
   planId: z.string().uuid().optional(),
+  planKey: z.enum(['hobby', 'pro']).optional(),
 });
 
 export function createBillingRoutes() {
@@ -54,7 +55,7 @@ export function createBillingRoutes() {
   });
 
   router.post('/checkout-session', zValidator('json', checkoutSessionBody), async (c) => {
-    const { planId } = c.req.valid('json');
+    const { planId, planKey } = c.req.valid('json');
     const billingUsecase = c.get('usecases').billing;
     const md = c.get('md');
 
@@ -63,6 +64,7 @@ export function createBillingRoutes() {
         userId: md.userId,
         userEmail: md.userEmail ?? null,
         planId: planId ?? null,
+        planKey: planKey ?? null,
         traceId: c.get('traceId'),
       });
       return c.json(data, 200);

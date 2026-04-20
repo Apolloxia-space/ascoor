@@ -375,16 +375,17 @@ export function SettingsPage() {
   };
 
   const usageData = usageQuery.data?.status === 200 ? usageQuery.data.data : null;
-  const usageItems = usageData && usageData.limit > 0
-    ? [
-        {
-          id: 'designs',
-          label: 'Designs',
-          used: usageData.used,
-          limit: usageData.limit,
-        },
-      ]
-    : [];
+  const usageItems =
+    usageData && usageData.limit > 0
+      ? [
+          {
+            id: 'designs',
+            label: 'Designs',
+            used: usageData.used,
+            limit: usageData.limit,
+          },
+        ]
+      : [];
   const usageResetDate = usageData?.periodEnd ? formatBillingDate(usageData.periodEnd) : null;
   const isUsageLoading = usageQuery.isLoading;
 
@@ -573,7 +574,7 @@ export function SettingsPage() {
                       {!isBillingStatusLoading && !activePlan && (
                         <div>
                           <Button size="sm" onClick={() => router.push(paths.plan)}>
-                            Subscribe to Pro
+                            View plans
                           </Button>
                         </div>
                       )}
@@ -602,7 +603,7 @@ export function SettingsPage() {
                         </div>
                       ) : usageItems.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          Subscribe to Pro to unlock design generation.
+                          Choose a plan to unlock more asset generation.
                         </p>
                       ) : (
                         usageItems.map((item) => {

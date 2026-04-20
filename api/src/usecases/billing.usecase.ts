@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { BillingStatus, BillingUsage } from '../entities/billing';
-import type { PlanDesignLimit } from '../generated/prisma/client';
+import type { PlanDesignLimit, PlanKey } from '../generated/prisma/client';
 import type {
   CancelSubscriptionReason,
   Plan,
@@ -19,7 +19,7 @@ import { logger } from '../utils/logger';
 import { getUtcMonthWindow } from '../utils/date';
 import {
   buildSubscriptionUpsertInput,
-  isProSubscriptionStatus,
+  isActiveSubscriptionStatus,
   isStripeManagedSubscriptionStatus,
   parseStripeSubscriptionWebhook,
   type StripeSubscriptionWebhookObject,
@@ -29,6 +29,7 @@ export interface CheckoutSessionInput {
   userId: string;
   userEmail?: string | null;
   planId?: string | null;
+  planKey?: 'hobby' | 'pro' | null;
   traceId?: string | null;
 }
 
@@ -46,8 +47,6 @@ export interface WebhookInput {
 export interface CreatePortalSessionInput {
   userId: string;
 }
-
-const PRO_PLAN_FREE_TRIAL_DAYS = 7;
 
 export class BillingUsecase {
   private readonly billingCache = new BillingCache();
@@ -69,9 +68,10 @@ export class BillingUsecase {
   async getStatus(userId: string): Promise<BillingStatus> {
     const subscription = await this.getCachedSubscription(userId);
     if (!subscription) {
+      const freePlan = await this.getCachedPlanByKey('free');
       return {
         status: 'none',
-        plan: null,
+        plan: freePlan,
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
       };
@@ -89,25 +89,16 @@ export class BillingUsecase {
 
   async getUsage(userId: string): Promise<BillingUsage> {
     const subscription = await this.getCachedSubscription(userId);
-    const isPro = isProSubscriptionStatus(subscription?.status);
+    const planKey = await this.resolveEffectivePlanKey(subscription);
     const now = new Date();
     const window = getUtcMonthWindow(now);
     const periodStart = window.start;
     const periodEnd = window.end;
 
-    if (!isPro) {
-      return {
-        used: 0,
-        limit: 0,
-        periodStart,
-        periodEnd,
-      };
-    }
-
-    const limitRecord = await this.getCachedPlanDesignLimit('pro');
+    const limitRecord = await this.getCachedPlanDesignLimit(planKey);
     if (!limitRecord) {
-      logger.error('billing_plan_limit_missing', { planKey: 'pro' });
-      throw new Error('plan_design_limit_missing:pro');
+      logger.error('billing_plan_limit_missing', { planKey });
+      throw new Error(`plan_design_limit_missing:${planKey}`);
     }
 
     const used = await this.designJobRepository.countSucceededByUserInPeriod({
@@ -128,10 +119,16 @@ export class BillingUsecase {
     const webAppBaseUrl = this.getWebAppBaseUrl();
     const plan = input.planId
       ? await this.getCachedPlanById(input.planId)
-      : await this.getCachedDefaultPlan();
+      : await this.getCachedPlanByKey(input.planKey ?? 'hobby');
 
     if (!plan) {
       throw new NotFoundError('plan_not_found');
+    }
+    if (plan.key === 'free') {
+      throw new ValidationError('free_plan_checkout_not_supported');
+    }
+    if (!plan.stripePriceId) {
+      throw new ValidationError(`stripe_price_missing:${plan.key}`);
     }
 
     const existingSubscription = await this.getCachedSubscription(input.userId);
@@ -154,8 +151,6 @@ export class BillingUsecase {
       successUrl: successUrl.toString(),
       cancelUrl: cancelUrl.toString(),
       idempotencyKey,
-      trialPeriodDays:
-        plan.name.trim().toLowerCase() === 'pro' ? PRO_PLAN_FREE_TRIAL_DAYS : undefined,
       customerId: existingSubscription?.stripeCustomerId ?? null,
     });
 
@@ -380,7 +375,24 @@ export class BillingUsecase {
     return this.billingCache.getDefaultPlan(() => this.billingRepository.findDefaultPlan());
   }
 
-  private getCachedPlanDesignLimit(planKey: 'pro'): Promise<PlanDesignLimit | null> {
+  private getCachedPlanByKey(planKey: PlanKey): Promise<Plan | null> {
+    return this.billingCache.getPlanByKey(planKey, () =>
+      this.billingRepository.findPlanByKey(planKey),
+    );
+  }
+
+  private async resolveEffectivePlanKey(subscription: Subscription | null): Promise<PlanKey> {
+    if (!isActiveSubscriptionStatus(subscription?.status)) {
+      return 'free';
+    }
+    if (!subscription?.planId) {
+      return 'free';
+    }
+    const plan = await this.getCachedPlanById(subscription.planId);
+    return plan?.key ?? 'free';
+  }
+
+  private getCachedPlanDesignLimit(planKey: PlanKey): Promise<PlanDesignLimit | null> {
     return this.billingCache.getPlanDesignLimit(planKey, () =>
       this.billingRepository.findPlanDesignLimit(planKey),
     );

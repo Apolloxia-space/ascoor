@@ -5,7 +5,9 @@
  * API contract for the Ascoor 3D Design editor backend.
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateCheckoutSessionRequestPlanKey } from './createCheckoutSessionRequestPlanKey';
 
 export interface CreateCheckoutSessionRequest {
   planId?: string;
+  planKey?: CreateCheckoutSessionRequestPlanKey;
 }

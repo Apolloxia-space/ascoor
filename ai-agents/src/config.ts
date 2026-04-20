@@ -12,7 +12,7 @@ export const config = {
   host: process.env.HOST || '0.0.0.0',
   port: asNumber(process.env.PORT, 8080),
   primaryModel: {
-    modelKey: getEnv('AI_AGENT_PRIMARY_MODEL') || 'gpt-5.4-nano',
+    modelKey: getEnv('AI_AGENT_PRIMARY_MODEL') || 'gpt-5.4-mini',
     temperature: asNumber(getEnv('AI_AGENT_PRIMARY_MODEL_TEMPERATURE'), 0.2),
   },
   secondaryModel: {

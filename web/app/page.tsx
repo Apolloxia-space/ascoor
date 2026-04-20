@@ -57,9 +57,7 @@ const storySections: Array<StorySection> = [
     title: 'Get to a usable first model in minutes',
     description:
       'Ascoor is strongest when the goal is speed to first draft. Start from a prompt, inspect the result, and decide what to refine next.',
-    points: [
-      'Move from idea to 3D form without opening a heavyweight desktop workflow first.',
-    ],
+    points: ['Move from idea to 3D form without opening a heavyweight desktop workflow first.'],
     visual: 'draft',
   },
   {
@@ -103,9 +101,17 @@ type LandingPlan = {
 
 const plans: Array<LandingPlan> = [
   {
-    ...planDefinitions.pro,
-    cta: 'Start free trial',
+    ...planDefinitions.free,
+    cta: 'Start free',
+  },
+  {
+    ...planDefinitions.hobby,
+    cta: 'Upgrade to Hobby',
     highlight: true,
+  },
+  {
+    ...planDefinitions.pro,
+    cta: 'Upgrade to Pro',
   },
 ];
 
@@ -139,24 +145,24 @@ export default function HomePage() {
 
             <div className="mx-auto mt-10 max-w-[56rem]">
               <div className="relative overflow-hidden rounded-[24px]">
-                  <video
-                    className="h-full min-h-[250px] w-full object-cover md:min-h-[330px] lg:min-h-[430px]"
-                    src={heroDemoVideoPath}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                    aria-label="Ascoor create, edit, and export workflow demo"
-                  />
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,0.72))] px-5 pb-5 pt-16 sm:px-6 sm:pb-6">
-                    <div className="max-w-2xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/64">
-                        Create → Edit → Export
-                      </p>
-                    </div>
+                <video
+                  className="h-full min-h-[250px] w-full object-cover md:min-h-[330px] lg:min-h-[430px]"
+                  src={heroDemoVideoPath}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  aria-label="Ascoor create, edit, and export workflow demo"
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,0.72))] px-5 pb-5 pt-16 sm:px-6 sm:pb-6">
+                  <div className="max-w-2xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/64">
+                      Create → Edit → Export
+                    </p>
                   </div>
                 </div>
+              </div>
               <p className="mt-3 px-2 text-center text-xs leading-relaxed text-muted-foreground">
                 Top demo shows the broader create-edit-export flow across browser-based 3D work.
               </p>
@@ -257,13 +263,13 @@ export default function HomePage() {
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Pricing</p>
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              One plan for fast 3D draft workflows
+              Pricing for prototype game assets
             </h2>
             <a className="text-sm text-primary hover:underline" href={paths.pricing}>
               View full pricing page
             </a>
           </div>
-          <div className="mx-auto mt-12 grid max-w-xl gap-6">
+          <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
             {plans.map((plan) => (
               <div
                 key={plan.name}
@@ -302,7 +308,8 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            7-day free trial with card required. Then renews monthly. Excl. tax.
+            Free includes a small monthly generation allowance. Paid plans renew monthly. Taxes may
+            apply.
           </p>
         </div>
       </section>
@@ -375,10 +382,7 @@ function StoryVisual({ kind }: { kind: StoryVisualKind }) {
 
   return (
     <div className="overflow-hidden rounded-[32px] border border-[#23324d]/70 bg-[radial-gradient(circle_at_50%_18%,rgba(37,60,102,0.46),rgba(11,18,36,0.96)_56%,rgba(6,10,22,1))] shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
-      <LandingGlbPreview
-        className="h-[320px] w-full md:h-[380px]"
-        src={sampleGlbPath}
-      />
+      <LandingGlbPreview className="h-[320px] w-full md:h-[380px]" src={sampleGlbPath} />
     </div>
   );
 }

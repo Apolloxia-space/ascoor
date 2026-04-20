@@ -8,10 +8,7 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { PlanInclusions } from '@/features/plan/components/plan-inclusions';
 import { planDefinitions } from '@/features/plan/plan-definitions';
-import {
-  useCreateCheckoutSession,
-  useGetBillingStatus,
-} from '@/shared/api/generated/client';
+import { useCreateCheckoutSession, useGetBillingStatus } from '@/shared/api/generated/client';
 import type { ApiError } from '@/shared/api/fetcher';
 import { paths } from '@shared/constants/paths';
 import {
@@ -50,18 +47,33 @@ type PlanCard = {
   badge?: string;
   features: Array<string>;
   icon: typeof Sparkles;
+  freePlan?: boolean;
+  planKey?: 'hobby' | 'pro';
 };
 
 const planGroup: { subtitle: string; plans: Array<PlanCard>; footnote?: string } = {
-  subtitle: 'Subscribe to Pro to unlock Ascoor design generation.',
-  footnote: '7-day free trial with card required. Then renews monthly. Excl. tax.',
+  subtitle: 'Choose a monthly allowance for prototype game asset generation.',
+  footnote: 'Free includes a small monthly generation allowance. Paid plans renew monthly.',
   plans: [
     {
-      ...planDefinitions.pro,
-      cta: 'Start 7-day free trial',
-      highlight: true,
-      badge: 'Most Popular',
+      ...planDefinitions.free,
+      cta: 'Current free plan',
       icon: Sparkles,
+      freePlan: true,
+    },
+    {
+      ...planDefinitions.hobby,
+      cta: 'Upgrade to Hobby',
+      highlight: true,
+      badge: 'Best start',
+      icon: Sparkles,
+      planKey: 'hobby',
+    },
+    {
+      ...planDefinitions.pro,
+      cta: 'Upgrade to Pro',
+      icon: Sparkles,
+      planKey: 'pro',
     },
   ],
 };
@@ -127,7 +139,7 @@ export function PlanPage() {
     lastStatusRef.current = status;
 
     if (status === 'success') {
-      toast.success('Free trial started.');
+      toast.success('Checkout completed.');
       router.replace(paths.settingsBilling);
       return;
     }
@@ -144,7 +156,7 @@ export function PlanPage() {
     router.push(paths.studio);
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (planKey?: 'hobby' | 'pro') => {
     if (checkoutMutation.isPending) return;
     if (authStatus === 'loading') {
       toast('Checking your session...');
@@ -158,7 +170,7 @@ export function PlanPage() {
       router.push(paths.settingsBilling);
       return;
     }
-    checkoutMutation.mutate({ data: {} });
+    checkoutMutation.mutate({ data: planKey ? { planKey } : {} });
   };
 
   if (authStatus !== 'authenticated') {
@@ -204,9 +216,7 @@ export function PlanPage() {
                 </AlertDialogAction>
               </>
             ) : (
-              <AlertDialogAction onClick={() => setCheckoutDialogMode(null)}>
-                OK
-              </AlertDialogAction>
+              <AlertDialogAction onClick={() => setCheckoutDialogMode(null)}>OK</AlertDialogAction>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -226,24 +236,26 @@ export function PlanPage() {
               Pricing
             </p>
             <h1 className="mt-3 text-2xl font-semibold text-white md:text-3xl">
-              One plan, full access
+              Prototype game asset pricing
             </h1>
             <p className="mt-2 text-sm text-white/60 md:text-base">{planGroup.subtitle}</p>
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-6 pb-16 pt-10">
-          <div className="mx-auto grid max-w-xl gap-6">
+          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
             {planGroup.plans.map((plan) => {
               const Icon = plan.icon;
-              const isCurrentPlan = isCurrentProPlan;
+              const isCurrentPlan = plan.name === planDefinitions.pro.name && isCurrentProPlan;
               const ctaLabel = checkoutMutation.isPending
                 ? 'Redirecting...'
                 : billingQuery.isLoading
                   ? 'Loading...'
-                  : hasOngoingSubscription
-                    ? 'Manage subscription'
-                    : plan.cta;
+                  : plan.freePlan
+                    ? plan.cta
+                    : hasOngoingSubscription
+                      ? 'Manage subscription'
+                      : plan.cta;
 
               return (
                 <article
@@ -284,8 +296,11 @@ export function PlanPage() {
 
                   <Button
                     type="button"
-                    disabled={checkoutMutation.isPending || billingQuery.isLoading}
-                    onClick={handleUpgrade}
+                    disabled={plan.freePlan || checkoutMutation.isPending || billingQuery.isLoading}
+                    onClick={() => {
+                      if (plan.freePlan) return;
+                      void handleUpgrade(plan.planKey);
+                    }}
                     className={cn(
                       'mt-6 h-11 rounded-full text-sm font-semibold',
                       plan.highlight

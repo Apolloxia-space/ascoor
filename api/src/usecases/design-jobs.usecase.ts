@@ -8,13 +8,12 @@ import type {
 } from '../repositories/postgres/design-job.repository';
 import type { BillingRepository } from '../repositories/postgres/billing.repository';
 import type { DesignTaskQueue } from '../infra/design-task-queue';
-import type { DesignStatus } from '../generated/prisma/client';
+import type { DesignStatus, PlanKey, Subscription } from '../generated/prisma/client';
 import {
   DesignConcurrencyLimitExceededError,
   DesignQuotaExceededError,
   DesignValidationError,
   NotFoundError,
-  ProSubscriptionRequiredError,
 } from './errors';
 import {
   DesignPipelineError,
@@ -26,7 +25,7 @@ import { BillingCache } from '../repositories/inmemory/billing.cache';
 import { logger } from '../utils/logger';
 import { getUtcMonthWindow } from '../utils/date';
 import { normalizeRequiredFormValue } from '../utils/form';
-import { isProSubscriptionStatus } from '../utils/subscription';
+import { isActiveSubscriptionStatus } from '../utils/subscription';
 import { collapseWhitespace, truncateText } from '../utils/text';
 import { CREATE_FORM_MAX_CHARS } from '../constants/form-limits';
 
@@ -257,7 +256,7 @@ export class DesignJobsUsecase {
     if (used >= usage.limit) {
       throw new DesignQuotaExceededError();
     }
-    const concurrentLimit = await this.resolveConcurrentLimit('pro');
+    const concurrentLimit = await this.resolveConcurrentLimit(usage.planKey);
     const active = await this.designJobRepository.countActiveByUser(input.userId);
     if (active >= concurrentLimit) {
       throw new DesignConcurrencyLimitExceededError();
@@ -520,27 +519,43 @@ export class DesignJobsUsecase {
     }
   }
 
-  private async resolveUsageWindow(
-    userId: string,
-  ): Promise<{ periodStart: Date; periodEnd: Date; limit: number }> {
+  private async resolveUsageWindow(userId: string): Promise<{
+    periodStart: Date;
+    periodEnd: Date;
+    limit: number;
+    planKey: PlanKey;
+  }> {
     const subscription = await this.billingCache.getSubscription(userId, () =>
       this.billingRepository.findSubscriptionByUserId(userId),
     );
-    if (!isProSubscriptionStatus(subscription?.status)) {
-      throw new ProSubscriptionRequiredError();
-    }
+    const planKey = await this.resolveEffectivePlanKey(subscription);
 
     const now = new Date();
     const { start: periodStart, end: periodEnd } = getUtcMonthWindow(now);
-    const limit = await this.resolveMonthlyLimit('pro');
+    const limit = await this.resolveMonthlyLimit(planKey);
     return {
       periodStart,
       periodEnd,
       limit,
+      planKey,
     };
   }
 
-  private async resolveMonthlyLimit(planKey: 'pro'): Promise<number> {
+  private async resolveEffectivePlanKey(subscription: Subscription | null): Promise<PlanKey> {
+    if (!isActiveSubscriptionStatus(subscription?.status)) {
+      return 'free';
+    }
+    if (!subscription?.planId) {
+      return 'free';
+    }
+    const planId = subscription.planId;
+    const plan = await this.billingCache.getPlanById(subscription.planId, () =>
+      this.billingRepository.findPlanById(planId),
+    );
+    return plan?.key ?? 'free';
+  }
+
+  private async resolveMonthlyLimit(planKey: PlanKey): Promise<number> {
     try {
       const record = await this.billingCache.getPlanDesignLimit(planKey, () =>
         this.billingRepository.findPlanDesignLimit(planKey),
@@ -553,7 +568,7 @@ export class DesignJobsUsecase {
     throw new Error(`design_plan_limit_missing:${planKey}`);
   }
 
-  private async resolveConcurrentLimit(planKey: 'pro'): Promise<number> {
+  private async resolveConcurrentLimit(planKey: PlanKey): Promise<number> {
     try {
       const record = await this.billingCache.getPlanDesignLimit(planKey, () =>
         this.billingRepository.findPlanDesignLimit(planKey),

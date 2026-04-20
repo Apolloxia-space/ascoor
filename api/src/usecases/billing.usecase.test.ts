@@ -193,7 +193,8 @@ test('getUsage counts succeeded generated designs in the current UTC month', asy
   try {
     const usecase = new BillingUsecase(
       {
-        findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
+        findSubscriptionByUserId: async () => ({ status: 'active', planId: 'plan-pro' }) as never,
+        findPlanById: async () => ({ key: 'pro' }) as never,
         findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }) as never,
       } as unknown as BillingRepository,
       {} as unknown as StripeRepository,
@@ -225,7 +226,7 @@ test('getUsage counts succeeded generated designs in the current UTC month', asy
   }
 });
 
-test('getUsage returns zero available usage when no active Pro subscription exists', async () => {
+test('getUsage returns free plan usage when no paid subscription exists', async () => {
   const countCalls: Array<{ userId: string; periodStart: Date; periodEnd: Date }> = [];
   const realDate = Date;
 
@@ -246,7 +247,7 @@ test('getUsage returns zero available usage when no active Pro subscription exis
     const usecase = new BillingUsecase(
       {
         findSubscriptionByUserId: async () => null,
-        findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }) as never,
+        findPlanDesignLimit: async () => ({ planKey: 'free', monthlyDesignLimit: 5 }) as never,
       } as unknown as BillingRepository,
       {} as unknown as StripeRepository,
       {
@@ -264,11 +265,11 @@ test('getUsage returns zero available usage when no active Pro subscription exis
 
     const usage = await usecase.getUsage('user-1');
 
-    assert.equal(usage.used, 0);
-    assert.equal(usage.limit, 0);
+    assert.equal(usage.used, 3);
+    assert.equal(usage.limit, 5);
     assert.equal(usage.periodStart.toISOString(), '2026-03-01T00:00:00.000Z');
     assert.equal(usage.periodEnd.toISOString(), '2026-04-01T00:00:00.000Z');
-    assert.equal(countCalls.length, 0);
+    assert.equal(countCalls.length, 1);
   } finally {
     globalThis.Date = realDate;
   }
@@ -280,10 +281,11 @@ test('createCheckoutSession uses traceId to derive idempotency key', async () =>
   const usecase = new BillingUsecase(
     {
       findPlanById: async () => null,
-      findDefaultPlan: async () =>
+      findPlanByKey: async () =>
         ({
           id: 'plan-pro',
           name: 'Pro',
+          key: 'pro',
           stripePriceId: 'price_pro_monthly',
         }) as never,
       findSubscriptionByUserId: async () => null,
@@ -323,7 +325,7 @@ test('createCheckoutSession uses traceId to derive idempotency key', async () =>
   assert.equal(idempotencyKeys.length, 3);
   assert.equal(idempotencyKeys[0], idempotencyKeys[1]);
   assert.notEqual(idempotencyKeys[1], idempotencyKeys[2]);
-  assert.deepEqual(trialPeriodDays, [7, 7, 7]);
+  assert.deepEqual(trialPeriodDays, [undefined, undefined, undefined]);
 });
 
 test('cancelSubscriptionAtPeriodEnd always schedules period-end cancellation', async () => {

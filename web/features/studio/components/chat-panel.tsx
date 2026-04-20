@@ -75,8 +75,8 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
     },
   });
   const billingStatus = billingQuery.data?.status === 200 ? billingQuery.data.data : undefined;
-  const isProPlan = billingStatus?.status === 'active' || billingStatus?.status === 'trialing';
-  const showUpgrade = !isProPlan;
+  const hasPaidPlan = billingStatus?.status === 'active' || billingStatus?.status === 'trialing';
+  const showUpgrade = !hasPaidPlan;
 
   useEffect(() => {
     if (!open) {
@@ -94,11 +94,6 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
     if (isSendingRef.current) return;
     if (!messageInput.trim()) return;
     if (!projectId) return;
-    if (!billingQuery.isLoading && !isProPlan) {
-      setUpgradeDialogMode('required');
-      return;
-    }
-
     isSendingRef.current = true;
     setIsSending(true);
 
@@ -200,22 +195,22 @@ export function CreatePanelContent({ open, projectId }: CreatePanelContentProps)
           <DialogHeader>
             <DialogTitle>
               {upgradeDialogMode === 'required'
-                ? 'Pro subscription required'
+                ? 'Paid plan required'
                 : upgradeDialogMode === 'concurrency'
                   ? 'Concurrent Design Limit Reached'
                   : 'Design limit reached'}
             </DialogTitle>
             <DialogDescription>
               {upgradeDialogMode === 'required'
-                ? 'An active Pro subscription is required to create designs.'
+                ? 'Upgrade to a paid plan to continue creating assets.'
                 : upgradeDialogMode === 'concurrency'
-                  ? 'You can have up to 3 designs awaiting preview at the same time. Open a pending design and complete its preview before creating another.'
-                  : 'You have reached your generated design limit for this month. Please wait for the next reset.'}
+                  ? 'You have reached the number of assets that can be awaiting preview at the same time. Open a pending asset and complete its preview before creating another.'
+                  : 'You have reached your generated asset limit for this month. Upgrade or wait for the next reset.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             {showUpgrade || upgradeDialogMode === 'required' ? (
-              <Button onClick={() => router.push(paths.plan)}>Upgrade to Pro</Button>
+              <Button onClick={() => router.push(paths.plan)}>View plans</Button>
             ) : null}
           </DialogFooter>
         </DialogContent>

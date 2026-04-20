@@ -69,7 +69,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '402':
-          description: Active Pro subscription required
+          description: Paid plan required
           content:
             application/json:
               schema:
@@ -1047,6 +1047,7 @@ components:
       type: object
       required:
         - id
+        - key
         - name
         - stripePriceId
         - amount
@@ -1059,10 +1060,14 @@ components:
       properties:
         id:
           type: string
+        key:
+          type: string
+          enum: [free, hobby, pro]
         name:
           type: string
         stripePriceId:
           type: string
+          nullable: true
         amount:
           type: integer
           format: int32
@@ -1135,6 +1140,9 @@ components:
         planId:
           type: string
           format: uuid
+        planKey:
+          type: string
+          enum: [hobby, pro]
     CreateCheckoutSessionResponse:
       type: object
       required:

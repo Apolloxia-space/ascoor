@@ -1,8 +1,29 @@
 [
   {
+    "key": "free",
+    "name": "Free",
+    "stripePriceId": null,
+    "amount": 0,
+    "currency": "usd",
+    "interval": "month",
+    "intervalCount": 1,
+    "isActive": true
+  },
+  {
+    "key": "hobby",
+    "name": "Hobby",
+    "stripePriceId": "price_1TNtwHEnM7tUG4IyIcuSO2dY",
+    "amount": 500,
+    "currency": "usd",
+    "interval": "month",
+    "intervalCount": 1,
+    "isActive": true
+  },
+  {
+    "key": "pro",
     "name": "Pro",
-    "stripePriceId": "price_1SrpAnEnM7tUG4Iyc9MQX54S",
-    "amount": 1700,
+    "stripePriceId": "price_1TNtvAEnM7tUG4IyjmKNzoAk",
+    "amount": 900,
     "currency": "usd",
     "interval": "month",
     "intervalCount": 1,

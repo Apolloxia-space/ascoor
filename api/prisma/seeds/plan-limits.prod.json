@@ -1,7 +1,17 @@
 [
   {
+    "planKey": "free",
+    "monthlyDesignLimit": 5,
+    "concurrentDesignLimit": 1
+  },
+  {
+    "planKey": "hobby",
+    "monthlyDesignLimit": 50,
+    "concurrentDesignLimit": 2
+  },
+  {
     "planKey": "pro",
-    "monthlyDesignLimit": 100,
+    "monthlyDesignLimit": 150,
     "concurrentDesignLimit": 3
   }
 ]

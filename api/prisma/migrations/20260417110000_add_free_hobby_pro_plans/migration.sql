@@ -1,0 +1,13 @@
+ALTER TYPE "PlanKey" ADD VALUE IF NOT EXISTS 'free';
+ALTER TYPE "PlanKey" ADD VALUE IF NOT EXISTS 'hobby';
+
+ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "key" "PlanKey";
+
+UPDATE "Plan"
+SET "key" = 'pro'
+WHERE "key" IS NULL;
+
+ALTER TABLE "Plan" ALTER COLUMN "key" SET NOT NULL;
+ALTER TABLE "Plan" ALTER COLUMN "stripePriceId" DROP NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS "Plan_key_key" ON "Plan"("key");

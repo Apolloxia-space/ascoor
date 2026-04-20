@@ -14,6 +14,7 @@ import type {
 export interface BillingRepository {
   findPlanById(id: string): Promise<Plan | null>;
   findPlanByPriceId(stripePriceId: string): Promise<Plan | null>;
+  findPlanByKey(planKey: PlanKey): Promise<Plan | null>;
   findDefaultPlan(): Promise<Plan | null>;
   listActivePlans(): Promise<Array<Plan>>;
   findPlanDesignLimit(planKey: PlanKey): Promise<PlanDesignLimit | null>;
@@ -77,6 +78,10 @@ export class BillingRepositoryPostgres implements BillingRepository {
 
   findPlanByPriceId(stripePriceId: string): Promise<Plan | null> {
     return this.prisma.plan.findUnique({ where: { stripePriceId } });
+  }
+
+  findPlanByKey(planKey: PlanKey): Promise<Plan | null> {
+    return this.prisma.plan.findUnique({ where: { key: planKey } });
   }
 
   findDefaultPlan(): Promise<Plan | null> {

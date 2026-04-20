@@ -1,6 +1,6 @@
 import type { Subscription, SubscriptionStatus } from '../entities/subscription';
 
-const PRO_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>(['active', 'trialing']);
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>(['active', 'trialing']);
 const STRIPE_MANAGED_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   'incomplete',
   'trialing',
@@ -80,11 +80,11 @@ function trimToNull(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-export function isProSubscriptionStatus(status: SubscriptionStatus | null | undefined): boolean {
+export function isActiveSubscriptionStatus(status: SubscriptionStatus | null | undefined): boolean {
   if (!status) {
     return false;
   }
-  return PRO_SUBSCRIPTION_STATUSES.has(status);
+  return ACTIVE_SUBSCRIPTION_STATUSES.has(status);
 }
 
 export function isStripeManagedSubscriptionStatus(

@@ -8,6 +8,7 @@
 
 export * from './billingPlan';
 export * from './billingPlanInterval';
+export * from './billingPlanKey';
 export * from './billingPortalSessionResponse';
 export * from './billingStatus';
 export * from './billingStatusResponse';
@@ -18,6 +19,7 @@ export * from './billingWebhookResponse';
 export * from './cancellationReason';
 export * from './cancelSubscriptionRequest';
 export * from './createCheckoutSessionRequest';
+export * from './createCheckoutSessionRequestPlanKey';
 export * from './createCheckoutSessionResponse';
 export * from './createDesignJobRequest';
 export * from './createDesignRequest';

@@ -3,15 +3,15 @@ import test from 'node:test';
 import type { Subscription } from '../entities/subscription';
 import {
   buildSubscriptionUpsertInput,
-  isProSubscriptionStatus,
+  isActiveSubscriptionStatus,
   isStripeManagedSubscriptionStatus,
   parseStripeSubscriptionWebhook,
 } from './subscription';
 
-test('isProSubscriptionStatus returns true for pro statuses only', () => {
-  assert.equal(isProSubscriptionStatus('active'), true);
-  assert.equal(isProSubscriptionStatus('trialing'), true);
-  assert.equal(isProSubscriptionStatus('canceled'), false);
+test('isActiveSubscriptionStatus returns true for active paid statuses only', () => {
+  assert.equal(isActiveSubscriptionStatus('active'), true);
+  assert.equal(isActiveSubscriptionStatus('trialing'), true);
+  assert.equal(isActiveSubscriptionStatus('canceled'), false);
 });
 
 test('isStripeManagedSubscriptionStatus returns true for Stripe-managed statuses only', () => {

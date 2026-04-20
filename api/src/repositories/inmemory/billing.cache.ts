@@ -1,11 +1,9 @@
-import type { Plan, PlanDesignLimit, Subscription } from '../../generated/prisma/client';
+import type { Plan, PlanDesignLimit, PlanKey, Subscription } from '../../generated/prisma/client';
 import { InMemoryAsyncCache } from './inmemory';
 
 const DEFAULT_SUBSCRIPTION_CACHE_TTL_MS = 30 * 1000;
 const DEFAULT_PLAN_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_LIMIT_CACHE_TTL_MS = 5 * 60 * 1000;
-
-type BillingPlanKey = 'pro';
 
 export class BillingCache {
   private readonly cache: InMemoryAsyncCache<string>;
@@ -45,8 +43,12 @@ export class BillingCache {
     return this.cache.loadThrough('billing:plan:default', this.planCacheTtlMs, loader);
   }
 
+  getPlanByKey(planKey: PlanKey, loader: () => Promise<Plan | null>): Promise<Plan | null> {
+    return this.cache.loadThrough(`billing:plan:key:${planKey}`, this.planCacheTtlMs, loader);
+  }
+
   getPlanDesignLimit(
-    planKey: BillingPlanKey,
+    planKey: PlanKey,
     loader: () => Promise<PlanDesignLimit | null>,
   ): Promise<PlanDesignLimit | null> {
     return this.cache.loadThrough(`billing:limit:${planKey}`, this.planLimitCacheTtlMs, loader);

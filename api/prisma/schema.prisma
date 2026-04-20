@@ -27,6 +27,8 @@ enum PlanInterval {
 }
 
 enum PlanKey {
+  free
+  hobby
   pro
 }
 
@@ -133,8 +135,9 @@ model DesignJob {
 
 model Plan {
   id            String       @id @default(uuid())
+  key           PlanKey      @unique
   name          String
-  stripePriceId String       @unique
+  stripePriceId String?      @unique
   amount        Int
   currency      String       @default("usd")
   interval      PlanInterval

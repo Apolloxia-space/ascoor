@@ -6,8 +6,9 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 type PlanSeed = {
+  key: 'free' | 'hobby' | 'pro';
   name: string;
-  stripePriceId: string;
+  stripePriceId?: string | null;
   amount: number;
   currency?: string;
   interval: 'month' | 'year';
@@ -16,10 +17,12 @@ type PlanSeed = {
 };
 
 type PlanLimitSeed = {
-  planKey: 'pro';
+  planKey: 'free' | 'hobby' | 'pro';
   monthlyDesignLimit: number;
   concurrentDesignLimit: number;
 };
+
+const PLAN_KEYS = new Set(['free', 'hobby', 'pro']);
 
 const datasourceUrl = process.env.DATABASE_URL;
 if (!datasourceUrl) {
@@ -50,11 +53,20 @@ function assertPlanSeed(value: unknown, index: number): asserts value is PlanSee
   }
 
   const plan = value as Record<string, unknown>;
+  if (typeof plan.key !== 'string' || !PLAN_KEYS.has(plan.key)) {
+    throw new Error(`Invalid plan seed at index ${index}: key must be free, hobby, or pro.`);
+  }
   if (typeof plan.name !== 'string' || plan.name.trim().length === 0) {
     throw new Error(`Invalid plan seed at index ${index}: name is required.`);
   }
-  if (typeof plan.stripePriceId !== 'string' || plan.stripePriceId.trim().length === 0) {
-    throw new Error(`Invalid plan seed at index ${index}: stripePriceId is required.`);
+  if (
+    plan.stripePriceId !== null &&
+    plan.stripePriceId !== undefined &&
+    (typeof plan.stripePriceId !== 'string' || plan.stripePriceId.trim().length === 0)
+  ) {
+    throw new Error(
+      `Invalid plan seed at index ${index}: stripePriceId must be a non-empty string or null.`,
+    );
   }
   if (typeof plan.amount !== 'number' || !Number.isFinite(plan.amount)) {
     throw new Error(`Invalid plan seed at index ${index}: amount must be a number.`);
@@ -70,8 +82,10 @@ function assertPlanLimitSeed(value: unknown, index: number): asserts value is Pl
   }
 
   const planLimit = value as Record<string, unknown>;
-  if (planLimit.planKey !== 'pro') {
-    throw new Error(`Invalid plan limit seed at index ${index}: planKey must be "pro".`);
+  if (typeof planLimit.planKey !== 'string' || !PLAN_KEYS.has(planLimit.planKey)) {
+    throw new Error(
+      `Invalid plan limit seed at index ${index}: planKey must be free, hobby, or pro.`,
+    );
   }
   if (
     typeof planLimit.monthlyDesignLimit !== 'number' ||
@@ -128,9 +142,11 @@ async function main(): Promise<void> {
   await prisma.$transaction(
     plans.map((plan) =>
       prisma.plan.upsert({
-        where: { stripePriceId: plan.stripePriceId },
+        where: { key: plan.key },
         update: {
+          key: plan.key,
           name: plan.name,
+          stripePriceId: plan.stripePriceId?.trim() || null,
           amount: plan.amount,
           currency: plan.currency ?? 'usd',
           interval: plan.interval,
@@ -138,8 +154,9 @@ async function main(): Promise<void> {
           isActive: plan.isActive ?? true,
         },
         create: {
+          key: plan.key,
           name: plan.name,
-          stripePriceId: plan.stripePriceId,
+          stripePriceId: plan.stripePriceId?.trim() || null,
           amount: plan.amount,
           currency: plan.currency ?? 'usd',
           interval: plan.interval,

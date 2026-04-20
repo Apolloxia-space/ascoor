@@ -9,20 +9,50 @@ type SharedPlanDefinition = {
 };
 
 export const planDefinitions = {
-  pro: {
-    name: 'Pro',
-    description: '7-day free trial. Card required. Cancel before renewal to avoid billing.',
-    price: '$17',
-    billing: 'per month after trial',
+  free: {
+    name: 'Free',
+    description: 'Try Ascoor with a small monthly generation allowance.',
+    price: '$0',
+    billing: 'per month',
+    priceNote: 'No card required',
+    features: [
+      '5 generated assets per month',
+      'GLB export',
+      '1 project',
+      'Low-priority generation queue',
+      'Prototype use only',
+    ],
+    limitResetNote: '* Generated asset limits reset monthly (UTC).',
+  },
+  hobby: {
+    name: 'Hobby',
+    description: 'For indie developers making prototype game assets.',
+    price: '$5',
+    billing: 'per month',
     priceNote: 'Excl. tax',
     features: [
-      'Generate designs from prompts in Create mode',
-      'Edit models with structure tree and transform controls',
-      'Export GLB, STL, and JavaScript assets',
-      'Save edited models back to the design',
-      'Manage project-based design history',
-      '100 generated designs per month',
+      '50 generated assets per month',
+      'GLB and OBJ export',
+      'Private projects',
+      'Commercial use',
+      'Basic browser editing',
     ],
-    limitResetNote: '* Generated design limits reset monthly (UTC).',
+    limitResetNote: '* Generated asset limits reset monthly (UTC).',
+  },
+  pro: {
+    name: 'Pro',
+    description: 'For heavier prototype workflows and asset pack production.',
+    price: '$9',
+    billing: 'per month',
+    priceNote: 'Excl. tax',
+    features: [
+      '150 generated assets per month',
+      'GLB and OBJ export',
+      'Batch export',
+      'Asset pack generation',
+      'Priority generation queue',
+      'No attribution required',
+    ],
+    limitResetNote: '* Generated asset limits reset monthly (UTC).',
   },
 } satisfies Record<string, SharedPlanDefinition>;

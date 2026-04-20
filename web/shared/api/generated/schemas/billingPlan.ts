@@ -6,11 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BillingPlanInterval } from './billingPlanInterval';
+import type { BillingPlanKey } from './billingPlanKey';
 
 export interface BillingPlan {
   id: string;
+  key: BillingPlanKey;
   name: string;
-  stripePriceId: string;
+  stripePriceId: string | null;
   amount: number;
   currency: string;
   interval: BillingPlanInterval;
