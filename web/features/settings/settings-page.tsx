@@ -219,16 +219,6 @@ export function SettingsPage() {
 
   const billingStatus = billingQuery.data?.status === 200 ? billingQuery.data.data : undefined;
   const activePlan = billingStatus?.plan ?? null;
-  const planIntervalLabel = formatBillingInterval(activePlan?.interval, activePlan?.intervalCount);
-  const planPriceLabel = formatBillingAmount(activePlan?.amount, activePlan?.currency);
-  const periodEndDate = formatBillingDate(billingStatus?.currentPeriodEnd);
-  const planSummary = activePlan
-    ? `${activePlan.name}${planIntervalLabel ? ` - ${planIntervalLabel}` : ''}${planPriceLabel ? ` (${planPriceLabel})` : ''}`
-    : 'No active subscription';
-  const periodLabel = billingStatus?.cancelAtPeriodEnd ? 'Access ends' : 'Next renewal';
-  const periodLabelText = periodEndDate ? `${periodLabel}: ${periodEndDate}` : null;
-  const isBillingStatusLoading = !!user && billingQuery.isLoading && !billingQuery.data;
-  const isBillingReady = !!user && !billingQuery.isLoading && !billingQuery.isError;
   const hasActiveSubscription = [
     'incomplete',
     'trialing',
@@ -237,9 +227,26 @@ export function SettingsPage() {
     'unpaid',
     'paused',
   ].includes(billingStatus?.status ?? '');
+  const hasNoSubscription = !billingStatus || billingStatus.status === 'none';
+  const planIntervalLabel = formatBillingInterval(activePlan?.interval, activePlan?.intervalCount);
+  const planPriceLabel = formatBillingAmount(activePlan?.amount, activePlan?.currency);
+  const periodEndDate = formatBillingDate(billingStatus?.currentPeriodEnd);
+  const planSummary = activePlan
+    ? `${activePlan.name}${planIntervalLabel ? ` - ${planIntervalLabel}` : ''}${planPriceLabel ? ` (${planPriceLabel})` : ''}`
+    : hasActiveSubscription
+      ? 'Active subscription'
+      : 'No active subscription';
+  const periodLabel = billingStatus?.cancelAtPeriodEnd
+    ? 'Access ends'
+    : hasActiveSubscription
+      ? 'Next renewal'
+      : 'Next reset';
+  const periodLabelText = periodEndDate ? `${periodLabel}: ${periodEndDate}` : null;
+  const isBillingStatusLoading = !!user && billingQuery.isLoading && !billingQuery.data;
+  const isBillingReady = !!user && !billingQuery.isLoading && !billingQuery.isError;
   const canCancel =
     isBillingReady &&
-    !!activePlan &&
+    hasActiveSubscription &&
     billingStatus?.status !== 'canceled' &&
     billingStatus?.status !== 'none' &&
     !billingStatus?.cancelAtPeriodEnd;
@@ -250,13 +257,13 @@ export function SettingsPage() {
     hasActiveSubscription || billingQuery.isLoading || billingQuery.isError;
   const canOpenPortal =
     !!user &&
-    !!activePlan &&
+    hasActiveSubscription &&
     billingStatus?.status !== 'none' &&
     billingStatus?.status !== 'canceled' &&
     !portalSessionMutation.isPending;
   const canResumeCancellation =
     !!user &&
-    !!activePlan &&
+    hasActiveSubscription &&
     !!billingStatus?.cancelAtPeriodEnd &&
     !resumeCancellationMutation.isPending;
   const activeTab = (() => {
@@ -568,10 +575,16 @@ export function SettingsPage() {
                             {periodLabelText && (
                               <p className="text-sm text-muted-foreground">{periodLabelText}</p>
                             )}
+                            {hasActiveSubscription && !activePlan && (
+                              <p className="text-sm text-muted-foreground">
+                                Your subscription is active, but the plan details are not mapped
+                                yet.
+                              </p>
+                            )}
                           </>
                         )}
                       </div>
-                      {!isBillingStatusLoading && !activePlan && (
+                      {!isBillingStatusLoading && hasNoSubscription && (
                         <div>
                           <Button size="sm" onClick={() => router.push(paths.plan)}>
                             View plans

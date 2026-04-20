@@ -12,7 +12,7 @@
   {
     "key": "hobby",
     "name": "Hobby",
-    "stripePriceId": null,
+    "stripePriceId": "price_1TO8AfEnM7tUG4IyQP4hSqAg",
     "amount": 500,
     "currency": "usd",
     "interval": "month",
@@ -22,7 +22,7 @@
   {
     "key": "pro",
     "name": "Pro",
-    "stripePriceId": null,
+    "stripePriceId": "price_1TO89MEnM7tUG4IyAkKfCviM",
     "amount": 900,
     "currency": "usd",
     "interval": "month",
