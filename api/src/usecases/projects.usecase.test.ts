@@ -4,10 +4,11 @@ import test from 'node:test';
 import { ProjectsUsecase } from './projects.usecase';
 import { NotFoundError } from './errors';
 import type { ProjectRepository } from '../repositories/postgres/project.repository';
-import type { IDesignRepository } from '../repositories/interfaces';
+import type { IDesignRepository, IGcsRepository } from '../repositories/interfaces';
 import type { UsersUsecase } from './users.usecase';
 
 test('listDesigns returns designs only for owned project', async () => {
+  const gcsRepository = {} as IGcsRepository;
   const projectRepository = {
     get: async () => null,
     listByOwner: async () => [],
@@ -56,7 +57,7 @@ test('listDesigns returns designs only for owned project', async () => {
     create: async () => ({ id: 'user-1' }),
   } as unknown as UsersUsecase;
 
-  const usecase = new ProjectsUsecase(projectRepository, fileRepository, usersUsecase);
+  const usecase = new ProjectsUsecase(projectRepository, fileRepository, gcsRepository, usersUsecase);
   const result = await usecase.listDesigns('proj-1', 'user-1');
 
   assert.equal(result.projectId, 'proj-1');
@@ -65,6 +66,7 @@ test('listDesigns returns designs only for owned project', async () => {
 });
 
 test('listDesigns throws not found when project is not owned', async () => {
+  const gcsRepository = {} as IGcsRepository;
   const projectRepository = {
     get: async () => null,
     listByOwner: async () => [],
@@ -101,7 +103,7 @@ test('listDesigns throws not found when project is not owned', async () => {
     create: async () => ({ id: 'user-1' }),
   } as unknown as UsersUsecase;
 
-  const usecase = new ProjectsUsecase(projectRepository, fileRepository, usersUsecase);
+  const usecase = new ProjectsUsecase(projectRepository, fileRepository, gcsRepository, usersUsecase);
 
   await assert.rejects(
     async () => usecase.listDesigns('proj-1', 'user-2'),
@@ -110,6 +112,7 @@ test('listDesigns throws not found when project is not owned', async () => {
 });
 
 test('ensureDefaultProject creates default project for first login user', async () => {
+  const gcsRepository = {} as IGcsRepository;
   let createdProjectName: string | null = null;
 
   const projectRepository = {
@@ -155,7 +158,7 @@ test('ensureDefaultProject creates default project for first login user', async 
     },
   } as unknown as UsersUsecase;
 
-  const usecase = new ProjectsUsecase(projectRepository, fileRepository, usersUsecase);
+  const usecase = new ProjectsUsecase(projectRepository, fileRepository, gcsRepository, usersUsecase);
   await usecase.ensureDefaultProject({
     ownerId: 'user-1',
     ownerEmail: 'user-1@example.com',
@@ -167,6 +170,7 @@ test('ensureDefaultProject creates default project for first login user', async 
 });
 
 test('ensureDefaultProject does nothing for existing user', async () => {
+  const gcsRepository = {} as IGcsRepository;
   let createCalled = false;
   let userCreateCalled = false;
   const projectRepository = {
@@ -211,7 +215,7 @@ test('ensureDefaultProject does nothing for existing user', async () => {
     },
   } as unknown as UsersUsecase;
 
-  const usecase = new ProjectsUsecase(projectRepository, fileRepository, usersUsecase);
+  const usecase = new ProjectsUsecase(projectRepository, fileRepository, gcsRepository, usersUsecase);
   await usecase.ensureDefaultProject({ ownerId: 'user-1' });
 
   assert.equal(createCalled, false);

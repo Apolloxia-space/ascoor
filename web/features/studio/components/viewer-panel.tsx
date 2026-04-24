@@ -33,12 +33,14 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Kbd, KbdGroup } from '@shared/components/ui/kbd';
 import { cn } from '@shared/lib/utils';
-import { buildTraceId } from '@shared/api/fetcher';
+import { apiFetcher, buildTraceId } from '@shared/api/fetcher';
 import {
   getDesignAssetContent,
   getGetBillingStatusQueryKey,
+  getListProjectsQueryKey,
   getListProjectDesignsQueryKey,
   reportDesignPreviewResult,
+  useUpdateProjectThumbnailContent,
 } from '@shared/api/generated/client';
 import { useDesignDetail } from '../hooks/use-design-detail';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from '../messages';
@@ -63,6 +65,7 @@ type ViewerPanelProps = {
   }) => void;
   designId?: string | null;
   designName?: string | null;
+  projectThumbnailAssetUri?: string | null;
   traceId?: string | null;
   shortcutHelpOpen?: boolean;
   onShortcutHelpOpenChange?: (open: boolean) => void;
@@ -89,6 +92,7 @@ export function ViewerPanel({
   onAssemblyControlsReady,
   designId,
   designName,
+  projectThumbnailAssetUri = null,
   traceId,
   shortcutHelpOpen = false,
   onShortcutHelpOpenChange,
@@ -106,7 +110,34 @@ export function ViewerPanel({
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
   const reportedPreviewResultRef = useRef<string | null>(null);
+  const uploadedThumbnailRef = useRef<string | null>(null);
   const [renderSucceeded, setRenderSucceeded] = useState(false);
+  const uploadThumbnailMutation = useUpdateProjectThumbnailContent({
+    mutation: {
+      mutationFn: async ({
+        projectId,
+        data,
+      }: {
+        projectId: string;
+        data: Blob;
+      }) =>
+        apiFetcher(`/projects/${projectId}/thumbnail/content`, {
+          method: 'PUT',
+          body: data,
+          headers: {
+            'Content-Type': data.type || 'image/webp',
+          },
+        }),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+      },
+    },
+    request: {
+      headers: {
+        'X-Trace-Id': traceId ?? buildTraceId(),
+      },
+    },
+  });
 
   const fileDetailQuery = useDesignDetail(designId);
   const refetchFileDetail = fileDetailQuery.refetch;
@@ -185,6 +216,7 @@ export function ViewerPanel({
     setRenderSucceeded(false);
     setIsLoading(Boolean(designId));
     reportedPreviewResultRef.current = null;
+    uploadedThumbnailRef.current = null;
   }, [designId]);
 
   useEffect(() => {
@@ -330,6 +362,64 @@ export function ViewerPanel({
     refetchFileDetail,
     renderSucceeded,
     traceId,
+  ]);
+
+  useEffect(() => {
+    const projectId = designData?.projectId ?? null;
+    const firstPartId = parts[0]?.id ?? null;
+    if (
+      !designId ||
+      !projectId ||
+      !renderSucceeded ||
+      loadError ||
+      parseError ||
+      isLoading ||
+      projectThumbnailAssetUri
+    ) {
+      return;
+    }
+    if (!firstPartId || activePartId !== firstPartId) {
+      return;
+    }
+
+    const uploadKey = `${designId}:initial-thumbnail`;
+    if (uploadedThumbnailRef.current === uploadKey) {
+      return;
+    }
+    uploadedThumbnailRef.current = uploadKey;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const blob = await viewerRef.current?.captureThumbnail();
+          if (!blob || cancelled) return;
+          await uploadThumbnailMutation.mutateAsync({ projectId, data: blob });
+          if (cancelled) return;
+        } catch {
+          if (!cancelled) {
+            uploadedThumbnailRef.current = null;
+          }
+        }
+      })();
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    activePartId,
+    designData?.projectId,
+    designId,
+    isLoading,
+    loadError,
+    parseError,
+    projectThumbnailAssetUri,
+    parts.length,
+    renderSucceeded,
+    uploadThumbnailMutation,
+    activePartId,
   ]);
 
   const buildDownloadBaseName = (name: string | null | undefined) => {

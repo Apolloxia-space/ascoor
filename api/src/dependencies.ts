@@ -103,7 +103,12 @@ export function buildDependencies() {
       promptCompilerRepository,
       designPipelineService,
     ),
-    projectsUsecase: new ProjectsUsecase(projectRepository, designRepository, usersUsecase),
+    projectsUsecase: new ProjectsUsecase(
+      projectRepository,
+      designRepository,
+      gcsRepository,
+      usersUsecase,
+    ),
     usersUsecase,
     billingUsecase,
   };

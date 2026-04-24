@@ -739,6 +739,77 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /projects/{projectId}/thumbnail/content:
+    get:
+      operationId: getProjectThumbnailContent
+      tags:
+        - projects
+      summary: Get the saved workspace thumbnail image.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workspace thumbnail image
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      operationId: updateProjectThumbnailContent
+      tags:
+        - projects
+      summary: Save or replace the workspace thumbnail image.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          image/webp:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Workspace thumbnail saved
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /billing/status:
     get:
       operationId: getBillingStatus
@@ -1295,6 +1366,7 @@ components:
       required:
         - id
         - name
+        - thumbnailAssetUri
         - createdAt
         - updatedAt
       properties:
@@ -1302,6 +1374,9 @@ components:
           type: string
         name:
           type: string
+        thumbnailAssetUri:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time

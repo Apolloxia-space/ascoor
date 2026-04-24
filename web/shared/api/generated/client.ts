@@ -2461,6 +2461,230 @@ export function useListProjectDesigns<TData = Awaited<ReturnType<typeof listProj
 
 
 /**
+ * @summary Get the saved workspace thumbnail image.
+ */
+export type getProjectThumbnailContentResponse200 = {
+  data: Blob
+  status: 200
+}
+
+export type getProjectThumbnailContentResponse401 = {
+  data: ErrorResponse
+  status: 401
+}
+
+export type getProjectThumbnailContentResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type getProjectThumbnailContentResponseSuccess = (getProjectThumbnailContentResponse200) & {
+  headers: Headers;
+};
+export type getProjectThumbnailContentResponseError = (getProjectThumbnailContentResponse401 | getProjectThumbnailContentResponse404) & {
+  headers: Headers;
+};
+
+export type getProjectThumbnailContentResponse = (getProjectThumbnailContentResponseSuccess | getProjectThumbnailContentResponseError)
+
+export const getGetProjectThumbnailContentUrl = (projectId: string,) => {
+
+
+  
+
+  return `/projects/${projectId}/thumbnail/content`
+}
+
+export const getProjectThumbnailContent = async (projectId: string, options?: RequestInit): Promise<getProjectThumbnailContentResponse> => {
+  
+  return apiFetcher<getProjectThumbnailContentResponse>(getGetProjectThumbnailContentUrl(projectId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getGetProjectThumbnailContentQueryKey = (projectId: string,) => {
+    return [
+    `/projects/${projectId}/thumbnail/content`
+    ] as const;
+    }
+
+    
+export const getGetProjectThumbnailContentQueryOptions = <TData = Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError = ErrorResponse>(projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProjectThumbnailContentQueryKey(projectId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectThumbnailContent>>> = ({ signal }) => getProjectThumbnailContent(projectId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(projectId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetProjectThumbnailContentQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectThumbnailContent>>>
+export type GetProjectThumbnailContentQueryError = ErrorResponse
+
+
+export function useGetProjectThumbnailContent<TData = Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError = ErrorResponse>(
+ projectId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectThumbnailContent>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectThumbnailContent>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProjectThumbnailContent<TData = Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError = ErrorResponse>(
+ projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProjectThumbnailContent>>,
+          TError,
+          Awaited<ReturnType<typeof getProjectThumbnailContent>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProjectThumbnailContent<TData = Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError = ErrorResponse>(
+ projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get the saved workspace thumbnail image.
+ */
+
+export function useGetProjectThumbnailContent<TData = Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError = ErrorResponse>(
+ projectId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectThumbnailContent>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProjectThumbnailContentQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+/**
+ * @summary Save or replace the workspace thumbnail image.
+ */
+export type updateProjectThumbnailContentResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updateProjectThumbnailContentResponse400 = {
+  data: ErrorResponse
+  status: 400
+}
+
+export type updateProjectThumbnailContentResponse401 = {
+  data: ErrorResponse
+  status: 401
+}
+
+export type updateProjectThumbnailContentResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type updateProjectThumbnailContentResponseSuccess = (updateProjectThumbnailContentResponse204) & {
+  headers: Headers;
+};
+export type updateProjectThumbnailContentResponseError = (updateProjectThumbnailContentResponse400 | updateProjectThumbnailContentResponse401 | updateProjectThumbnailContentResponse404) & {
+  headers: Headers;
+};
+
+export type updateProjectThumbnailContentResponse = (updateProjectThumbnailContentResponseSuccess | updateProjectThumbnailContentResponseError)
+
+export const getUpdateProjectThumbnailContentUrl = (projectId: string,) => {
+
+
+  
+
+  return `/projects/${projectId}/thumbnail/content`
+}
+
+export const updateProjectThumbnailContent = async (projectId: string,
+    updateProjectThumbnailContentBody: Blob, options?: RequestInit): Promise<updateProjectThumbnailContentResponse> => {
+  
+  return apiFetcher<updateProjectThumbnailContentResponse>(getUpdateProjectThumbnailContentUrl(projectId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/webp', ...options?.headers },
+    body: JSON.stringify(
+      updateProjectThumbnailContentBody,)
+  }
+);}
+  
+
+
+
+export const getUpdateProjectThumbnailContentMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProjectThumbnailContent>>, TError,{projectId: string;data: Blob}, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProjectThumbnailContent>>, TError,{projectId: string;data: Blob}, TContext> => {
+
+const mutationKey = ['updateProjectThumbnailContent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProjectThumbnailContent>>, {projectId: string;data: Blob}> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  updateProjectThumbnailContent(projectId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProjectThumbnailContentMutationResult = NonNullable<Awaited<ReturnType<typeof updateProjectThumbnailContent>>>
+    export type UpdateProjectThumbnailContentMutationBody = Blob
+    export type UpdateProjectThumbnailContentMutationError = ErrorResponse
+
+    /**
+ * @summary Save or replace the workspace thumbnail image.
+ */
+export const useUpdateProjectThumbnailContent = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProjectThumbnailContent>>, TError,{projectId: string;data: Blob}, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateProjectThumbnailContent>>,
+        TError,
+        {projectId: string;data: Blob},
+        TContext
+      > => {
+      return useMutation(getUpdateProjectThumbnailContentMutationOptions(options), queryClient);
+    }
+    
+/**
  * @summary Get billing status for the authenticated user.
  */
 export type getBillingStatusResponse200 = {

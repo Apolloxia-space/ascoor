@@ -1,14 +1,21 @@
 'use client';
 
+import Image from 'next/image';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRight, FolderOpen, Loader2, Sparkles } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
+import { getProjectThumbnailContent } from '@/shared/api/generated/client';
 import type { ProjectResponseData } from '@/shared/api/generated/schemas';
 import type { WorkspaceGenerationStatus } from '../lib/workspace-generation-status';
 
+type StudioHomeProject = ProjectResponseData & {
+  thumbnailAssetUri?: string | null;
+};
+
 type StudioHomeProps = {
-  projects: Array<ProjectResponseData>;
+  projects: Array<StudioHomeProject>;
   workspaceGenerationStatuses: Record<string, WorkspaceGenerationStatus>;
   projectsLoading?: boolean;
   projectsRefreshing?: boolean;
@@ -18,7 +25,7 @@ type StudioHomeProps = {
 };
 
 type WorkspaceSectionItem = {
-  project: ProjectResponseData;
+  project: StudioHomeProject;
   generationStatus?: WorkspaceGenerationStatus;
 };
 
@@ -29,6 +36,12 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 });
 
 const formatUpdatedAt = (value: string) => {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return null;
+  return dateFormatter.format(new Date(timestamp));
+};
+
+const formatCreatedAt = (value: string) => {
   const timestamp = Date.parse(value);
   if (!Number.isFinite(timestamp)) return null;
   return dateFormatter.format(new Date(timestamp));
@@ -46,12 +59,16 @@ const WorkspaceSection = ({
   items,
   emptyLabel,
   onSelectProject,
+  thumbnailUrls,
+  variant = 'list',
 }: {
   title: string;
   description?: string;
   items: Array<WorkspaceSectionItem>;
   emptyLabel?: string;
   onSelectProject: (id: string, name: string) => void;
+  thumbnailUrls: Record<string, string>;
+  variant?: 'list' | 'cards';
 }) => {
   if (items.length === 0 && !emptyLabel) return null;
 
@@ -63,6 +80,47 @@ const WorkspaceSection = ({
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+      ) : variant === 'cards' ? (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {items.map(({ project }) => {
+            const thumbnailUrl = thumbnailUrls[project.id] ?? null;
+            const createdAt = formatCreatedAt(project.createdAt);
+
+            return (
+              <button
+                type="button"
+                key={project.id}
+                className="flex w-full flex-col text-left transition-opacity hover:opacity-90"
+                onClick={() => onSelectProject(project.id, project.name)}
+              >
+                <div className="aspect-square w-full overflow-hidden rounded-md bg-muted">
+                  {thumbnailUrl ? (
+                    <Image
+                      src={thumbnailUrl}
+                      alt={`${project.name} thumbnail`}
+                      unoptimized
+                      width={480}
+                      height={480}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <FolderOpen className="size-5" />
+                    </div>
+                  )}
+                </div>
+                <div className="pt-2">
+                  <p className="line-clamp-2 text-sm font-medium text-foreground">
+                    {project.name}
+                  </p>
+                  {createdAt ? (
+                    <p className="pt-1 text-xs text-muted-foreground">{createdAt}</p>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       ) : (
         <div className="space-y-2">
           {items.map(({ project, generationStatus }) => {
@@ -73,6 +131,7 @@ const WorkspaceSection = ({
               generationStatus?.errorMessage ??
               generationStatus?.promptPreview ??
               (updatedAt ? `Updated ${updatedAt}` : null);
+            const thumbnailUrl = thumbnailUrls[project.id] ?? null;
 
             return (
               <button
@@ -81,8 +140,19 @@ const WorkspaceSection = ({
                 className="flex w-full items-start gap-3 rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-left transition-colors hover:bg-accent/40"
                 onClick={() => onSelectProject(project.id, project.name)}
               >
-                <div className="mt-0.5 rounded-md bg-muted p-2 text-muted-foreground">
-                  <FolderOpen className="size-4" />
+                <div className="mt-0.5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/70 bg-muted text-muted-foreground">
+                  {thumbnailUrl ? (
+                    <Image
+                      src={thumbnailUrl}
+                      alt={`${project.name} thumbnail`}
+                      unoptimized
+                      width={56}
+                      height={56}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <FolderOpen className="size-4" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -133,9 +203,81 @@ export function StudioHome({
   onOpenProjectManager,
   onSelectProject,
 }: StudioHomeProps) {
-  const sortedProjects = [...projects].sort(
-    (a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''),
+  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
+  const thumbnailUrlMapRef = useRef<Record<string, string>>({});
+  const sortedProjects = useMemo(
+    () =>
+      [...projects].sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || '')),
+    [projects],
   );
+  const thumbnailProjects = useMemo(
+    () =>
+      sortedProjects.filter(
+        (project) => typeof project.thumbnailAssetUri === 'string' && project.thumbnailAssetUri,
+      ),
+    [sortedProjects],
+  );
+  const thumbnailProjectsKey = useMemo(
+    () =>
+      thumbnailProjects.map((project) => `${project.id}:${project.thumbnailAssetUri ?? ''}`).join('|'),
+    [thumbnailProjects],
+  );
+  const thumbnailProjectsSnapshot = useMemo(() => thumbnailProjects, [thumbnailProjectsKey]);
+
+  useEffect(() => {
+    if (!thumbnailProjectsKey) {
+      Object.values(thumbnailUrlMapRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      thumbnailUrlMapRef.current = {};
+      setThumbnailUrls({});
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const entries = await Promise.all(
+        thumbnailProjectsSnapshot.map(async (project) => {
+          try {
+            const response = await getProjectThumbnailContent(project.id);
+            if (response.status !== 200) {
+              return null;
+            }
+            return [project.id, URL.createObjectURL(response.data)] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) {
+        entries.forEach((entry) => {
+          if (entry) URL.revokeObjectURL(entry[1]);
+        });
+        return;
+      }
+
+      const nextUrls = Object.fromEntries(entries.filter((entry) => entry !== null));
+      Object.values(thumbnailUrlMapRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      thumbnailUrlMapRef.current = nextUrls;
+      setThumbnailUrls(nextUrls);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [thumbnailProjectsKey, thumbnailProjectsSnapshot]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(thumbnailUrlMapRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+    };
+  }, []);
+
   const activeProjects = sortedProjects.filter((project) => {
     const status = workspaceGenerationStatuses[project.id];
     return status?.kind === 'queued' || status?.kind === 'running';
@@ -146,11 +288,7 @@ export function StudioHome({
   const excludedProjectIds = new Set([...activeProjects, ...failedProjects].map((p) => p.id));
   const continueWorking = sortedProjects
     .filter((project) => !excludedProjectIds.has(project.id))
-    .slice(0, 3);
-  const continueWorkingIds = new Set(continueWorking.map((project) => project.id));
-  const recentProjects = sortedProjects.filter(
-    (project) => !excludedProjectIds.has(project.id) && !continueWorkingIds.has(project.id),
-  );
+    .slice(0, 10);
 
   const mapSectionItems = (items: Array<ProjectResponseData>) =>
     items.map((project) => ({
@@ -229,22 +367,20 @@ export function StudioHome({
           items={mapSectionItems(continueWorking)}
           emptyLabel="No completed workspaces yet."
           onSelectProject={onSelectProject}
+          thumbnailUrls={thumbnailUrls}
+          variant="cards"
         />
         <WorkspaceSection
           title="In progress"
           items={mapSectionItems(activeProjects)}
           onSelectProject={onSelectProject}
+          thumbnailUrls={thumbnailUrls}
         />
         <WorkspaceSection
           title="Needs attention"
           items={mapSectionItems(failedProjects)}
           onSelectProject={onSelectProject}
-        />
-        <WorkspaceSection
-          title="Recent workspaces"
-          items={mapSectionItems(recentProjects)}
-          emptyLabel="No additional workspaces."
-          onSelectProject={onSelectProject}
+          thumbnailUrls={thumbnailUrls}
         />
       </div>
     </main>

@@ -23,6 +23,10 @@ export interface ProjectRepository {
   listByOwnerPage(params: ListByOwnerPageParams): Promise<ListByOwnerPageResult>;
   getOwned(projectId: string, ownerId: string): Promise<Project | null>;
   updateName(params: { projectId: string; name: string }): Promise<Project>;
+  updateThumbnailAssetUri(params: {
+    projectId: string;
+    thumbnailAssetUri: string | null;
+  }): Promise<Project>;
   delete(projectId: string): Promise<Project>;
   create(params: { ownerId: string; name: string }): Promise<Project>;
 }
@@ -114,6 +118,18 @@ export class ProjectRepositoryPostgres implements ProjectRepository {
     return this.prisma.project.update({
       where: { id: params.projectId },
       data: { name: params.name },
+    });
+  }
+
+  updateThumbnailAssetUri(params: {
+    projectId: string;
+    thumbnailAssetUri: string | null;
+  }): Promise<Project> {
+    return this.prisma.project.update({
+      where: { id: params.projectId },
+      data: {
+        thumbnailAssetUri: params.thumbnailAssetUri,
+      },
     });
   }
 

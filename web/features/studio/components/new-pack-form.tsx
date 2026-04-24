@@ -49,6 +49,7 @@ import { buildTraceId, type ApiError } from '@/shared/api/fetcher';
 import {
   getListProjectDesignJobsQueryKey,
   useGetBillingStatus,
+  useGetBillingUsage,
 } from '@/shared/api/generated/client';
 import { Button } from '@shared/components/ui/button';
 import {
@@ -180,9 +181,21 @@ export function NewPackForm({
       retry: false,
     },
   });
+  const billingUsageQuery = useGetBillingUsage({
+    query: {
+      enabled: active,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+    },
+  });
   const billingStatus = billingQuery.data?.status === 200 ? billingQuery.data.data : undefined;
+  const billingUsage =
+    billingUsageQuery.data?.status === 200 ? billingUsageQuery.data.data : undefined;
   const hasPaidPlan = billingStatus?.status === 'active' || billingStatus?.status === 'trialing';
   const showUpgrade = !hasPaidPlan;
+  const monthlyLimitReached =
+    billingUsage !== undefined && billingUsage.limit > 0 && billingUsage.used >= billingUsage.limit;
 
   useEffect(() => {
     if (!active) {
@@ -403,6 +416,13 @@ export function NewPackForm({
     });
     setDesignErrorDialogOpen(false);
     setUpgradeDialogMode(null);
+
+    if (monthlyLimitReached) {
+      setUpgradeDialogMode('limit');
+      setIsSending(false);
+      isSendingRef.current = false;
+      return;
+    }
 
     try {
       setIsGenerating(true);

@@ -9,6 +9,7 @@
 export interface ProjectResponseData {
   id: string;
   name: string;
+  thumbnailAssetUri: string | null;
   createdAt: string;
   updatedAt: string;
 }

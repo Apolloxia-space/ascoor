@@ -4,6 +4,10 @@ import { getEditedModelSnapshot, type Design } from './design';
 // Project entity (re-export from Prisma for use in usecases)
 export type Project = PrismaProject;
 
+export function buildProjectThumbnailObjectPath(params: { ownerId: string; projectId: string }) {
+  return `users/${params.ownerId}/projects/${params.projectId}/thumbnail.webp`;
+}
+
 export interface ProjectDesignSummary {
   id: string;
   projectId: string;

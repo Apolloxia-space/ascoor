@@ -46,6 +46,7 @@ export type ThreeViewerHandle = {
   focusFullModel: () => void;
   previewPart: (id: string) => void;
   clearPartPreview: () => void;
+  captureThumbnail: () => Promise<Blob | null>;
   exportGlb: () => Promise<Blob | null>;
   exportPartsZip: () => Promise<Blob | null>;
   exportObj: (mtlFilename: string) => { obj: Blob; mtl: Blob } | null;
@@ -493,6 +494,42 @@ const centerRootOnObject = (root: THREE.Object3D, object: THREE.Object3D) => {
   root.updateWorldMatrix(true, true);
 };
 
+const canvasToWebpBlob = (canvas: HTMLCanvasElement) =>
+  new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.92);
+  });
+
+const captureRendererThumbnail = async (renderer: THREE.WebGLRenderer) => {
+  const sourceCanvas = renderer.domElement;
+  const sourceWidth = sourceCanvas.width;
+  const sourceHeight = sourceCanvas.height;
+  if (sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+  const cropSize = Math.min(sourceWidth, sourceHeight);
+  const sx = Math.max(0, Math.floor((sourceWidth - cropSize) / 2));
+  const sy = Math.max(0, Math.floor((sourceHeight - cropSize) / 2));
+  const targetSize = 512;
+  const targetCanvas = document.createElement('canvas');
+  targetCanvas.width = targetSize;
+  targetCanvas.height = targetSize;
+  const context = targetCanvas.getContext('2d');
+  if (!context) return null;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(
+    sourceCanvas,
+    sx,
+    sy,
+    cropSize,
+    cropSize,
+    0,
+    0,
+    targetSize,
+    targetSize,
+  );
+  return canvasToWebpBlob(targetCanvas);
+};
+
 const DECLARED_IDENTIFIER_PATTERN =
   /\b(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
 const ASSIGNED_IDENTIFIER_PATTERN = /(^|[^\w$.])([A-Za-z_$][\w$]*)\s*=(?!=)/g;
@@ -830,6 +867,11 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         const firstPart = partsRef.current[0];
         if (firstPart) showOnlyPart(firstPart.id);
       },
+      captureThumbnail: async () => {
+        const renderer = rendererRef.current;
+        if (!renderer) return null;
+        return captureRendererThumbnail(renderer);
+      },
       exportGlb: async () => {
         const source = sourceModelRef.current ?? modelRef.current;
         if (!source) return null;
@@ -900,7 +942,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     if (!container) return;
     if (rendererRef.current) return;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.domElement.tabIndex = 0;
     renderer.domElement.setAttribute('aria-label', '3D viewer');
     renderer.setPixelRatio(window.devicePixelRatio);

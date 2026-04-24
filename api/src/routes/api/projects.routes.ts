@@ -142,6 +142,61 @@ export function createProjectsRoutes() {
   );
 
   router.get(
+    '/:projectId/thumbnail/content',
+    zValidator('param', ListProjectDesignsParams),
+    async (c) => {
+      const { projectId } = c.req.valid('param');
+      const projectsUsecase = c.get('usecases').projects;
+      const userId = c.get('md').userId;
+      try {
+        const asset = await projectsUsecase.getThumbnail({ projectId, ownerId: userId });
+        const body = Uint8Array.from(asset.data).buffer;
+        return new Response(body, {
+          status: 200,
+          headers: {
+            'Content-Type': asset.mime,
+            'Cache-Control': 'private, max-age=31536000, immutable',
+          },
+        });
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return c.json({ error: error.message }, 404);
+        }
+        throw error;
+      }
+    },
+  );
+
+  router.put(
+    '/:projectId/thumbnail/content',
+    zValidator('param', ListProjectDesignsParams),
+    async (c) => {
+      const { projectId } = c.req.valid('param');
+      const projectsUsecase = c.get('usecases').projects;
+      const userId = c.get('md').userId;
+      const contentType = c.req.header('content-type')?.split(';')[0]?.trim() ?? '';
+      try {
+        const body = new Uint8Array(await c.req.arrayBuffer());
+        await projectsUsecase.saveThumbnail({
+          projectId,
+          ownerId: userId,
+          content: body,
+          contentType,
+        });
+        return c.body(null, 204);
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return c.json({ error: error.message }, 404);
+        }
+        if (error instanceof ValidationError) {
+          return c.json({ error: error.message }, 400);
+        }
+        throw error;
+      }
+    },
+  );
+
+  router.get(
     '/:projectId/design-jobs',
     zValidator('param', ListProjectDesignsParams),
     zValidator('query', listProjectDesignJobsQuery),

@@ -1,10 +1,15 @@
 import { NotFoundError, ValidationError } from './errors';
-import { buildProjectDesigns, type Project, type ProjectDesigns } from '../entities/project';
+import {
+  buildProjectDesigns,
+  buildProjectThumbnailObjectPath,
+  type Project,
+  type ProjectDesigns,
+} from '../entities/project';
 import type {
   ProjectListCursor,
   ProjectRepository,
 } from '../repositories/postgres/project.repository';
-import type { IDesignRepository } from '../repositories/interfaces';
+import type { IDesignRepository, IGcsRepository } from '../repositories/interfaces';
 import type { UsersUsecase } from './users.usecase';
 import { DEFAULT_FORM_MAX_CHARS } from '../constants/form-limits';
 import { normalizeRequiredFormValue } from '../utils/form';
@@ -49,6 +54,7 @@ const PROJECTS_PAGE_LIMIT_DEFAULT = 20;
 const PROJECTS_PAGE_LIMIT_MAX = 50;
 const PROJECTS_CURSOR_SEPARATOR = '|';
 const DEFAULT_PROJECT_NAME = 'default';
+const MAX_PROJECT_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 
 const encodeProjectsCursor = (cursor: ProjectListCursor): string =>
   `${cursor.updatedAt.toISOString()}${PROJECTS_CURSOR_SEPARATOR}${cursor.id}`;
@@ -77,6 +83,7 @@ export class ProjectsUsecase {
   constructor(
     private readonly projectRepository: ProjectRepository,
     private readonly designRepository: IDesignRepository,
+    private readonly gcsRepository: IGcsRepository,
     private readonly usersUsecase: UsersUsecase,
   ) {}
 
@@ -179,6 +186,63 @@ export class ProjectsUsecase {
     const owned = await this.projectRepository.getOwned(input.projectId, input.ownerId);
     if (!owned) throw new NotFoundError('project not found');
     return this.projectRepository.delete(input.projectId);
+  }
+
+  async saveThumbnail(input: {
+    ownerId: string;
+    projectId: string;
+    content: Uint8Array;
+    contentType: string;
+  }): Promise<Project> {
+    const project = await this.projectRepository.getOwned(input.projectId, input.ownerId);
+    if (!project) throw new NotFoundError('project not found');
+    if (input.content.byteLength === 0) {
+      throw new ValidationError('Thumbnail content is empty.');
+    }
+    if (input.content.byteLength > MAX_PROJECT_THUMBNAIL_BYTES) {
+      throw new ValidationError('Thumbnail must be 2 MB or smaller.');
+    }
+    if (input.contentType !== 'image/webp') {
+      throw new ValidationError('Thumbnail must be image/webp.');
+    }
+
+    const objectPath = buildProjectThumbnailObjectPath({
+      ownerId: input.ownerId,
+      projectId: input.projectId,
+    });
+    const uploaded = await this.gcsRepository.uploadBinary({
+      content: input.content,
+      contentType: input.contentType,
+      objectPath,
+      metadata: {
+        projectId: input.projectId,
+        ownerId: input.ownerId,
+        source: 'workspace-thumbnail',
+      },
+    });
+
+    return this.projectRepository.updateThumbnailAssetUri({
+      projectId: input.projectId,
+      thumbnailAssetUri: uploaded.gcsUri,
+    });
+  }
+
+  async getThumbnail(input: { ownerId: string; projectId: string }) {
+    const project = await this.projectRepository.getOwned(input.projectId, input.ownerId);
+    if (!project) throw new NotFoundError('project not found');
+    if (!project.thumbnailAssetUri) {
+      throw new NotFoundError('thumbnail not found');
+    }
+
+    const data = await this.gcsRepository.downloadBinary({ uri: project.thumbnailAssetUri });
+    if (!data) {
+      throw new NotFoundError('thumbnail not found');
+    }
+
+    return {
+      mime: 'image/webp',
+      data,
+    };
   }
 
   private async ensureOwnerExists(input: EnsureDefaultProjectInput): Promise<void> {

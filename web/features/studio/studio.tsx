@@ -171,6 +171,10 @@ export function StudioPage() {
     projectsQuery.data?.status === 200 ? projectsQuery.data.data.items : [];
   const designs = designsQuery.data?.status === 200 ? designsQuery.data.data.designs : [];
   const projectFileDesign = useMemo(() => getProjectFileDesign(designs), [designs]);
+  const currentProject = useMemo(
+    () => projectItems.find((project) => project.id === activeProjectId) ?? null,
+    [activeProjectId, projectItems],
+  );
   const workspaceGenerationStatuses = useMemo(
     () => getWorkspaceGenerationStatuses(pendingDesigns),
     [pendingDesigns],
@@ -204,7 +208,7 @@ export function StudioPage() {
       setRightPanelMode('create');
       const nextPath = buildStudioPath(nextProjectId);
       if (pathname !== nextPath) {
-        router.replace(nextPath);
+        router.push(nextPath);
       }
     },
     [clearSelectedDesign, pathname, router, setRightPanelMode],
@@ -896,7 +900,7 @@ export function StudioPage() {
         />
         {isStudioHome ? (
           <StudioHome
-            projects={projectItems}
+            projects={projectItems as Array<ProjectResponseData & { thumbnailAssetUri?: string | null }>}
             workspaceGenerationStatuses={workspaceGenerationStatuses}
             projectsLoading={projectsLoading}
             projectsRefreshing={projectsRefreshing}
@@ -925,6 +929,7 @@ export function StudioPage() {
                   }}
                   designId={selectedDesignId}
                   designName={selectedDesignName}
+                  projectThumbnailAssetUri={currentProject?.thumbnailAssetUri ?? null}
                   traceId={selectedDesignTraceId}
                   shortcutHelpOpen={shortcutHelpOpen}
                   onShortcutHelpOpenChange={setShortcutHelpOpen}
