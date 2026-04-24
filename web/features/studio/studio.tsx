@@ -33,7 +33,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 import { paths } from '@/shared/constants/paths';
 import { useIsMobile } from '@/shared/hooks/use-mobile';
 import { cn } from '@/shared/lib/utils';
-import { ChatPanel, NewPackDialog } from './components/chat-panel';
+import { ChatPanel } from './components/chat-panel';
 import { ProjectListDialog } from './components/dialogs/project-list-dialog';
 import { RightPanel } from './components/right-panel';
 import { StudioHeader } from './components/studio-header';
@@ -41,7 +41,7 @@ import { ViewerPanel } from './components/viewer-panel';
 import { useDesignMonitor } from './hooks/use-design-monitor';
 import { useStudioApi } from './hooks/use-studio-api';
 import { useStudioPersist } from './hooks/use-studio-persist';
-import { buildStudioPath } from './lib/paths';
+import { buildStudioNewPath, buildStudioPath } from './lib/paths';
 import { getWorkspaceGenerationStatuses } from './lib/workspace-generation-status';
 import type { PartNode } from './lib/model-parts';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from './messages';
@@ -126,7 +126,6 @@ export function StudioPage() {
   const [designErrorMessage, setDesignErrorMessage] = useState(DESIGN_FAILED_MESSAGE);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [newPackDialogOpen, setNewPackDialogOpen] = useState(false);
   const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
   const [invalidRouteProjectId, setInvalidRouteProjectId] = useState<string | null>(null);
   const [parts, setParts] = useState<Array<PartNode>>([]);
@@ -217,6 +216,10 @@ export function StudioPage() {
       router.replace(paths.studio);
     }
   }, [clearProject, clearSelectedDesign, pathname, projectId, projectName, router]);
+
+  const handleOpenNewPackPage = useCallback(() => {
+    router.push(buildStudioNewPath());
+  }, [router]);
 
   const applySelectedDesign = useCallback(
     (designId: string, name: string, traceId: string | null = null) => {
@@ -663,9 +666,8 @@ export function StudioPage() {
         onOpenChange={setProjectListDialogOpen}
         onSelectProject={handleSelectProject}
         onDeleteCurrentProject={handleCloseProject}
-        onCreateNewPack={() => setNewPackDialogOpen(true)}
+        onCreateNewPack={handleOpenNewPackPage}
       />
-      <NewPackDialog open={newPackDialogOpen} onOpenChange={setNewPackDialogOpen} />
       <div className={cn('flex h-full min-h-0 flex-col transition-all')}>
         <StudioHeader
           projectMenuOpen={projectMenuOpen}
@@ -682,7 +684,7 @@ export function StudioPage() {
                 type="button"
                 size="sm"
                 className="hidden rounded-lg md:inline-flex"
-                onClick={() => setNewPackDialogOpen(true)}
+                onClick={handleOpenNewPackPage}
               >
                 <Sparkles className="size-4" />
                 New Pack
@@ -718,7 +720,7 @@ export function StudioPage() {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setNewPackDialogOpen(true);
+                          handleOpenNewPackPage();
                         }}
                       >
                         <Sparkles className="size-4" />

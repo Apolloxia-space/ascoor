@@ -2,6 +2,7 @@ export const paths = {
   home: '/',
   pricing: '/pricing',
   studio: '/studio',
+  studioNew: '/studio/new',
   plan: '/plans',
   settingsAccount: '/settings/account',
   settingsBilling: '/settings/billing',

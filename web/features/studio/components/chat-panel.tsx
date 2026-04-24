@@ -239,14 +239,6 @@ function GenerationLog({
                         <p className="text-[color:var(--accent-foreground)]/70">Theme</p>
                         <p>{structuredPrompt.themeLabel}</p>
                       </div>
-                      {structuredPrompt.themeDetails ? (
-                        <div className="space-y-0.5">
-                          <p className="text-[color:var(--accent-foreground)]/70">
-                            Theme details
-                          </p>
-                          <p>{structuredPrompt.themeDetails}</p>
-                        </div>
-                      ) : null}
                       <div className="space-y-0.5">
                         <p className="text-[color:var(--accent-foreground)]/70">
                           What are you making?

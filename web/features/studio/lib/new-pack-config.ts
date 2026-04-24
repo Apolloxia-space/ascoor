@@ -91,6 +91,7 @@ export type PackThemeOption = {
   label: string;
   description: string;
   prompt: string;
+  group: string;
   thumbnailSrc?: string;
 };
 
@@ -124,6 +125,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'post_apocalyptic',
     label: 'Post-apocalyptic',
     description: 'Worn, dusty, damaged world',
+    group: 'Genre and Mood',
     prompt: 'post-apocalyptic, worn, damaged, dusty, muted colors, survival-game mood',
     thumbnailSrc: '/studio/theme-thumbnails/post-apocalyptic.svg',
   },
@@ -131,6 +133,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'cyberpunk',
     label: 'Cyberpunk',
     description: 'Neon, dense, high-tech decay',
+    group: 'Sci-fi and Futuristic',
     prompt: 'cyberpunk, neon accents, dense urban detail, gritty futurism, readable sci-fi shapes',
     thumbnailSrc: '/studio/theme-thumbnails/cyberpunk.svg',
   },
@@ -138,6 +141,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'modern_city',
     label: 'Modern city',
     description: 'Contemporary urban scenes',
+    group: 'Modern and Urban',
     prompt: 'modern city, contemporary urban details, clean public spaces, practical everyday objects',
     thumbnailSrc: '/studio/theme-thumbnails/modern-city.svg',
   },
@@ -145,6 +149,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'sci_fi',
     label: 'Sci-fi',
     description: 'Clean or rugged future tech',
+    group: 'Sci-fi and Futuristic',
     prompt: 'sci-fi, futuristic materials, readable technology shapes, game-ready hard-surface forms',
     thumbnailSrc: '/studio/theme-thumbnails/sci-fi.svg',
   },
@@ -152,6 +157,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'medieval',
     label: 'Medieval',
     description: 'Handmade, rustic, grounded fantasy',
+    group: 'Fantasy and Historical',
     prompt: 'medieval, handmade materials, rustic details, grounded fantasy, timber and stone',
     thumbnailSrc: '/studio/theme-thumbnails/medieval.svg',
   },
@@ -159,6 +165,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'cozy_fantasy',
     label: 'Cozy fantasy',
     description: 'Warm, simple, inviting',
+    group: 'Fantasy and Historical',
     prompt: 'cozy fantasy, warm mood, soft stylization, inviting shapes, simple charming details',
     thumbnailSrc: '/studio/theme-thumbnails/cozy-fantasy.svg',
   },
@@ -166,6 +173,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'horror',
     label: 'Horror',
     description: 'Tense, eerie, unsettling',
+    group: 'Genre and Mood',
     prompt: 'horror, eerie mood, unsettling details, worn surfaces, readable silhouettes with ominous tone',
     thumbnailSrc: '/studio/theme-thumbnails/horror.svg',
   },
@@ -173,6 +181,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'retro',
     label: 'Retro',
     description: 'Old-school, nostalgic style',
+    group: 'Stylized and Playful',
     prompt: 'retro, nostalgic shapes, vintage details, old-school game mood, readable simplified forms',
     thumbnailSrc: '/studio/theme-thumbnails/retro.svg',
   },
@@ -180,6 +189,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'industrial',
     label: 'Industrial',
     description: 'Heavy machinery and utility spaces',
+    group: 'Modern and Urban',
     prompt: 'industrial, heavy-duty materials, maintenance areas, practical utility details, robust shapes',
     thumbnailSrc: '/studio/theme-thumbnails/industrial.svg',
   },
@@ -187,6 +197,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'desert',
     label: 'Desert',
     description: 'Dry, sun-bleached environments',
+    group: 'Nature and Environment',
     prompt: 'desert, sun-bleached materials, dusty weathering, dry environment details, strong silhouettes',
     thumbnailSrc: '/studio/theme-thumbnails/desert.svg',
   },
@@ -194,6 +205,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'forest',
     label: 'Forest',
     description: 'Natural, overgrown, organic',
+    group: 'Nature and Environment',
     prompt: 'forest, natural materials, overgrown details, organic shapes, grounded outdoor mood',
     thumbnailSrc: '/studio/theme-thumbnails/forest.svg',
   },
@@ -201,6 +213,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'snow',
     label: 'Snow and ice',
     description: 'Cold, frosty, winter scenes',
+    group: 'Nature and Environment',
     prompt: 'snow and ice, cold climate details, frosty materials, winter mood, readable layered forms',
     thumbnailSrc: '/studio/theme-thumbnails/snow.svg',
   },
@@ -208,6 +221,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'steampunk',
     label: 'Steampunk',
     description: 'Brass, pipes, clockwork inventions',
+    group: 'Sci-fi and Futuristic',
     prompt: 'steampunk, brass materials, exposed pipes, gears, clockwork details, adventurous retro-futurism',
     thumbnailSrc: '/studio/theme-thumbnails/steampunk.svg',
   },
@@ -215,6 +229,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'dieselpunk',
     label: 'Dieselpunk',
     description: 'Heavy machinery and smoky retro industry',
+    group: 'Sci-fi and Futuristic',
     prompt: 'dieselpunk, heavy industrial retro-futurism, smoky atmosphere, riveted metal, robust mechanical forms',
     thumbnailSrc: '/studio/theme-thumbnails/dieselpunk.svg',
   },
@@ -222,6 +237,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'space_station',
     label: 'Space station',
     description: 'Modular futuristic interiors and equipment',
+    group: 'Sci-fi and Futuristic',
     prompt: 'space station, modular futuristic construction, utilitarian sci-fi details, clean panels, readable hard-surface forms',
     thumbnailSrc: '/studio/theme-thumbnails/space-station.svg',
   },
@@ -229,6 +245,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'underwater',
     label: 'Underwater',
     description: 'Submerged structures and aquatic mood',
+    group: 'Nature and Environment',
     prompt: 'underwater, aquatic atmosphere, submerged materials, marine details, layered organic and structural shapes',
     thumbnailSrc: '/studio/theme-thumbnails/underwater.svg',
   },
@@ -236,6 +253,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'tropical',
     label: 'Tropical',
     description: 'Lush, humid, colorful outdoor scenes',
+    group: 'Nature and Environment',
     prompt: 'tropical, lush vegetation, humid climate details, bright natural materials, relaxed outdoor mood',
     thumbnailSrc: '/studio/theme-thumbnails/tropical.svg',
   },
@@ -243,6 +261,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'volcanic',
     label: 'Volcanic',
     description: 'Ash, lava, scorched environments',
+    group: 'Nature and Environment',
     prompt: 'volcanic, scorched materials, lava glow, ash-covered surfaces, harsh dramatic environment details',
     thumbnailSrc: '/studio/theme-thumbnails/volcanic.svg',
   },
@@ -250,6 +269,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'western',
     label: 'Western',
     description: 'Frontier towns and dusty outposts',
+    group: 'Fantasy and Historical',
     prompt: 'western frontier, dusty roads, timber buildings, rustic props, old-town silhouettes and frontier mood',
     thumbnailSrc: '/studio/theme-thumbnails/western.svg',
   },
@@ -257,6 +277,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'pirate',
     label: 'Pirate',
     description: 'Seafaring adventure and worn wood',
+    group: 'Fantasy and Historical',
     prompt: 'pirate adventure, weathered wood, rope details, seafaring props, rugged nautical atmosphere',
     thumbnailSrc: '/studio/theme-thumbnails/pirate.svg',
   },
@@ -264,6 +285,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'gothic',
     label: 'Gothic',
     description: 'Dark stonework and ornate atmosphere',
+    group: 'Fantasy and Historical',
     prompt: 'gothic, ornate stonework, dark dramatic mood, pointed forms, old-world detail and moody silhouettes',
     thumbnailSrc: '/studio/theme-thumbnails/gothic.svg',
   },
@@ -271,6 +293,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'brutalist',
     label: 'Brutalist',
     description: 'Raw concrete and heavy urban forms',
+    group: 'Modern and Urban',
     prompt: 'brutalist, raw concrete, heavy geometric architecture, stark urban details, strong blocky silhouettes',
     thumbnailSrc: '/studio/theme-thumbnails/brutalist.svg',
   },
@@ -278,6 +301,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'victorian',
     label: 'Victorian',
     description: 'Decorative historical urban style',
+    group: 'Fantasy and Historical',
     prompt: 'victorian, decorative historical details, elegant materials, dense urban ornament, refined period atmosphere',
     thumbnailSrc: '/studio/theme-thumbnails/victorian.svg',
   },
@@ -285,6 +309,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'japanese_retro',
     label: 'Japanese retro',
     description: 'Showa-era streets and nostalgic signage',
+    group: 'Cultural and Regional',
     prompt: 'Japanese retro, nostalgic streetscape, vintage signage, compact urban details, warm old-town mood',
     thumbnailSrc: '/studio/theme-thumbnails/japanese-retro.svg',
   },
@@ -292,6 +317,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'shrine_temple',
     label: 'Shrine and temple',
     description: 'Sacred architecture and traditional materials',
+    group: 'Cultural and Regional',
     prompt: 'shrine and temple, traditional sacred architecture, wood and stone materials, ceremonial details, calm spiritual atmosphere',
     thumbnailSrc: '/studio/theme-thumbnails/shrine-temple.svg',
   },
@@ -299,6 +325,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'arabian',
     label: 'Arabian',
     description: 'Warm markets, arches, and desert cities',
+    group: 'Cultural and Regional',
     prompt: 'Arabian-inspired setting, warm market atmosphere, arches, patterned materials, desert-city detail and rich silhouettes',
     thumbnailSrc: '/studio/theme-thumbnails/arabian.svg',
   },
@@ -306,6 +333,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'ancient_ruins',
     label: 'Ancient ruins',
     description: 'Forgotten structures and weathered relics',
+    group: 'Fantasy and Historical',
     prompt: 'ancient ruins, weathered stone, relic details, overgrown decay, mysterious archaeological atmosphere',
     thumbnailSrc: '/studio/theme-thumbnails/ancient-ruins.svg',
   },
@@ -313,6 +341,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'toybox',
     label: 'Toybox',
     description: 'Playful oversized shapes and bright materials',
+    group: 'Stylized and Playful',
     prompt: 'toybox style, playful oversized proportions, bright materials, simplified cheerful forms, imaginative childlike mood',
     thumbnailSrc: '/studio/theme-thumbnails/toybox.svg',
   },
@@ -320,6 +349,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'arcade',
     label: 'Arcade',
     description: 'Bright machines, neon, and playful interiors',
+    group: 'Stylized and Playful',
     prompt: 'arcade, bright machines, playful neon details, glossy surfaces, energetic entertainment-space mood',
     thumbnailSrc: '/studio/theme-thumbnails/arcade.svg',
   },
@@ -327,6 +357,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
     id: 'military',
     label: 'Military',
     description: 'Tactical equipment and utilitarian structures',
+    group: 'Genre and Mood',
     prompt: 'military, tactical utility details, rugged materials, practical equipment, disciplined functional silhouettes',
     thumbnailSrc: '/studio/theme-thumbnails/military.svg',
   },
@@ -1027,14 +1058,12 @@ export const buildPackSummary = ({
 
 export const buildStructuredPackPrompt = ({
   theme,
-  themeDetails,
   packType,
   style,
   assetCount,
   notes,
 }: {
   theme: PackTheme;
-  themeDetails: string;
   packType: PackType;
   style: PackStyle;
   assetCount: PackAssetCount;
@@ -1043,14 +1072,12 @@ export const buildStructuredPackPrompt = ({
   const themeOption = getPackThemeOption(theme);
   const packTypeOption = getPackTypeOption(packType);
   const styleOption = getPackStyleOption(style);
-  const trimmedThemeDetails = themeDetails.trim();
   const trimmedNotes = notes.trim();
 
   return [
     `Create a ${styleOption.label.toLowerCase()} game asset pack.`,
     '',
     `Theme: ${themeOption.prompt}.`,
-    trimmedThemeDetails ? `Theme details: ${trimmedThemeDetails}` : null,
     `Pack focus: ${packTypeOption.prompt}.`,
     `Asset count: generate ${assetCount} separate reusable assets.`,
     '',
@@ -1069,7 +1096,6 @@ export const buildStructuredPackPrompt = ({
 
 export type StructuredPackPromptSummary = {
   themeLabel: string;
-  themeDetails: string | null;
   packTypeLabel: string;
   styleLabel: string;
   assetCount: number | null;
@@ -1082,7 +1108,6 @@ export const parseStructuredPackPrompt = (
   if (!prompt) return null;
 
   const themePrompt = prompt.match(/^Theme:\s*(.+)$/m)?.[1]?.trim() ?? null;
-  const themeDetails = prompt.match(/^Theme details:\s*(.+)$/m)?.[1]?.trim() ?? null;
   const packFocusPrompt = prompt.match(/^Pack focus:\s*(.+)$/m)?.[1]?.trim() ?? null;
   const stylePrompt = prompt.match(/^-\s*Style direction:\s*(.+)$/m)?.[1]?.trim() ?? null;
   const additionalDirection =
@@ -1100,7 +1125,6 @@ export const parseStructuredPackPrompt = (
 
   return {
     themeLabel: themeOption?.label ?? themePrompt ?? 'Unknown',
-    themeDetails,
     packTypeLabel: packTypeOption?.label ?? packFocusPrompt ?? 'Unknown',
     styleLabel: styleOption?.label ?? stylePrompt ?? 'Unknown',
     assetCount,
