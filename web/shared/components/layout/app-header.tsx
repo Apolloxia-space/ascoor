@@ -25,10 +25,11 @@ import { Skeleton } from '@shared/components/ui/skeleton';
 import { cn } from '@shared/lib/utils';
 
 type ProjectGenerationStatus = {
-  kind: 'queued' | 'running' | 'failed';
+  kind: 'queued' | 'running' | 'succeeded' | 'failed';
   label: string;
   promptPreview?: string | null;
   errorMessage?: string | null;
+  detailTitle?: string | null;
 };
 
 const formatWorkspaceListName = (name: string) => {
@@ -51,6 +52,7 @@ type AppHeaderProps = {
   hideProjectMenuOnMobile?: boolean;
   showBrand?: boolean;
   projectMenuRightSlot?: ReactNode;
+  userMenuLeftSlot?: ReactNode;
   user: { displayName?: string | null; email?: string | null } | null;
   authStatus?: string;
   onSignIn?: () => void;
@@ -74,6 +76,7 @@ export function AppHeader({
   hideProjectMenuOnMobile = false,
   showBrand = true,
   projectMenuRightSlot,
+  userMenuLeftSlot,
   user,
   authStatus,
   onSignIn,
@@ -100,7 +103,12 @@ export function AppHeader({
       <Badge
         variant={isFailed ? 'destructive' : 'outline'}
         className="ml-auto max-w-[120px] gap-1 truncate"
-        title={isFailed ? (status.errorMessage ?? status.promptPreview ?? status.label) : status.promptPreview ?? status.label}
+        title={
+          status.detailTitle ??
+          (isFailed
+            ? (status.errorMessage ?? status.promptPreview ?? status.label)
+            : (status.promptPreview ?? status.label))
+        }
       >
         {isFailed ? <AlertTriangle className="size-3" /> : null}
         {isGenerating ? <Loader2 className="size-3 animate-spin" /> : null}
@@ -207,6 +215,7 @@ export function AppHeader({
       </div>
       <div className="hidden items-center gap-6 md:flex" />
       <div className="flex items-center gap-2">
+        {userMenuLeftSlot}
         {user ? (
           <DropdownMenu open={userMenuOpen} onOpenChange={setUserMenuOpen}>
             <DropdownMenuTrigger asChild>

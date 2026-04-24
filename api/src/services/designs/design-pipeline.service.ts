@@ -1,3 +1,4 @@
+import type { AiPackPlanRepository } from '../../repositories/ai/asset-pack-plan.repository';
 import type { AiDesignRepository } from '../../repositories/ai/design.repository';
 import type { PromptCompilerRepository } from '../../repositories/ai/prompt-compiler.repository';
 import type { IGcsRepository, IDesignRepository } from '../../repositories/interfaces';
@@ -6,9 +7,12 @@ import type { DesignJobRepositoryPostgres } from '../../repositories/postgres/de
 import { NotFoundError } from '../../usecases/errors';
 import {
   CompilePromptStep,
+  GenerateAssetPartsStep,
   InvokeAiAgentStep,
+  PlanAssetPackStep,
   PersistTypeScriptAssetStep,
 } from './design-pipeline.steps';
+import { composeAssetPackPreviewCode } from './asset-pack-code';
 import type {
   DesignPipelineResult,
   DesignPipelineRunInput,
@@ -25,6 +29,7 @@ export { DesignPipelineError } from './design-pipeline.types';
 
 type DesignPipelineDeps = {
   aiRepository: AiDesignRepository;
+  packPlanRepository?: AiPackPlanRepository;
   designRepository: IDesignRepository;
   projectRepository: ProjectRepository;
   gcsRepository: IGcsRepository;
@@ -35,6 +40,8 @@ type DesignPipelineDeps = {
 export class DesignPipelineService {
   private readonly compilePromptStep: CompilePromptStep;
   private readonly invokeAiAgentStep: InvokeAiAgentStep;
+  private readonly planAssetPackStep?: PlanAssetPackStep;
+  private readonly generateAssetPartsStep: GenerateAssetPartsStep;
   private readonly persistTypeScriptAssetStep: PersistTypeScriptAssetStep;
 
   constructor(private readonly deps: DesignPipelineDeps) {
@@ -43,6 +50,14 @@ export class DesignPipelineService {
       deps.promptCompilerRepository,
     );
     this.invokeAiAgentStep = new InvokeAiAgentStep(deps.aiRepository);
+    this.planAssetPackStep = deps.packPlanRepository
+      ? new PlanAssetPackStep(deps.packPlanRepository)
+      : undefined;
+    this.generateAssetPartsStep = new GenerateAssetPartsStep(
+      deps.aiRepository,
+      deps.designRepository,
+      deps.gcsRepository,
+    );
     this.persistTypeScriptAssetStep = new PersistTypeScriptAssetStep(
       deps.designRepository,
       deps.designJobRepository,
@@ -75,27 +90,71 @@ export class DesignPipelineService {
       trace,
     });
 
-    const aiOutput = await this.invokeAiAgentStep.run({
-      promptWithContext: compiledPrompt,
+    if (!this.planAssetPackStep) {
+      const aiOutput = await this.invokeAiAgentStep.run({
+        promptWithContext: compiledPrompt,
+        userPrompt: input.userPrompt,
+        userId: input.userId,
+        trace,
+      });
+
+      const designId = await this.persistTypeScriptAssetStep.run({
+        projectId: input.projectId,
+        userId: input.userId,
+        displayName: aiOutput.title,
+        code: aiOutput.code,
+        executionStatus: 'success',
+        previewStatus: 'unverified',
+        previewError: null,
+        trace,
+      });
+
+      return {
+        message: aiOutput.message,
+        title: aiOutput.title,
+        designId,
+      };
+    }
+
+    const packPlan = await this.planAssetPackStep.run({
+      promptWithContext: `Create an asset pack plan for this user request.\n\nUser request:\n${input.userPrompt}\n\nCompiled runtime context:\n${compiledPrompt}`,
       userPrompt: input.userPrompt,
       userId: input.userId,
       trace,
     });
 
-    const designId = await this.persistTypeScriptAssetStep.run({
+    const assetPackDesignId = await this.persistTypeScriptAssetStep.createAssetPackShell({
       projectId: input.projectId,
-      userId: input.userId,
-      displayName: aiOutput.title,
-      code: aiOutput.code,
-      executionStatus: 'success',
-      previewStatus: 'unverified',
-      previewError: null,
+      displayName: packPlan.title,
+      packPlan,
       trace,
     });
 
+    const parts = await this.generateAssetPartsStep.run({
+      designId: assetPackDesignId,
+      plan: packPlan,
+      userPrompt: input.userPrompt,
+      userId: input.userId,
+      trace,
+    });
+
+    const code = composeAssetPackPreviewCode({
+      plan: packPlan,
+      parts,
+    });
+
+    const designId = await this.persistTypeScriptAssetStep.persistPackPreview({
+      designId: assetPackDesignId,
+      userId: input.userId,
+      code,
+      executionStatus: 'success',
+      previewStatus: 'unverified',
+      previewError: null,
+    });
+
     return {
-      message: aiOutput.message,
-      title: aiOutput.title,
+      message: packPlan.message,
+      title: packPlan.title,
       designId,
     };
   }

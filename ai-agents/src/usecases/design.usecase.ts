@@ -27,11 +27,12 @@ export class DesignUsecase implements IDesignUsecase {
         trace,
       });
 
-      const titlePrompt = input.userPrompt?.trim() || input.prompt;
-      const title = await this.titleRepository.designTitle({
-        prompt: titlePrompt,
-        trace,
-      });
+      const title = input.skipTitle
+        ? 'Generated part'
+        : await this.titleRepository.designTitle({
+            prompt: input.userPrompt?.trim() || input.prompt,
+            trace,
+          });
 
       return {
         message: 'Generated a message.',

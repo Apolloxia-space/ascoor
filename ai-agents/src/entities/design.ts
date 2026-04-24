@@ -8,6 +8,7 @@ export const designInSchema = z.object({
   designId: z.string().nullish(),
   traceId: z.string().nullish(),
   requestId: z.string().nullish(),
+  skipTitle: z.boolean().optional(),
 });
 
 export type DesignIn = z.infer<typeof designInSchema>;

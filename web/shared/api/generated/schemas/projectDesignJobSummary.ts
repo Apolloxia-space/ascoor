@@ -11,6 +11,7 @@ export interface ProjectDesignJobSummary {
   designJobId: string;
   projectId: string;
   status: ProjectDesignJobSummaryStatus;
+  userPrompt: string | null;
   message?: string | null;
   title?: string | null;
   designId?: string | null;

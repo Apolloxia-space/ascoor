@@ -21,6 +21,13 @@ enum DesignStatus {
   failed
 }
 
+enum DesignPartStatus {
+  pending
+  generating
+  completed
+  failed
+}
+
 enum PlanInterval {
   month
   year
@@ -91,6 +98,8 @@ model Design {
   displayName         String
   assetUriTs          String?
   editedAssetUriGlb   String?
+  packPlan            Json?
+  stageLayout         Json?
   previewStatus       PreviewStatus @default(unverified)
   previewError        String?
   editedAssetUpdatedAt DateTime?
@@ -99,8 +108,30 @@ model Design {
 
   project    Project     @relation(fields: [projectId], references: [id])
   designJobs DesignJob[]
+  parts      DesignPart[]
 
   @@index([projectId])
+}
+
+model DesignPart {
+  id           String           @id @default(uuid())
+  designId     String
+  slug         String
+  displayName  String
+  description  String?
+  prompt       String
+  status       DesignPartStatus @default(pending)
+  assetUriTs   String?
+  errorMessage String?
+  sortOrder    Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@unique([designId, slug])
+  @@index([designId])
+  @@index([status])
 }
 
 model DesignJob {

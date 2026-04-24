@@ -39,6 +39,7 @@ export class AiAgentDesignRepository implements AiDesignRepository {
           prompt: input.prompt,
           userPrompt: input.userPrompt,
           userId: input.userId,
+          skipTitle: input.skipTitle,
           designId: input.trace?.designId,
           traceId: input.trace?.traceId,
           requestId: input.trace?.requestId,

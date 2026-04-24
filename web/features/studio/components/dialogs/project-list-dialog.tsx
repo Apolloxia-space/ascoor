@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Loader2, MoreHorizontal, Pencil, Search, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
@@ -39,7 +47,10 @@ import { listProjects } from '@/shared/api/generated/client';
 import { DEFAULT_FORM_MAX_CHARS } from '@/shared/constants/form-limits';
 import { useStudioStore } from '../../stores/use-studio-store';
 import { useStudioApi } from '../../hooks/use-studio-api';
-import { getWorkspaceGenerationStatuses, type WorkspaceGenerationStatus } from '../../lib/workspace-generation-status';
+import {
+  getWorkspaceGenerationStatuses,
+  type WorkspaceGenerationStatus,
+} from '../../lib/workspace-generation-status';
 
 const formatWorkspaceListName = (name: string) => {
   return name.length > 30 ? `${name.slice(0, 27)}...` : name;
@@ -50,6 +61,7 @@ type ProjectListDialogProps = {
   onOpenChange: (open: boolean) => void;
   onSelectProject: (id: string, name: string) => void;
   onDeleteCurrentProject: () => void;
+  onCreateNewPack?: () => void;
 };
 
 export function ProjectListDialog({
@@ -57,6 +69,7 @@ export function ProjectListDialog({
   onOpenChange,
   onSelectProject,
   onDeleteCurrentProject,
+  onCreateNewPack,
 }: ProjectListDialogProps) {
   const PROJECTS_PAGE_SIZE = 20;
   const { projects, projectId, pendingDesigns, setProject, setProjects } = useStudioStore();
@@ -113,11 +126,7 @@ export function ProjectListDialog({
       <Badge
         variant={isFailed ? 'destructive' : 'outline'}
         className="max-w-[140px] gap-1 truncate"
-        title={
-          isFailed
-            ? (generationStatus.errorMessage ?? generationStatus.promptPreview)
-            : generationStatus.promptPreview
-        }
+        title={generationStatus.detailTitle}
       >
         {isFailed ? <AlertTriangle className="size-3" /> : null}
         {isGenerating ? <Loader2 className="size-3 animate-spin" /> : null}
@@ -242,6 +251,19 @@ export function ProjectListDialog({
                   />
                 </InputGroup>
               </div>
+              {onCreateNewPack ? (
+                <Button
+                  type="button"
+                  className="rounded-lg"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onCreateNewPack();
+                  }}
+                >
+                  <Sparkles className="size-4" />
+                  New Pack
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -293,11 +315,15 @@ export function ProjectListDialog({
                           onOpenChange(false);
                         }}
                       >
-                        <span
-                          className="min-w-0 flex-1 truncate text-sm font-semibold text-[color:var(--text-primary)]"
-                          title={project.name}
-                        >
-                          {formatWorkspaceListName(project.name)}
+                        <span className="min-w-0 flex-1 text-left" title={project.name}>
+                          <span className="block truncate text-sm font-semibold text-[color:var(--text-primary)]">
+                            {formatWorkspaceListName(project.name)}
+                          </span>
+                          {projectGenerationStatuses[project.id]?.partSummary ? (
+                            <span className="block truncate text-xs text-[color:var(--text-muted)]">
+                              {projectGenerationStatuses[project.id]?.partSummary}
+                            </span>
+                          ) : null}
                         </span>
                         {renderGenerationStatus(projectGenerationStatuses[project.id])}
                         {projectId === project.id && <Badge variant="secondary">Selected</Badge>}
@@ -340,7 +366,10 @@ export function ProjectListDialog({
                 >
                   {projectPagesQuery.isFetchingNextPage ? (
                     <div className="flex items-center justify-center">
-                      <Loader2 className="size-4 animate-spin" aria-label="Loading more workspaces" />
+                      <Loader2
+                        className="size-4 animate-spin"
+                        aria-label="Loading more workspaces"
+                      />
                     </div>
                   ) : projectPagesQuery.hasNextPage ? (
                     'Scroll to load more'

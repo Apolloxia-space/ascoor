@@ -441,7 +441,9 @@ const fitCameraToObject = (
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
-  object.position.sub(center);
+  object.position.x -= center.x;
+  object.position.y -= box.min.y;
+  object.position.z -= center.z;
 
   const maxDim = Math.max(size.x, size.y, size.z);
   const distance = maxDim > 0 ? maxDim * 1.6 : 6;
@@ -451,7 +453,7 @@ const fitCameraToObject = (
   camera.position.set(distance, distance * 0.85, distance);
   camera.updateProjectionMatrix();
 
-  controls.target.set(0, 0, 0);
+  controls.target.set(0, Math.max(size.y * 0.45, 0.2), 0);
   controls.update();
 };
 
@@ -477,6 +479,78 @@ const focusCameraOnObject = (
   controls.update();
 };
 
+const centerRootOnObject = (root: THREE.Object3D, object: THREE.Object3D) => {
+  root.updateWorldMatrix(true, true);
+  object.updateWorldMatrix(true, true);
+
+  const box = new THREE.Box3().setFromObject(object);
+  if (box.isEmpty()) return;
+
+  const center = box.getCenter(new THREE.Vector3());
+  root.position.x -= center.x;
+  root.position.y -= box.min.y;
+  root.position.z -= center.z;
+  root.updateWorldMatrix(true, true);
+};
+
+const DECLARED_IDENTIFIER_PATTERN =
+  /\b(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
+const ASSIGNED_IDENTIFIER_PATTERN = /(^|[^\w$.])([A-Za-z_$][\w$]*)\s*=(?!=)/g;
+const ACCENT_IDENTIFIER_PATTERN = /\baccent[A-Z][\w$]*/g;
+const RESERVED_ASSIGNED_IDENTIFIERS = new Set(['result', 'globalThis', 'console', 'THREE']);
+
+const getFallbackAccentColor = (name: string) => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('cyan')) return '0x39d7e8';
+  if (lowerName.includes('yellow')) return '0xf0c84b';
+  if (lowerName.includes('pink') || lowerName.includes('magenta')) return '0xff4fa3';
+  if (lowerName.includes('green')) return '0x6ee07a';
+  if (lowerName.includes('blue')) return '0x4f8cff';
+  if (lowerName.includes('red')) return '0xd94b4b';
+  if (lowerName.includes('orange')) return '0xff8a3d';
+  if (lowerName.includes('purple') || lowerName.includes('violet')) return '0x9b5cff';
+  return '0xffffff';
+};
+
+const addImplicitDeclarations = (code: string) => {
+  const declared = new Set<string>();
+  for (const match of code.matchAll(DECLARED_IDENTIFIER_PATTERN)) {
+    const name = match[1];
+    if (name) declared.add(name);
+  }
+
+  const implicit = new Set<string>();
+  for (const match of code.matchAll(ASSIGNED_IDENTIFIER_PATTERN)) {
+    const name = match[2];
+    if (!name) continue;
+    if (declared.has(name)) continue;
+    if (RESERVED_ASSIGNED_IDENTIFIERS.has(name)) continue;
+    implicit.add(name);
+  }
+
+  const fallbackAccents = new Set<string>();
+  for (const match of code.matchAll(ACCENT_IDENTIFIER_PATTERN)) {
+    const name = match[0];
+    if (!name) continue;
+    if (declared.has(name)) continue;
+    if (implicit.has(name)) continue;
+    fallbackAccents.add(name);
+  }
+
+  const declarations: Array<string> = [];
+  if (implicit.size > 0) {
+    declarations.push(`let ${[...implicit].join(', ')};`);
+  }
+  for (const name of fallbackAccents) {
+    declarations.push(
+      `const ${name} = new THREE.MeshStandardMaterial({ color: ${getFallbackAccentColor(name)}, roughness: 0.7, metalness: 0.05 });`,
+    );
+  }
+
+  if (declarations.length === 0) return code;
+  return `${declarations.join('\n')}\n${code}`;
+};
+
 const sanitizeGeneratedCode = (input: string) => {
   const trimmed = input.trim();
   const fenced = trimmed.match(/```(?:javascript|js|typescript|ts)?\s*([\s\S]*?)```/i);
@@ -490,11 +564,13 @@ const sanitizeGeneratedCode = (input: string) => {
     )
     .join('\n');
 
-  return withoutImports
+  const normalized = withoutImports
     .replace(/^\s*export\s+default\s+/gm, '')
     .replace(/^\s*export\s+(const|let|var|function|class)\s+/gm, '$1 ')
     .replace(/^\s*export\s*\{[^}]+\}\s*;?\s*$/gm, '')
     .replace(/^\s*(const|let|var)\s+result\s*=/gm, 'result =');
+
+  return addImplicitDeclarations(normalized);
 };
 
 const toRenderableObject = (result: unknown): THREE.Object3D => {
@@ -709,6 +785,34 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     onPartsChange?.(parts);
   };
 
+  const showOnlyPart = (id: string) => {
+    const source = sourceModelRef.current ?? modelRef.current;
+    const target = partObjectMapRef.current.get(id);
+    if (!source || !target) return;
+
+    const visibleNodes = new Set<THREE.Object3D>();
+    let ancestor: THREE.Object3D | null = target;
+    while (ancestor) {
+      visibleNodes.add(ancestor);
+      ancestor = ancestor.parent;
+    }
+    target.traverse((child) => {
+      visibleNodes.add(child);
+    });
+
+    source.traverse((child) => {
+      child.visible = visibleNodes.has(child);
+    });
+    centerRootOnObject(source, target);
+    source.updateWorldMatrix(true, true);
+
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (camera && controls) {
+      focusCameraOnObject(camera, controls, target);
+    }
+  };
+
   useImperativeHandle(
     ref,
     () => ({
@@ -720,43 +824,11 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         focusCameraOnObject(camera, controls, source);
       },
       previewPart: (id: string) => {
-        const source = sourceModelRef.current ?? modelRef.current;
-        const target = partObjectMapRef.current.get(id);
-        if (!source || !target) return;
-
-        const visibleNodes = new Set<THREE.Object3D>();
-        let ancestor: THREE.Object3D | null = target;
-        while (ancestor) {
-          visibleNodes.add(ancestor);
-          ancestor = ancestor.parent;
-        }
-        target.traverse((child) => {
-          visibleNodes.add(child);
-        });
-
-        source.traverse((child) => {
-          child.visible = visibleNodes.has(child);
-        });
-        source.updateWorldMatrix(true, true);
-
-        const camera = cameraRef.current;
-        const controls = controlsRef.current;
-        if (camera && controls) {
-          focusCameraOnObject(camera, controls, target);
-        }
+        showOnlyPart(id);
       },
       clearPartPreview: () => {
-        const source = sourceModelRef.current ?? modelRef.current;
-        if (!source) return;
-        source.traverse((child) => {
-          child.visible = true;
-        });
-        source.updateWorldMatrix(true, true);
-        const camera = cameraRef.current;
-        const controls = controlsRef.current;
-        if (camera && controls) {
-          focusCameraOnObject(camera, controls, source);
-        }
+        const firstPart = partsRef.current[0];
+        if (firstPart) showOnlyPart(firstPart.id);
       },
       exportGlb: async () => {
         const source = sourceModelRef.current ?? modelRef.current;
@@ -828,7 +900,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     if (!container) return;
     if (rendererRef.current) return;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.domElement.tabIndex = 0;
     renderer.domElement.setAttribute('aria-label', '3D viewer');
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -839,19 +911,22 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     renderer.autoClear = false;
 
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xeef1f3);
 
     const camera = new THREE.PerspectiveCamera(
-      45,
+      42,
       container.clientWidth / container.clientHeight,
       0.1,
       2000,
     );
     camera.up.set(0, 1, 0);
-    camera.position.set(6, 4, 6);
+    camera.position.set(3, 2.4, 3.8);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = false;
-    controls.target.set(0, 0, 0);
+    controls.enableDamping = true;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 1.6;
+    controls.target.set(0, 0.7, 0);
 
     const viewHelper = new ViewHelper(camera, renderer.domElement) as unknown as ViewHelperInstance;
     viewHelper.center.copy(controls.target);
@@ -860,13 +935,15 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     viewHelper.setLabels('X', 'Y', 'Z');
     viewHelper.setLabelStyle('bold 24px Arial', '#ffffff', 14);
 
-    const hemi = new THREE.HemisphereLight(0xf8fafc, 0x111827, 1.1);
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    keyLight.position.set(6, 8, 6);
-    const rimLight = new THREE.DirectionalLight(0x94a3b8, 0.35);
-    rimLight.position.set(-5, 4, -4);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x8c9299, 2.4);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
+    keyLight.position.set(4, 6, 3);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    fillLight.position.set(-3, 2, -4);
+    const grid = new THREE.GridHelper(10, 20, 0x9aa2aa, 0xd5d9de);
+    grid.position.y = -0.01;
 
-    scene.add(hemi, keyLight, rimLight);
+    scene.add(hemi, keyLight, fillLight, grid);
 
     container.appendChild(renderer.domElement);
 
@@ -1027,6 +1104,10 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
         sourceModelRef.current = object;
         modelRef.current = object;
         syncParts();
+        const firstPart = partsRef.current[0];
+        if (firstPart) {
+          showOnlyPart(firstPart.id);
+        }
         onModelParseError?.(null);
       } catch (error) {
         object.parent?.remove(object);

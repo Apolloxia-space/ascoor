@@ -1,12 +1,15 @@
 import { DesignRepository } from './repositories/ai/design.repository';
+import { AssetPackPlanRepository } from './repositories/ai/asset-pack-plan.repository';
 import { TitleRepository } from './repositories/ai/title.repository';
 import { PromptCompileRepository } from './repositories/prompt-compile.repository';
+import { AssetPackPlanUsecase } from './usecases/asset-pack-plan.usecase';
 import { DesignUsecase } from './usecases/design.usecase';
 import { PromptCompileUsecase } from './usecases/prompt-compile.usecase';
 import { TitleUsecase } from './usecases/title.usecase';
 import OpenAI from 'openai';
 
 export type AgentDependencies = {
+  assetPackPlanUsecase: AssetPackPlanUsecase;
   designUsecase: DesignUsecase;
   titleUsecase: TitleUsecase;
   promptCompileUsecase: PromptCompileUsecase;
@@ -15,11 +18,13 @@ export type AgentDependencies = {
 const openAiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export function createDependencies(): AgentDependencies {
+  const assetPackPlanRepository = new AssetPackPlanRepository(openAiClient);
   const designRepository = new DesignRepository(openAiClient);
   const titleRepository = new TitleRepository(openAiClient);
   const promptCompileRepository = new PromptCompileRepository();
 
   return {
+    assetPackPlanUsecase: new AssetPackPlanUsecase(assetPackPlanRepository),
     designUsecase: new DesignUsecase(designRepository, titleRepository),
     titleUsecase: new TitleUsecase(titleRepository),
     promptCompileUsecase: new PromptCompileUsecase(promptCompileRepository),

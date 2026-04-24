@@ -1358,6 +1358,7 @@ components:
         - designJobId
         - projectId
         - status
+        - userPrompt
         - promptPreview
         - createdAt
         - updatedAt
@@ -1369,6 +1370,9 @@ components:
         status:
           type: string
           enum: [queued, running, succeeded, failed]
+        userPrompt:
+          type: string
+          nullable: true
         message:
           type: string
           nullable: true

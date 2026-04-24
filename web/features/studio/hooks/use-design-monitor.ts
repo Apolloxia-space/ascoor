@@ -4,10 +4,20 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { getDesignJob, getGetDesignJobQueryKey } from '@/shared/api/generated/client';
+import {
+  getDesign,
+  getDesignJob,
+  getGetDesignJobQueryKey,
+  getGetDesignQueryKey,
+} from '@/shared/api/generated/client';
 import type { DesignJobResponse } from '@/shared/api/generated/schemas';
 import { type ApiError } from '@/shared/api/fetcher';
-import { useStudioStore, type PendingDesign } from '../stores/use-studio-store';
+import {
+  useStudioStore,
+  type PendingDesign,
+  type PendingDesignPart,
+  type PendingDesignPartStatus,
+} from '../stores/use-studio-store';
 
 const DESIGN_POLL_INTERVAL_MS = 15_000;
 const DEFAULT_FAILURE_MESSAGE = 'Something went wrong. Please try again.';
@@ -42,11 +52,64 @@ const getDesignTraceId = (entry: PendingDesign) => entry.traceId ?? entry.design
 const getNotificationKey = (kind: 'succeeded' | 'failed', designJobId: string) =>
   `${kind}:${designJobId}`;
 
+type DesignDetailWithParts = {
+  design?: {
+    parts?: Array<{
+      slug?: string | null;
+      displayName?: string | null;
+      status?: string | null;
+      errorMessage?: string | null;
+    }> | null;
+  } | null;
+};
+
+const PART_STATUSES = new Set<PendingDesignPartStatus>([
+  'pending',
+  'generating',
+  'completed',
+  'failed',
+]);
+
+const normalizePartStatus = (value: string | null | undefined): PendingDesignPartStatus =>
+  PART_STATUSES.has(value as PendingDesignPartStatus)
+    ? (value as PendingDesignPartStatus)
+    : 'pending';
+
+const normalizeDesignParts = (payload: unknown): Array<PendingDesignPart> => {
+  const parts = (payload as DesignDetailWithParts | null)?.design?.parts;
+  if (!Array.isArray(parts)) return [];
+  return parts
+    .map((part, index) => {
+      const slug = part.slug?.trim() || `part_${index + 1}`;
+      return {
+        slug,
+        displayName: part.displayName?.trim() || slug,
+        status: normalizePartStatus(part.status),
+        errorMessage: part.errorMessage ?? null,
+      };
+    })
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+};
+
+const arePartsEqual = (a: Array<PendingDesignPart> | undefined, b: Array<PendingDesignPart>) => {
+  const left = a ?? [];
+  if (left.length !== b.length) return false;
+  return left.every((part, index) => {
+    const next = b[index];
+    return (
+      next &&
+      part.slug === next.slug &&
+      part.displayName === next.displayName &&
+      part.status === next.status &&
+      (part.errorMessage ?? null) === (next.errorMessage ?? null)
+    );
+  });
+};
+
 export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
   const { enabled = true, onDesignSucceeded, onDesignFailed, onInvalidateProjectDesigns } = params;
   const pendingDesigns = useStudioStore((state) => state.pendingDesigns);
   const updatePendingDesign = useStudioStore((state) => state.updatePendingDesign);
-  const removePendingDesign = useStudioStore((state) => state.removePendingDesign);
   const notifiedRef = useRef<Set<string>>(new Set());
 
   const markNotified = useCallback((key: string) => {
@@ -61,7 +124,12 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
       if (!markNotified(key)) return;
 
       onInvalidateProjectDesigns?.(entry.projectId);
-      removePendingDesign(entry.designId);
+      updatePendingDesign(entry.designId, {
+        status: 'succeeded',
+        assetDesignId: payload.designId ?? entry.assetDesignId ?? null,
+        errorMessage: null,
+        errorCode: null,
+      });
       onDesignSucceeded?.({
         designJobId: entry.designId,
         projectId: entry.projectId,
@@ -71,12 +139,7 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
       });
       toast.success('Pack completed.');
     },
-    [
-      markNotified,
-      onDesignSucceeded,
-      onInvalidateProjectDesigns,
-      removePendingDesign,
-    ],
+    [markNotified, onDesignSucceeded, onInvalidateProjectDesigns, updatePendingDesign],
   );
 
   const handleDesignFailure = useCallback(
@@ -101,6 +164,7 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
 
       updatePendingDesign(entry.designId, {
         status: 'failed',
+        assetDesignId: failure.designId ?? entry.assetDesignId ?? null,
         errorMessage: failure.errorMessage,
         errorCode: failure.errorCode,
       });
@@ -114,28 +178,30 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
         errorCode: failure.errorCode,
       });
     },
-    [
-      markNotified,
-      onDesignFailed,
-      onInvalidateProjectDesigns,
-      updatePendingDesign,
-    ],
+    [markNotified, onDesignFailed, onInvalidateProjectDesigns, updatePendingDesign],
   );
 
   const syncInProgressDesign = useCallback(
     (entry: PendingDesign, payload: DesignJobResponse) => {
-      if (
-        (payload.status === 'queued' || payload.status === 'running') &&
-        entry.status !== payload.status
-      ) {
-        updatePendingDesign(entry.designId, { status: payload.status });
+      if (payload.status !== 'queued' && payload.status !== 'running') {
+        return;
+      }
+      const assetDesignId = payload.designId ?? entry.assetDesignId ?? null;
+      if (entry.status !== payload.status || entry.assetDesignId !== assetDesignId) {
+        updatePendingDesign(entry.designId, {
+          status: payload.status,
+          assetDesignId,
+        });
       }
     },
     [updatePendingDesign],
   );
 
   const trackedDesigns = useMemo(
-    () => (enabled ? pendingDesigns.filter((entry) => entry.status !== 'failed') : []),
+    () =>
+      enabled
+        ? pendingDesigns.filter((entry) => entry.status === 'queued' || entry.status === 'running')
+        : [],
     [enabled, pendingDesigns],
   );
 
@@ -158,6 +224,43 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
         refetchInterval: (query: { state: { data?: { status?: string } } }) => {
           const status = query.state.data?.status;
           if (status === 'succeeded' || status === 'failed') return false;
+          return DESIGN_POLL_INTERVAL_MS;
+        },
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        retry: false,
+      };
+    }),
+  });
+
+  const partTrackedDesigns = useMemo(
+    () => (enabled ? pendingDesigns.filter((entry) => Boolean(entry.assetDesignId)) : []),
+    [enabled, pendingDesigns],
+  );
+
+  const partQueries = useQueries({
+    queries: partTrackedDesigns.map((entry) => {
+      const assetDesignId = entry.assetDesignId ?? '';
+      return {
+        queryKey: [...getGetDesignQueryKey(assetDesignId), 'parts-progress', entry.designId],
+        queryFn: async (context: { signal: AbortSignal }) => {
+          const response = await getDesign(assetDesignId, { signal: context.signal });
+          if (response.status !== 200) {
+            throw new Error('Unexpected response status');
+          }
+          return response.data;
+        },
+        enabled: Boolean(assetDesignId),
+        refetchInterval: (query: { state: { data?: unknown } }) => {
+          if (entry.status === 'failed' || entry.status === 'succeeded') return false;
+          const parts = normalizeDesignParts(query.state.data);
+          if (
+            parts.length > 0 &&
+            parts.every((part) => part.status === 'completed' || part.status === 'failed')
+          ) {
+            return false;
+          }
           return DESIGN_POLL_INTERVAL_MS;
         },
         refetchOnMount: 'always',
@@ -207,6 +310,18 @@ export function useDesignMonitor(params: UseDesignMonitorParams = {}) {
     syncInProgressDesign,
     trackedDesigns,
   ]);
+
+  useEffect(() => {
+    for (const [index, entry] of partTrackedDesigns.entries()) {
+      const query = partQueries[index];
+      if (!query?.data) continue;
+
+      const parts = normalizeDesignParts(query.data);
+      if (parts.length === 0 || arePartsEqual(entry.parts, parts)) continue;
+
+      updatePendingDesign(entry.designId, { parts });
+    }
+  }, [partQueries, partTrackedDesigns, updatePendingDesign]);
 
   useEffect(() => {
     for (const [index, entry] of trackedDesigns.entries()) {

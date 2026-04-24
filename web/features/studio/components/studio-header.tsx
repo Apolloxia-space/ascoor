@@ -16,6 +16,7 @@ type StudioHeaderProps = {
   projectsLoading?: boolean;
   projectsRefreshing?: boolean;
   projectMenuRightSlot?: ReactNode;
+  userMenuLeftSlot?: ReactNode;
   hideProjectMenuOnMobile?: boolean;
 };
 
@@ -28,6 +29,7 @@ export function StudioHeader({
   projectsLoading,
   projectsRefreshing,
   projectMenuRightSlot,
+  userMenuLeftSlot,
   hideProjectMenuOnMobile,
 }: StudioHeaderProps) {
   const { projectId, projectName, projects, pendingDesigns } = useStudioStore();
@@ -53,6 +55,7 @@ export function StudioHeader({
       hideProjectMenuOnMobile={hideProjectMenuOnMobile}
       showBrand={false}
       projectMenuRightSlot={projectMenuRightSlot}
+      userMenuLeftSlot={userMenuLeftSlot}
       user={user}
       authStatus={status}
       showSignIn={false}

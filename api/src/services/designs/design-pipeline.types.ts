@@ -7,6 +7,8 @@ export type DesignStage =
   | 'API_TASK_ENQUEUE'
   | 'WORKER_CLAIM'
   | 'PROMPT_COMPILE'
+  | 'PACK_PLAN'
+  | 'PART_GENERATION'
   | 'AI_AGENT_INVOKE'
   | 'ASSET_PERSIST_TS'
   | 'DESIGN_FINALIZE';

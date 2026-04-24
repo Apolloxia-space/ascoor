@@ -8,9 +8,16 @@ export type PartNode = {
 
 const UNNAMED_PART_LABEL = 'Unnamed Part';
 
-const getPartName = (object: THREE.Object3D) => object.name.trim();
+const getUserDataString = (object: THREE.Object3D, key: string) => {
+  const value = object.userData[key] as unknown;
+  return typeof value === 'string' ? value.trim() : '';
+};
 
-const getPartDisplayName = (object: THREE.Object3D) => getPartName(object) || UNNAMED_PART_LABEL;
+const getPartName = (object: THREE.Object3D) =>
+  getUserDataString(object, 'ascoorPartSlug') || object.name.trim();
+
+const getPartDisplayName = (object: THREE.Object3D) =>
+  getUserDataString(object, 'ascoorPartName') || getPartName(object) || UNNAMED_PART_LABEL;
 
 const isWrapperRoot = (root: THREE.Object3D) => {
   return (root instanceof THREE.Scene || root instanceof THREE.Group) && root.children.length > 0;

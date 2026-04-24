@@ -1,4 +1,4 @@
-import type { Design, PreviewStatus } from '../generated/prisma/client';
+import type { Design, DesignPartStatus, PreviewStatus, Prisma } from '../generated/prisma/client';
 import type { GeneratedDesignInfo } from '../entities/designs';
 import type { UploadedObjectInfo } from '../entities/storage';
 
@@ -14,6 +14,57 @@ export interface IDesignRepository {
   }): Promise<Design>;
   updateDisplayName(params: { designId: string; displayName: string }): Promise<Design>;
   create(params: { projectId: string; displayName: string }): Promise<Design>;
+  createAssetPack(params: {
+    projectId: string;
+    displayName: string;
+    packPlan: Prisma.InputJsonValue;
+    parts: Array<{
+      slug: string;
+      displayName: string;
+      description?: string | null;
+      prompt: string;
+      status?: DesignPartStatus;
+      assetUriTs?: string | null;
+      errorMessage?: string | null;
+      sortOrder: number;
+    }>;
+  }): Promise<Design>;
+  listParts(designId: string): Promise<
+    Array<{
+      id: string;
+      designId: string;
+      slug: string;
+      displayName: string;
+      description: string | null;
+      prompt: string;
+      status: string;
+      assetUriTs: string | null;
+      errorMessage: string | null;
+      sortOrder: number;
+      createdAt: Date;
+      updatedAt: Date;
+    }>
+  >;
+  createParts(params: {
+    designId: string;
+    parts: Array<{
+      slug: string;
+      displayName: string;
+      description?: string | null;
+      prompt: string;
+      status?: DesignPartStatus;
+      assetUriTs?: string | null;
+      errorMessage?: string | null;
+      sortOrder: number;
+    }>;
+  }): Promise<void>;
+  updatePart(params: {
+    designId: string;
+    slug: string;
+    status: DesignPartStatus;
+    assetUriTs?: string | null;
+    errorMessage?: string | null;
+  }): Promise<void>;
   updatePreview(params: {
     designId: string;
     assetUriTs?: string | null;

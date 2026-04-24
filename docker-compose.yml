@@ -27,9 +27,15 @@ services:
              npm run dev"
     env_file:
       - api/.env
+    environment:
+      AI_AGENT_BASE_URL: http://ai-agent:8080
+      AI_AGENT_USE_ID_TOKEN: "false"
+      GOOGLE_CLOUD_PROJECT: ascoor-dev
     depends_on:
       db:
         condition: service_healthy
+      ai-agent:
+        condition: service_started
     ports:
       - "3100:3100"
     volumes:
@@ -63,26 +69,25 @@ services:
       - ./web:/app
       - web-node-modules:/app/node_modules
 
-#  ai-agent:
-#    build:
-#      context: .
-#      dockerfile: ai-agents/Dockerfile
-#      target: dev
-#    init: true
-#    command: >
-#      sh -c "npm install &&
-#             npm run dev"
-#    environment:
-#      AI_AGENT_PRIMARY_MODEL: "gpt-5.4-mini"
-#      AI_AGENT_PRIMARY_MODEL_TEMPERATURE: "0.2"
-#      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-#      AI_AGENT_LOG_FULL_PAYLOADS: "true"
-#    ports:
-#      - "8080:8080"
-#    volumes:
-#      - ./ai-agents:/app
+  ai-agent:
+    build:
+      context: .
+      dockerfile: ai-agents/Dockerfile
+      target: dev
+    init: true
+    command: >
+      sh -c "npm install &&
+             npm run dev"
+    env_file:
+      - ai-agents/.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ai-agents:/app
+      - ai-agent-node-modules:/app/node_modules
 
 volumes:
   postgres-data:
   api-node-modules:
   web-node-modules:
+  ai-agent-node-modules:

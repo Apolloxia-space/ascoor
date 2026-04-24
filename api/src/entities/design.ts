@@ -19,6 +19,16 @@ export function buildDesignObjectPath(params: { designId: string; userId: string
   return { objectPath, contentType };
 }
 
+export function buildDesignPartObjectPath(params: {
+  designId: string;
+  partSlug: string;
+  userId: string;
+}) {
+  const objectPath = `users/${params.userId}/designs/${params.designId}/parts/${params.partSlug}.ts`;
+  const contentType = 'text/javascript';
+  return { objectPath, contentType };
+}
+
 export function buildEditedModelObjectPath(params: { designId: string; userId: string }) {
   return `users/${params.userId}/designs/${params.designId}/edited-model.glb`;
 }

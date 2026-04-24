@@ -1,8 +1,10 @@
 import { GcsRepository } from './repositories/gcs/gcs.repository';
+import { LocalStorageRepository } from './repositories/gcs/local-storage.repository';
 import { loadStorageConfig } from './config/storage';
 import { loadAiAgentConfig } from './config/ai-agent';
 import { loadDesignTaskConfig } from './config/design-task';
 import { AiAgentDesignRepository } from './repositories/ai/design.repository.ai-agent';
+import { AiAgentPackPlanRepository } from './repositories/ai/asset-pack-plan.repository.ai-agent';
 import { AiAgentPromptCompilerRepository } from './repositories/ai/prompt-compiler.repository.ai-agent';
 import { DesignRepositoryPostgres } from './repositories/postgres/design.repository';
 import { ProjectRepositoryPostgres } from './repositories/postgres/project.repository';
@@ -50,13 +52,21 @@ export function buildDependencies() {
   );
   const storageConfig = loadStorageConfig();
   const aiAgentConfig = loadAiAgentConfig();
-  const gcsRepository = new GcsRepository({
-    bucket: storageConfig.bucket,
-  });
+  const gcsRepository =
+    storageConfig.backend === 'local'
+      ? new LocalStorageRepository({
+          bucket: storageConfig.bucket,
+          rootDir: storageConfig.localRoot,
+        })
+      : new GcsRepository({
+          bucket: storageConfig.bucket,
+        });
   const aiRepository = new AiAgentDesignRepository(aiAgentConfig);
+  const packPlanRepository = new AiAgentPackPlanRepository(aiAgentConfig);
   const promptCompilerRepository = new AiAgentPromptCompilerRepository(aiAgentConfig);
   const designPipelineService = new DesignPipelineService({
     aiRepository,
+    packPlanRepository,
     designRepository,
     projectRepository,
     gcsRepository,

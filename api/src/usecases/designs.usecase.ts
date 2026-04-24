@@ -31,6 +31,10 @@ export class DesignsUsecase {
       userId,
       designId,
     });
+    const parts =
+      typeof this.designRepository.listParts === 'function'
+        ? await this.designRepository.listParts(design.id)
+        : [];
     const editedSnapshot = getEditedModelSnapshot(design);
 
     return {
@@ -40,6 +44,21 @@ export class DesignsUsecase {
         projectId: design.projectId,
         displayName: design.displayName,
         assetUriTs: design.assetUriTs ?? null,
+        packPlan: design.packPlan ?? null,
+        parts: parts.map((part) => ({
+          id: part.id,
+          designId: part.designId,
+          slug: part.slug,
+          displayName: part.displayName,
+          description: part.description,
+          prompt: part.prompt,
+          status: part.status,
+          assetUriTs: part.assetUriTs,
+          errorMessage: part.errorMessage,
+          sortOrder: part.sortOrder,
+          createdAt: part.createdAt.toISOString(),
+          updatedAt: part.updatedAt.toISOString(),
+        })),
         previewStatus: design.previewStatus,
         previewError: design.previewError ?? null,
         editedAssetUpdatedAt: editedSnapshot.editedAssetUpdatedAt?.toISOString() ?? null,

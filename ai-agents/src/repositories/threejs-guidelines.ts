@@ -12,8 +12,8 @@ function joinInstructionSentences(lines: ReadonlyArray<string>): string {
 }
 
 export const threeJsRuntimeRules = [...runtimeRules];
-export const threeJsStructureRules: string[] = [];
-export const threeJsPromptRules: string[] = [];
+export const threeJsStructureRules: Array<string> = [];
+export const threeJsPromptRules: Array<string> = [];
 
 export const threeJsDesignSystemInstruction = joinInstructionSentences(runtimeRules);
 

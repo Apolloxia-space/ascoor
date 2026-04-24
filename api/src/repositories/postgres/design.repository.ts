@@ -1,4 +1,10 @@
-import type { PrismaClient, Design, PreviewStatus, Prisma } from '../../generated/prisma/client';
+import type {
+  PrismaClient,
+  Design,
+  DesignPartStatus,
+  PreviewStatus,
+  Prisma,
+} from '../../generated/prisma/client';
 import type { IDesignRepository } from '../interfaces';
 
 export class DesignRepositoryPostgres implements IDesignRepository {
@@ -68,6 +74,103 @@ export class DesignRepositoryPostgres implements IDesignRepository {
         projectId: params.projectId,
         displayName: params.displayName,
         previewStatus: 'unverified',
+      },
+    });
+  }
+
+  createAssetPack(params: {
+    projectId: string;
+    displayName: string;
+    packPlan: Prisma.InputJsonValue;
+    parts: Array<{
+      slug: string;
+      displayName: string;
+      description?: string | null;
+      prompt: string;
+      status?: DesignPartStatus;
+      assetUriTs?: string | null;
+      errorMessage?: string | null;
+      sortOrder: number;
+    }>;
+  }): Promise<Design> {
+    return this.prisma.design.create({
+      data: {
+        projectId: params.projectId,
+        displayName: params.displayName,
+        packPlan: params.packPlan,
+        stageLayout: [],
+        previewStatus: 'unverified',
+        parts: {
+          create: params.parts.map((part) => ({
+            slug: part.slug,
+            displayName: part.displayName,
+            description: part.description ?? null,
+            prompt: part.prompt,
+            status: part.status ?? 'pending',
+            assetUriTs: part.assetUriTs ?? null,
+            errorMessage: part.errorMessage ?? null,
+            sortOrder: part.sortOrder,
+          })),
+        },
+      },
+    });
+  }
+
+  listParts(designId: string) {
+    return this.prisma.designPart.findMany({
+      where: { designId },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async createParts(params: {
+    designId: string;
+    parts: Array<{
+      slug: string;
+      displayName: string;
+      description?: string | null;
+      prompt: string;
+      status?: DesignPartStatus;
+      assetUriTs?: string | null;
+      errorMessage?: string | null;
+      sortOrder: number;
+    }>;
+  }): Promise<void> {
+    if (params.parts.length === 0) return;
+    await this.prisma.designPart.createMany({
+      data: params.parts.map((part) => ({
+        designId: params.designId,
+        slug: part.slug,
+        displayName: part.displayName,
+        description: part.description ?? null,
+        prompt: part.prompt,
+        status: part.status ?? 'completed',
+        assetUriTs: part.assetUriTs ?? null,
+        errorMessage: part.errorMessage ?? null,
+        sortOrder: part.sortOrder,
+      })),
+    });
+  }
+
+  async updatePart(params: {
+    designId: string;
+    slug: string;
+    status: DesignPartStatus;
+    assetUriTs?: string | null;
+    errorMessage?: string | null;
+  }): Promise<void> {
+    await this.prisma.designPart.update({
+      where: {
+        designId_slug: {
+          designId: params.designId,
+          slug: params.slug,
+        },
+      },
+      data: {
+        status: params.status,
+        assetUriTs: params.assetUriTs,
+        errorMessage: params.errorMessage,
+        updatedAt: new Date(),
       },
     });
   }

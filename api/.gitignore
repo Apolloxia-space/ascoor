@@ -20,6 +20,9 @@ src/generated/
 logs/
 *.log
 
+# Local development storage
+.data/
+
 # Dependencies
 node_modules/
 

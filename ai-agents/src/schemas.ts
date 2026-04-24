@@ -1,4 +1,10 @@
 export {
+  assetPackPlanInSchema,
+  assetPackPlanSchema,
+  type AssetPackPlan,
+  type AssetPackPlanIn,
+} from './entities/asset-pack-plan';
+export {
   compilePromptInSchema,
   type CompilePromptIn,
   type CompilePromptOut,

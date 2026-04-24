@@ -3,9 +3,9 @@
 import {
   ArrowUpCircle,
   AlertTriangle,
+  ChevronsLeft,
   CreditCard,
   FolderOpen,
-  List,
   Loader2,
   Menu,
   Settings,
@@ -33,10 +33,8 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 import { paths } from '@/shared/constants/paths';
 import { useIsMobile } from '@/shared/hooks/use-mobile';
 import { cn } from '@/shared/lib/utils';
-import { ActionSidebar } from './components/action-sidebar';
-import { ChatPanel } from './components/chat-panel';
+import { ChatPanel, NewPackDialog } from './components/chat-panel';
 import { ProjectListDialog } from './components/dialogs/project-list-dialog';
-import { PartsPanelContent } from './components/parts-panel';
 import { RightPanel } from './components/right-panel';
 import { StudioHeader } from './components/studio-header';
 import { ViewerPanel } from './components/viewer-panel';
@@ -48,7 +46,6 @@ import { getWorkspaceGenerationStatuses } from './lib/workspace-generation-statu
 import type { PartNode } from './lib/model-parts';
 import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from './messages';
 import { useStudioStore } from './stores/use-studio-store';
-import type { RightPanelMode } from './types';
 import type { ProjectDesignSummary, ProjectResponseData } from '@/shared/api/generated/schemas';
 
 const isApiNotFoundError = (error: unknown): error is ApiError<{ error?: string }> => {
@@ -93,6 +90,8 @@ const SHORTCUT_BLOCK_SELECTOR = [
 const getSingleRouteParam = (value: string | Array<string> | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
+const isDevelopmentEnvironment = process.env.NODE_ENV === 'development';
+
 export function StudioPage() {
   useStudioPersist();
   const {
@@ -106,7 +105,6 @@ export function StudioPage() {
     chatPanelOpen,
     currentView,
     projectMenuOpen,
-    rightPanelMode,
     viewModeOpen,
     toggleChatPanel,
     setRightPanelMode,
@@ -128,7 +126,7 @@ export function StudioPage() {
   const [designErrorMessage, setDesignErrorMessage] = useState(DESIGN_FAILED_MESSAGE);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [mobilePartsOpen, setMobilePartsOpen] = useState(false);
+  const [newPackDialogOpen, setNewPackDialogOpen] = useState(false);
   const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
   const [invalidRouteProjectId, setInvalidRouteProjectId] = useState<string | null>(null);
   const [parts, setParts] = useState<Array<PartNode>>([]);
@@ -142,6 +140,9 @@ export function StudioPage() {
     focusFullModel: () => void;
     previewPart: (id: string) => void;
     clearPartPreview: () => void;
+    downloadPartsZip: () => void;
+    downloadJavaScript: () => void;
+    openPrompt: () => void;
   } | null>(null);
   const { updateProject, invalidateProjects, invalidateProjectDesigns } = useStudioApi();
   const routeProjectId = getSingleRouteParam(params.projectId) ?? null;
@@ -175,10 +176,6 @@ export function StudioPage() {
   const projectsLoading = status === 'authenticated' && projectsQuery.isPending;
   const projectsRefreshing =
     status === 'authenticated' && projectsQuery.isFetching && !projectsQuery.isPending;
-  const activePartIds = useMemo(
-    () => (activePartId ? new Set([activePartId]) : new Set<string>()),
-    [activePartId],
-  );
   const hasSelectedDesignState =
     selectedDesignId !== null ||
     selectedDesignName !== null ||
@@ -197,13 +194,7 @@ export function StudioPage() {
     setActivePartId(null);
     setShortcutHelpOpen(false);
     setShortcutHudMessage(null);
-  }, [
-    activePartId,
-    hasSelectedDesignState,
-    parts.length,
-    shortcutHelpOpen,
-    shortcutHudMessage,
-  ]);
+  }, [activePartId, hasSelectedDesignState, parts.length, shortcutHelpOpen, shortcutHudMessage]);
 
   const handleSelectProject = useCallback(
     (nextProjectId: string, _nextProjectName: string) => {
@@ -328,6 +319,35 @@ export function StudioPage() {
     }, 1400);
   }, []);
 
+  const previewPart = useCallback((id: string) => {
+    setActivePartId(id);
+    assemblyControlsRef.current?.previewPart(id);
+  }, []);
+
+  const browsePart = useCallback(
+    (offset: number) => {
+      if (parts.length < 2) return;
+      const currentIndex = activePartId
+        ? parts.findIndex((part) => part.id === activePartId)
+        : -1;
+      const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (baseIndex + offset + parts.length) % parts.length;
+      const nextPart = parts[nextIndex];
+      if (!nextPart) return;
+      previewPart(nextPart.id);
+      showShortcutHud(nextPart.displayName);
+    },
+    [activePartId, parts, previewPart, showShortcutHud],
+  );
+
+  const downloadCurrentPackZip = useCallback(() => {
+    assemblyControlsRef.current?.downloadPartsZip();
+  }, []);
+
+  const downloadCurrentPackJavaScript = useCallback(() => {
+    assemblyControlsRef.current?.downloadJavaScript();
+  }, []);
+
   useEffect(() => {
     return () => {
       if (shortcutHudTimerRef.current) {
@@ -360,15 +380,22 @@ export function StudioPage() {
           setShortcutHelpOpen(false);
           return;
         }
-        if (activePartId) {
-          event.preventDefault();
-          assemblyControlsRef.current?.clearPartPreview();
-          setActivePartId(null);
-        }
         return;
       }
 
       if (shortcutHelpOpen) {
+        return;
+      }
+
+      if (
+        !event.shiftKey &&
+        !event.altKey &&
+        !metaOrCtrl &&
+        (event.key === 'ArrowLeft' || event.key === 'ArrowRight') &&
+        parts.length > 1
+      ) {
+        event.preventDefault();
+        browsePart(event.key === 'ArrowRight' ? 1 : -1);
         return;
       }
 
@@ -400,7 +427,7 @@ export function StudioPage() {
         return;
       }
     },
-    [activePartId, setCurrentView, shortcutHelpOpen, showShortcutHud],
+    [browsePart, parts.length, setCurrentView, shortcutHelpOpen, showShortcutHud],
   );
 
   useEffect(() => {
@@ -518,9 +545,28 @@ export function StudioPage() {
   useEffect(() => {
     if (!isMobile) {
       setMobileChatOpen(false);
-      setMobilePartsOpen(false);
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    if (parts.length === 0) {
+      if (activePartId) {
+        setActivePartId(null);
+      }
+      return;
+    }
+
+    if (activePartId && parts.some((part) => part.id === activePartId)) {
+      return;
+    }
+
+    const firstPart = parts[0];
+    if (!firstPart) return;
+    setActivePartId(firstPart.id);
+    window.requestAnimationFrame(() => {
+      assemblyControlsRef.current?.previewPart(firstPart.id);
+    });
+  }, [activePartId, parts]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -571,17 +617,11 @@ export function StudioPage() {
       if (hasSelectedDesignState) {
         clearSelectedDesign();
       }
-      if (rightPanelMode !== 'create') {
-        setRightPanelMode('create');
-      }
       return;
     }
 
     const projectFileDesignName = projectFileDesign.displayName ?? projectName ?? 'Untitled';
-    if (
-      selectedDesignId !== projectFileDesign.id ||
-      selectedDesignName !== projectFileDesignName
-    ) {
+    if (selectedDesignId !== projectFileDesign.id || selectedDesignName !== projectFileDesignName) {
       applySelectedDesign(projectFileDesign.id, projectFileDesignName);
     }
 
@@ -605,25 +645,7 @@ export function StudioPage() {
     clearSelectedDesign,
     applySelectedDesign,
     syncWorkspaceName,
-    rightPanelMode,
-    setRightPanelMode,
   ]);
-
-  const handleSelectRightPanelMode = (mode: RightPanelMode) => {
-    if (mode === 'create') {
-      assemblyControlsRef.current?.clearPartPreview();
-      setActivePartId(null);
-    }
-    if (rightPanelMode === mode) {
-      toggleChatPanel();
-      return;
-    }
-    setRightPanelMode(mode);
-    if (!chatPanelOpen) {
-      toggleChatPanel();
-    }
-  };
-  const visibleRightPanelMode: RightPanelMode = rightPanelMode === 'parts' ? 'parts' : 'create';
 
   const mobileMenuSectionTitleClass =
     'px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground';
@@ -641,7 +663,9 @@ export function StudioPage() {
         onOpenChange={setProjectListDialogOpen}
         onSelectProject={handleSelectProject}
         onDeleteCurrentProject={handleCloseProject}
+        onCreateNewPack={() => setNewPackDialogOpen(true)}
       />
+      <NewPackDialog open={newPackDialogOpen} onOpenChange={setNewPackDialogOpen} />
       <div className={cn('flex h-full min-h-0 flex-col transition-all')}>
         <StudioHeader
           projectMenuOpen={projectMenuOpen}
@@ -654,6 +678,15 @@ export function StudioPage() {
           hideProjectMenuOnMobile
           projectMenuRightSlot={
             <>
+              <Button
+                type="button"
+                size="sm"
+                className="hidden rounded-lg md:inline-flex"
+                onClick={() => setNewPackDialogOpen(true)}
+              >
+                <Sparkles className="size-4" />
+                New Pack
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -684,28 +717,12 @@ export function StudioPage() {
                         className={mobileMenuItemClass}
                         onClick={() => {
                           setMobileMenuOpen(false);
-                          setMobilePartsOpen(false);
-                          assemblyControlsRef.current?.clearPartPreview();
-                          setActivePartId(null);
-                          setRightPanelMode('create');
-                          setMobileChatOpen(true);
+                          setMobileChatOpen(false);
+                          setNewPackDialogOpen(true);
                         }}
                       >
                         <Sparkles className="size-4" />
-                        Create
-                      </button>
-                      <button
-                        type="button"
-                        className={mobileMenuItemClass}
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setMobileChatOpen(false);
-                          setRightPanelMode('parts');
-                          setMobilePartsOpen(true);
-                        }}
-                      >
-                        <List className="size-4" />
-                        Parts
+                        New Pack
                       </button>
                     </section>
 
@@ -718,7 +735,6 @@ export function StudioPage() {
                           handleCloseProject();
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setMobilePartsOpen(false);
                         }}
                         disabled={!projectId}
                       >
@@ -731,7 +747,6 @@ export function StudioPage() {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setMobilePartsOpen(false);
                           setProjectListDialogOpen(true);
                         }}
                       >
@@ -781,7 +796,6 @@ export function StudioPage() {
                                   handleSelectProject(project.id, project.name);
                                   setMobileMenuOpen(false);
                                   setMobileChatOpen(false);
-                                  setMobilePartsOpen(false);
                                 }}
                               >
                                 <span className="min-w-0 flex-1 truncate" title={project.name}>
@@ -791,12 +805,7 @@ export function StudioPage() {
                                   <Badge
                                     variant={isFailedGeneration ? 'destructive' : 'outline'}
                                     className="max-w-[110px] gap-1 truncate"
-                                    title={
-                                      isFailedGeneration
-                                        ? (generationStatus.errorMessage ??
-                                          generationStatus.promptPreview)
-                                        : generationStatus.promptPreview
-                                    }
+                                    title={generationStatus.detailTitle}
                                   >
                                     {isFailedGeneration ? (
                                       <AlertTriangle className="size-3" />
@@ -825,7 +834,6 @@ export function StudioPage() {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setMobilePartsOpen(false);
                         }}
                       >
                         <Settings className="size-4" />
@@ -837,7 +845,6 @@ export function StudioPage() {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setMobilePartsOpen(false);
                         }}
                       >
                         <CreditCard className="size-4" />
@@ -849,7 +856,6 @@ export function StudioPage() {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setMobilePartsOpen(false);
                         }}
                       >
                         <ArrowUpCircle className="size-4" />
@@ -861,11 +867,18 @@ export function StudioPage() {
               </Sheet>
             </>
           }
+          userMenuLeftSlot={
+            <Button asChild variant="ghost" size="icon" className="hidden md:inline-flex">
+              <a href={paths.settingsAccount} aria-label="Settings">
+                <Settings className="size-5" />
+              </a>
+            </Button>
+          }
         />
         <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible bg-[color:var(--background-panel)]/80 md:flex-row">
           <section className="flex min-h-0 flex-1 min-w-0 overflow-hidden">
             <div
-              className="flex min-h-0 flex-1 min-w-0"
+              className="relative flex min-h-0 flex-1 min-w-0"
               onKeyDownCapture={handleShortcutScopeKeyDownCapture}
             >
               <ViewerPanel
@@ -874,6 +887,9 @@ export function StudioPage() {
                 onChangeView={setCurrentView}
                 onViewModeOpenChange={setViewModeOpen}
                 onPartsChange={setParts}
+                parts={parts}
+                activePartId={activePartId}
+                onPreviewPart={previewPart}
                 onAssemblyControlsReady={(controls) => {
                   assemblyControlsRef.current = controls;
                 }}
@@ -886,78 +902,59 @@ export function StudioPage() {
               />
               <RightPanel
                 open={chatPanelOpen}
-                mode={visibleRightPanelMode}
                 parts={parts}
-                activePartIds={activePartIds}
                 activePartId={activePartId}
-                onPreviewPart={(id) => {
-                  setActivePartId(id);
-                  assemblyControlsRef.current?.previewPart(id);
-                }}
+                onPreviewPart={previewPart}
                 onToggle={toggleChatPanel}
+                hasSelectedPack={Boolean(selectedDesignId)}
+                showJavaScriptDownload={isDevelopmentEnvironment}
+                onDownloadZip={downloadCurrentPackZip}
+                onDownloadJavaScript={downloadCurrentPackJavaScript}
               />
+              {!chatPanelOpen ? (
+                <button
+                  type="button"
+                  className="absolute right-0 top-24 z-30 hidden h-12 w-7 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/86 text-muted-foreground shadow-lg backdrop-blur transition-all hover:w-9 hover:bg-background hover:text-foreground md:flex"
+                  onClick={toggleChatPanel}
+                  aria-label="Show activity panel"
+                  aria-expanded={chatPanelOpen}
+                >
+                  <ChevronsLeft className="size-5" />
+                </button>
+              ) : null}
+              {!mobileChatOpen ? (
+                <button
+                  type="button"
+                  className="absolute right-0 top-24 z-30 flex h-12 w-8 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/88 text-muted-foreground shadow-lg backdrop-blur md:hidden"
+                  onClick={() => {
+                    setRightPanelMode('create');
+                    setMobileChatOpen(true);
+                  }}
+                  aria-label="Show activity panel"
+                  aria-expanded={mobileChatOpen}
+                >
+                  <ChevronsLeft className="size-5" />
+                </button>
+              ) : null}
+              {mobileChatOpen ? (
+                <div className="absolute inset-y-0 right-0 z-40 w-[90vw] max-w-sm md:hidden">
+                  <ChatPanel
+                    variant="mobile"
+                    open={mobileChatOpen}
+                    onToggle={() => setMobileChatOpen(false)}
+                    hasSelectedPack={Boolean(selectedDesignId)}
+                    showJavaScriptDownload={isDevelopmentEnvironment}
+                    parts={parts}
+                    activePartId={activePartId}
+                    onDownloadZip={downloadCurrentPackZip}
+                    onDownloadJavaScript={downloadCurrentPackJavaScript}
+                    onPreviewPart={previewPart}
+                  />
+                </div>
+              ) : null}
             </div>
-
-            <ActionSidebar
-              rightPanelOpen={chatPanelOpen}
-              activeMode={visibleRightPanelMode}
-              onSelectMode={handleSelectRightPanelMode}
-            />
           </section>
         </main>
-
-        <Sheet
-          open={mobileChatOpen}
-          onOpenChange={(open) => {
-            setMobileChatOpen(open);
-            if (open) {
-              setMobilePartsOpen(false);
-              assemblyControlsRef.current?.clearPartPreview();
-              setActivePartId(null);
-              setRightPanelMode('create');
-            }
-          }}
-        >
-          <SheetContent side="right" className="w-[90vw] max-w-sm p-0 [&>button]:hidden">
-            <div className="sr-only">
-              <SheetTitle>Create panel</SheetTitle>
-              <SheetDescription>
-                Enter a prompt to generate a new asset pack for the current workspace.
-              </SheetDescription>
-            </div>
-            <ChatPanel
-              variant="mobile"
-              open={mobileChatOpen}
-              onToggle={() => setMobileChatOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-        <Sheet
-          open={mobilePartsOpen}
-          onOpenChange={(open) => {
-            setMobilePartsOpen(open);
-            if (open) {
-              setMobileChatOpen(false);
-              setRightPanelMode('parts');
-            }
-          }}
-        >
-          <SheetContent side="right" className="w-[90vw] max-w-sm overflow-y-auto p-4">
-            <div className="sr-only">
-              <SheetTitle>Parts panel</SheetTitle>
-              <SheetDescription>Preview individual parts in the current pack.</SheetDescription>
-            </div>
-            <PartsPanelContent
-              parts={parts}
-              activePartIds={activePartIds}
-              activePartId={activePartId}
-              onPreviewPart={(id) => {
-                setActivePartId(id);
-                assemblyControlsRef.current?.previewPart(id);
-              }}
-            />
-          </SheetContent>
-        </Sheet>
 
         <Dialog open={designErrorDialogOpen} onOpenChange={setDesignErrorDialogOpen}>
           <DialogContent>

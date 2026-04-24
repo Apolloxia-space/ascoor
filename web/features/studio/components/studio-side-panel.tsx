@@ -9,6 +9,7 @@ type StudioSidePanelProps = {
   open: boolean;
   title: string;
   description?: string;
+  showHeader?: boolean;
   variant?: 'desktop' | 'mobile';
   resizeAriaLabel: string;
   onToggle?: () => void;
@@ -24,6 +25,7 @@ export function StudioSidePanel({
   open,
   title,
   description,
+  showHeader = true,
   variant = 'desktop',
   resizeAriaLabel,
   onToggle,
@@ -76,9 +78,11 @@ export function StudioSidePanel({
 
   return (
     <aside
+      aria-label={title}
       style={{ width: open ? (isMobileVariant ? '100%' : panelWidth) : 0 }}
       className={cn(
-        'relative min-h-0 flex-none overflow-x-hidden overflow-y-visible border-l border-border/80 bg-background/80 backdrop-blur transition-all duration-300',
+        'relative min-h-0 flex-none overflow-y-visible border-l border-border/80 bg-background/80 backdrop-blur transition-all duration-300',
+        isMobileVariant ? 'overflow-x-hidden' : 'overflow-x-visible',
         isMobileVariant ? 'flex h-full w-full flex-col' : 'hidden md:flex md:flex-col',
         open ? 'opacity-100' : 'border-transparent opacity-0',
       )}
@@ -101,30 +105,56 @@ export function StudioSidePanel({
       </div>
 
       <div className={cn('flex h-full min-h-0 flex-col', !open && 'pointer-events-none')}>
-        <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-          <div className="space-y-0.5">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+        {showHeader ? (
+          <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground">{title}</p>
+              {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+            </div>
+            {onToggle && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggle}>
+                <span className="sr-only">Close panel</span>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </Button>
+            )}
           </div>
-          {onToggle && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggle}>
-              <span className="sr-only">Close panel</span>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </Button>
-          )}
-        </div>
+        ) : null}
+
+        {!showHeader && onToggle ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-0 top-24 z-30 h-12 w-8 rounded-r-lg border border-l-0 border-border/80 bg-background/88 text-muted-foreground shadow-lg backdrop-blur hover:bg-background hover:text-foreground"
+            onClick={onToggle}
+          >
+            <span className="sr-only">Hide activity panel</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m6 17 5-5-5-5" />
+              <path d="m13 17 5-5-5-5" />
+            </svg>
+          </Button>
+        ) : null}
 
         <div className={cn('min-h-0 flex-1 space-y-4 overflow-y-auto p-4', bodyClassName)}>
           {children}

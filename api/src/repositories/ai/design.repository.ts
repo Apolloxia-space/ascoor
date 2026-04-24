@@ -8,6 +8,7 @@ export type AiDesignInput = {
   prompt: string;
   userPrompt: string;
   userId: string;
+  skipTitle?: boolean;
   trace?: AiDesignTraceContext;
 };
 

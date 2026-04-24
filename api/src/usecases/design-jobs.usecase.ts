@@ -52,6 +52,7 @@ const ERROR_STAGE_MESSAGES: Record<string, string> = {
 type DesignJobListItem = {
   designJobId: string;
   status: string;
+  userPrompt: string | null;
   message: string | null;
   title: string | null;
   designId: string | null;
@@ -374,6 +375,7 @@ export class DesignJobsUsecase {
         errorCode,
         message: failureMessage,
         title: DEFAULT_FAILURE_TITLE,
+        designId: error instanceof DesignPipelineError ? (error.designId ?? undefined) : undefined,
       });
       if (!marked) {
         return;

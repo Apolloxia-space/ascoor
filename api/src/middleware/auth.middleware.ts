@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from 'hono';
 import { getAuth } from 'firebase-admin/auth';
-import { app as adminApp } from '../infra/firebase-admin';
+import { app as adminApp, shouldCheckRevokedIdTokens } from '../infra/firebase-admin';
 import type { AppEnv } from '../entities/app-env';
 import type { Md } from '../entities/md';
 import { logger } from '../utils/logger';
@@ -24,7 +24,7 @@ export const authMiddleware: MiddlewareHandler = async (
 
   try {
     const auth = getAuth(adminApp);
-    const decoded = await auth.verifyIdToken(token, true);
+    const decoded = await auth.verifyIdToken(token, shouldCheckRevokedIdTokens());
     const md: Md = {
       userId: decoded.uid,
       userEmail: decoded.email ?? null,

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { createDependencies, type AgentDependencies } from './dependencies';
 import { logException } from './logger';
+import { registerAssetPackPlanRoutes } from './routes/asset-pack-plan.routes';
 import { registerRequestContextMiddleware } from './routes/context.middleware';
 import { registerDesignRoutes } from './routes/design.routes';
 import { registerPromptCompileRoutes } from './routes/prompt-compile.routes';
@@ -16,6 +17,7 @@ export function createApp(dependencies: AppDependencies = createDependencies()):
   registerRequestContextMiddleware(app);
 
   app.get('/healthz', (c) => c.json({ ok: true }));
+  registerAssetPackPlanRoutes(app, dependencies.assetPackPlanUsecase);
   registerDesignRoutes(app, dependencies.designUsecase);
   registerTitleRoutes(app, dependencies.titleUsecase);
   registerPromptCompileRoutes(app, dependencies.promptCompileUsecase);

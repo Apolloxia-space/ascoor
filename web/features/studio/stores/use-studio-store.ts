@@ -5,15 +5,25 @@ import { viewModes } from '@/mock/studio';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import type { RightPanelMode, ViewMode } from '../types';
 
-export type PendingDesignStatus = 'queued' | 'running' | 'failed';
+export type PendingDesignStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+export type PendingDesignPartStatus = 'pending' | 'generating' | 'completed' | 'failed';
+
+export type PendingDesignPart = {
+  slug: string;
+  displayName: string;
+  status: PendingDesignPartStatus;
+  errorMessage?: string | null;
+};
 
 export type PendingDesign = {
   designId: string;
   projectId: string;
+  assetDesignId?: string | null;
   traceId?: string | null;
   promptPreview: string;
   userPrompt?: string;
   status: PendingDesignStatus;
+  parts?: Array<PendingDesignPart>;
   createdAt: string;
   updatedAt: string;
   errorMessage?: string | null;
@@ -65,7 +75,7 @@ type StudioState = {
 };
 
 type StudioPersistState = Pick<StudioState, 'projectId' | 'projectName' | 'pendingDesigns'>;
-const PENDING_DESIGN_TTL_MS = 6 * 60 * 60 * 1000;
+const PENDING_DESIGN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const normalizePromptPreview = (value?: string) => {
   const normalized = (value ?? '').replace(/\s+/g, ' ').trim();
@@ -93,13 +103,7 @@ const pruneStalePendingDesigns = (entries: Array<PendingDesign>) => {
 
 const toPersistedPendingDesigns = (entries: Array<PendingDesign>) => {
   const now = Date.now();
-  return entries
-    .filter((entry) => isFreshPendingDesign(entry, now))
-    .map((entry) => ({
-      ...entry,
-      // Do not keep raw prompt payloads in localStorage.
-      userPrompt: undefined,
-    }));
+  return entries.filter((entry) => isFreshPendingDesign(entry, now));
 };
 
 const studioStorage = createJSONStorage<StudioPersistState>(() => ({
@@ -157,12 +161,16 @@ export const useStudioStore = create<StudioState>()(
             ? {
                 ...existing,
                 projectId: design.projectId,
+                assetDesignId: existing.assetDesignId ?? null,
                 traceId: design.traceId ?? existing.traceId ?? null,
                 promptPreview: normalizePromptPreview(
                   design.promptPreview ?? existing.promptPreview,
                 ),
                 userPrompt: design.userPrompt ?? existing.userPrompt,
-                status: existing.status === 'failed' ? 'queued' : existing.status,
+                status:
+                  existing.status === 'failed' || existing.status === 'succeeded'
+                    ? 'queued'
+                    : existing.status,
                 updatedAt: now,
                 errorMessage: null,
                 errorCode: null,
@@ -170,10 +178,12 @@ export const useStudioStore = create<StudioState>()(
             : {
                 designId: design.designId,
                 projectId: design.projectId,
+                assetDesignId: null,
                 traceId: design.traceId ?? null,
                 promptPreview: normalizePromptPreview(design.promptPreview),
                 userPrompt: design.userPrompt,
                 status: 'queued',
+                parts: [],
                 createdAt: now,
                 updatedAt: now,
                 errorMessage: null,

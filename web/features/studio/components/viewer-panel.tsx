@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Download, FileText, Keyboard, Loader2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Keyboard,
+} from 'lucide-react';
 
 import { viewModes } from '@/mock/studio';
 import { IconButton } from './icon-button';
@@ -45,10 +50,16 @@ type ViewerPanelProps = {
   onChangeView: (mode: ViewMode) => void;
   onViewModeOpenChange: (open: boolean) => void;
   onPartsChange?: (parts: Array<PartNode>) => void;
+  parts?: Array<PartNode>;
+  activePartId?: string | null;
+  onPreviewPart?: (id: string) => void;
   onAssemblyControlsReady?: (controls: {
     focusFullModel: () => void;
     previewPart: (id: string) => void;
     clearPartPreview: () => void;
+    downloadPartsZip: () => void;
+    downloadJavaScript: () => void;
+    openPrompt: () => void;
   }) => void;
   designId?: string | null;
   designName?: string | null;
@@ -72,6 +83,9 @@ export function ViewerPanel({
   onChangeView,
   onViewModeOpenChange,
   onPartsChange,
+  parts = [],
+  activePartId = null,
+  onPreviewPart,
   onAssemblyControlsReady,
   designId,
   designName,
@@ -86,12 +100,8 @@ export function ViewerPanel({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isExportingGlb, setIsExportingGlb] = useState(false);
   const [isExportingPartsZip, setIsExportingPartsZip] = useState(false);
-  const [isExportingObj, setIsExportingObj] = useState(false);
-  const [isExportingStl, setIsExportingStl] = useState(false);
   const [isExportingTs, setIsExportingTs] = useState(false);
-  const [downloadOpen, setDownloadOpen] = useState(false);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
@@ -120,14 +130,23 @@ export function ViewerPanel({
   const hasRenderableModel = Boolean(
     designId && !isLoading && !loadError && !parseError && (modelCode || modelData),
   );
-  const canExportGlb = Boolean(hasRenderableModel && !isExportingGlb);
-  const canExportPartsZip = Boolean(hasRenderableModel && !isExportingPartsZip);
-  const canExportObj = Boolean(hasRenderableModel && !isExportingObj);
-  const canExportStl = Boolean(hasRenderableModel && !isExportingStl);
-  const canExportTs = Boolean(
-    isDevelopmentEnvironment && designId && exportUrlTs && assetUriTs && !isExportingTs,
+  const activePartIndex = useMemo(() => {
+    if (parts.length === 0) return -1;
+    const index = activePartId ? parts.findIndex((part) => part.id === activePartId) : -1;
+    return index >= 0 ? index : 0;
+  }, [activePartId, parts]);
+  const activePart = activePartIndex >= 0 ? parts[activePartIndex] : null;
+  const canBrowseParts = parts.length > 1 && Boolean(onPreviewPart);
+  const handleBrowsePart = useCallback(
+    (offset: number) => {
+      if (!canBrowseParts || activePartIndex < 0) return;
+      const nextIndex = (activePartIndex + offset + parts.length) % parts.length;
+      const nextPart = parts[nextIndex];
+      if (!nextPart) return;
+      onPreviewPart?.(nextPart.id);
+    },
+    [activePartIndex, canBrowseParts, onPreviewPart, parts],
   );
-  const canOpenPrompt = Boolean(designId);
   const hasViewerError = Boolean(
     parseError ||
       loadError ||
@@ -227,12 +246,7 @@ export function ViewerPanel({
 
     load();
     return () => controller.abort();
-  }, [
-    designId,
-    fileDetailQuery.isPending,
-    tsContentUrl,
-    traceId,
-  ]);
+  }, [designId, fileDetailQuery.isPending, tsContentUrl, traceId]);
 
   const handleModelParseError = useCallback((message: string | null) => {
     setParseError(message);
@@ -343,27 +357,8 @@ export function ViewerPanel({
     URL.revokeObjectURL(objectUrl);
   };
 
-  const handleExportGlb = async () => {
-    if (!hasRenderableModel) {
-      toast.warning('3D preview is not ready yet.');
-      return;
-    }
-    try {
-      setIsExportingGlb(true);
-      const blob = await viewerRef.current?.exportGlb();
-      if (!blob) {
-        throw new Error('No model loaded');
-      }
-      downloadBlob(blob, buildDownloadName(designName, '.glb'));
-      toast.success('GLB exported.');
-    } catch (_error) {
-      toast.error('Failed to export GLB.');
-    } finally {
-      setIsExportingGlb(false);
-    }
-  };
-
-  const handleExportPartsZip = async () => {
+  const handleExportPartsZip = useCallback(async () => {
+    if (isExportingPartsZip) return;
     if (!hasRenderableModel) {
       toast.warning('3D preview is not ready yet.');
       return;
@@ -381,51 +376,10 @@ export function ViewerPanel({
     } finally {
       setIsExportingPartsZip(false);
     }
-  };
+  }, [designName, hasRenderableModel, isExportingPartsZip]);
 
-  const handleExportStl = async () => {
-    if (!hasRenderableModel) {
-      toast.warning('3D preview is not ready yet.');
-      return;
-    }
-    try {
-      setIsExportingStl(true);
-      const blob = viewerRef.current?.exportStl();
-      if (!blob) {
-        throw new Error('No model loaded');
-      }
-      downloadBlob(blob, buildDownloadName(designName, '.stl'));
-      toast.success('STL exported.');
-    } catch (_error) {
-      toast.error('Failed to export STL.');
-    } finally {
-      setIsExportingStl(false);
-    }
-  };
-
-  const handleExportObj = async () => {
-    if (!hasRenderableModel) {
-      toast.warning('3D preview is not ready yet.');
-      return;
-    }
-    try {
-      setIsExportingObj(true);
-      const baseName = buildDownloadBaseName(designName);
-      const files = viewerRef.current?.exportObj(`${baseName}.mtl`);
-      if (!files) {
-        throw new Error('No model loaded');
-      }
-      downloadBlob(files.obj, `${baseName}.obj`);
-      downloadBlob(files.mtl, `${baseName}.mtl`);
-      toast.success('OBJ + MTL (preview) exported.');
-    } catch (_error) {
-      toast.error('Failed to export OBJ + MTL (preview).');
-    } finally {
-      setIsExportingObj(false);
-    }
-  };
-
-  const handleExportTs = async () => {
+  const handleExportTs = useCallback(async () => {
+    if (isExportingTs) return;
     if (!isDevelopmentEnvironment) {
       toast.error('JavaScript download is only available in development.');
       return;
@@ -471,7 +425,7 @@ export function ViewerPanel({
     } finally {
       setIsExportingTs(false);
     }
-  };
+  }, [assetUriTs, designId, designName, exportUrlTs, isExportingTs, traceId]);
 
   useEffect(() => {
     if (!onAssemblyControlsReady) return;
@@ -485,11 +439,20 @@ export function ViewerPanel({
       clearPartPreview: () => {
         viewerRef.current?.clearPartPreview();
       },
+      downloadPartsZip: () => {
+        void handleExportPartsZip();
+      },
+      downloadJavaScript: () => {
+        void handleExportTs();
+      },
+      openPrompt: () => {
+        setPromptDialogOpen(true);
+      },
     });
-  }, [onAssemblyControlsReady]);
+  }, [handleExportPartsZip, handleExportTs, onAssemblyControlsReady]);
 
   return (
-    <div className="relative flex w-full min-w-0 flex-1 flex-col bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+    <div className="relative flex w-full min-w-0 flex-1 flex-col bg-[#eef1f3] text-[#191b1f]">
       <div className="absolute left-4 top-4 z-10 flex gap-2">
         <Popover open={viewModeOpen} onOpenChange={onViewModeOpenChange}>
           <PopoverTrigger asChild>
@@ -533,114 +496,6 @@ export function ViewerPanel({
           >
             <Keyboard className="size-4" />
           </IconButton>
-          <IconButton
-            label="Prompt"
-            onClick={() => setPromptDialogOpen(true)}
-            disabled={!canOpenPrompt}
-          >
-            <FileText className="size-4" />
-          </IconButton>
-          <Popover open={downloadOpen} onOpenChange={setDownloadOpen}>
-            <PopoverTrigger asChild>
-              <IconButton label="Download">
-                <Download className="size-4" />
-              </IconButton>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 space-y-1 p-2">
-              {isDevelopmentEnvironment ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    void handleExportTs();
-                    setDownloadOpen(false);
-                  }}
-                  disabled={!canExportTs}
-                >
-                  {isExportingTs ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Download className="size-4" />
-                  )}
-                  <span>JavaScript</span>
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => {
-                  handleExportGlb();
-                  setDownloadOpen(false);
-                }}
-                disabled={!canExportGlb}
-              >
-                {isExportingGlb ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                <span>GLB</span>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => {
-                  void handleExportPartsZip();
-                  setDownloadOpen(false);
-                }}
-                disabled={!canExportPartsZip}
-              >
-                {isExportingPartsZip ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                <span>All parts ZIP</span>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => {
-                  void handleExportObj();
-                  setDownloadOpen(false);
-                }}
-                disabled={!canExportObj}
-              >
-                {isExportingObj ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                <span>OBJ + MTL (preview)</span>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => {
-                  void handleExportStl();
-                  setDownloadOpen(false);
-                }}
-                disabled={!canExportStl}
-              >
-                {isExportingStl ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                <span>STL</span>
-              </Button>
-            </PopoverContent>
-          </Popover>
           {/*
           <IconButton label="Fullscreen">
             <Maximize2 className="size-4" />
@@ -655,10 +510,6 @@ export function ViewerPanel({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 rounded-xl border border-white/5" />
-      </div>
-
       <div className="relative flex flex-1 overflow-hidden">
         <ThreeViewer
           ref={viewerRef}
@@ -669,6 +520,50 @@ export function ViewerPanel({
           onModelParseError={handleModelParseError}
           className="absolute inset-0"
         />
+
+        {activePart ? (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="pointer-events-auto h-11 w-11 rounded-lg border border-[#c9ced4] bg-[#f8f9fa]/88 text-[#191b1f] shadow-lg backdrop-blur hover:bg-white"
+              onClick={() => handleBrowsePart(-1)}
+              disabled={!canBrowseParts}
+              aria-label="Previous asset"
+            >
+              <ChevronLeft className="size-5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="pointer-events-auto h-11 w-11 rounded-lg border border-[#c9ced4] bg-[#f8f9fa]/88 text-[#191b1f] shadow-lg backdrop-blur hover:bg-white"
+              onClick={() => handleBrowsePart(1)}
+              disabled={!canBrowseParts}
+              aria-label="Next asset"
+            >
+              <ChevronRight className="size-5" />
+            </Button>
+          </div>
+        ) : null}
+
+        {activePart ? (
+          <div className="pointer-events-none absolute inset-x-4 bottom-5 z-10 flex justify-center">
+            <button
+              type="button"
+              className="pointer-events-auto max-w-[min(34rem,calc(100vw-2rem))] rounded-lg border border-[#c9ced4] bg-[#f8f9fa]/90 px-3 py-2 text-center text-xs text-[#191b1f] shadow-lg backdrop-blur transition-colors hover:bg-white disabled:cursor-default disabled:hover:bg-[#f8f9fa]/90"
+              onClick={() => handleBrowsePart(1)}
+              disabled={!canBrowseParts}
+              aria-label="Next asset"
+            >
+              <p className="truncate font-medium">{activePart.displayName}</p>
+              <p className="mt-0.5 text-[11px] text-[#555f6d]">
+                {activePartIndex + 1} / {parts.length}
+              </p>
+            </button>
+          </div>
+        ) : null}
 
         {shortcutHelpOpen && (
           <div className="pointer-events-none absolute inset-x-6 bottom-6 z-20 flex justify-start">
@@ -705,20 +600,23 @@ export function ViewerPanel({
                     <Kbd>5</Kbd>
                   </KbdGroup>
                 </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Browse assets</span>
+                  <KbdGroup>
+                    <Kbd>←</Kbd>
+                    <Kbd>→</Kbd>
+                  </KbdGroup>
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
-
       {shortcutHudMessage ? (
-        <div className="pointer-events-none absolute bottom-5 left-5 z-20 rounded-lg border border-white/10 bg-slate-950/82 px-3 py-2 text-xs text-slate-100 shadow-xl backdrop-blur">
-          <p className="font-medium uppercase tracking-[0.18em] text-slate-400">Keyboard</p>
-          <p className="mt-1">
-            {shortcutHudMessage}
-          </p>
+        <div className="pointer-events-none absolute bottom-5 left-5 z-20 rounded-lg border border-[#c9ced4] bg-[#f8f9fa]/90 px-3 py-2 text-xs text-[#191b1f] shadow-xl backdrop-blur">
+          <p className="font-medium uppercase tracking-[0.18em] text-[#555f6d]">Keyboard</p>
+          <p className="mt-1">{shortcutHudMessage}</p>
         </div>
       ) : null}
 
