@@ -27,6 +27,7 @@ export function NewPackPage() {
         onCloseProject={() => router.push(paths.studio)}
         showProjectMenu={false}
         showBrand
+        brandHref={paths.studio}
         projectMenuRightSlot={
           <Button
             type="button"

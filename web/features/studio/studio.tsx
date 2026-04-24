@@ -6,6 +6,7 @@ import {
   ChevronsLeft,
   CreditCard,
   FolderOpen,
+  Home,
   Loader2,
   Menu,
   Settings,
@@ -36,6 +37,7 @@ import { cn } from '@/shared/lib/utils';
 import { ChatPanel } from './components/chat-panel';
 import { ProjectListDialog } from './components/dialogs/project-list-dialog';
 import { RightPanel } from './components/right-panel';
+import { StudioHome } from './components/studio-home';
 import { StudioHeader } from './components/studio-header';
 import { ViewerPanel } from './components/viewer-panel';
 import { useDesignMonitor } from './hooks/use-design-monitor';
@@ -145,9 +147,10 @@ export function StudioPage() {
   } | null>(null);
   const { updateProject, invalidateProjects, invalidateProjectDesigns } = useStudioApi();
   const routeProjectId = getSingleRouteParam(params.projectId) ?? null;
+  const isStudioHome = pathname === paths.studio && !routeProjectId;
   const activeRouteProjectId =
     routeProjectId && routeProjectId !== invalidRouteProjectId ? routeProjectId : null;
-  const activeProjectId = activeRouteProjectId ?? projectId ?? '';
+  const activeProjectId = activeRouteProjectId ?? (isStudioHome ? '' : projectId ?? '');
   const projectsQuery = useListProjects(
     { limit: 20 },
     {
@@ -532,20 +535,6 @@ export function StudioPage() {
   ]);
 
   useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (pathname !== paths.studio) return;
-    if (routeProjectId) return;
-    if (!projectsQuery.isSuccess) return;
-    if (projectItems.length === 0) return;
-
-    const fallbackProject =
-      projectItems.find((project) => project.id === projectId) ?? projectItems[0] ?? null;
-    if (!fallbackProject) return;
-
-    router.replace(buildStudioPath(fallbackProject.id));
-  }, [status, pathname, routeProjectId, projectsQuery.isSuccess, projectItems, projectId, router]);
-
-  useEffect(() => {
     if (!isMobile) {
       setMobileChatOpen(false);
     }
@@ -678,8 +667,36 @@ export function StudioPage() {
           projectsLoading={projectsLoading}
           projectsRefreshing={projectsRefreshing}
           hideProjectMenuOnMobile
+          showBrand
+          projectNameOverride={isStudioHome ? 'Studio' : null}
           projectMenuRightSlot={
             <>
+              {!isStudioHome ? (
+                <>
+                  <Button
+                    asChild
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="hidden md:inline-flex"
+                  >
+                    <a href={paths.studio} aria-label="Studio home">
+                      <Home className="size-5" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                  >
+                    <a href={paths.studio} aria-label="Studio home">
+                      <Home className="size-5" />
+                    </a>
+                  </Button>
+                </>
+              ) : null}
               <Button
                 type="button"
                 size="sm"
@@ -877,86 +894,98 @@ export function StudioPage() {
             </Button>
           }
         />
-        <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible bg-[color:var(--background-panel)]/80 md:flex-row">
-          <section className="flex min-h-0 flex-1 min-w-0 overflow-hidden">
-            <div
-              className="relative flex min-h-0 flex-1 min-w-0"
-              onKeyDownCapture={handleShortcutScopeKeyDownCapture}
-            >
-              <ViewerPanel
-                currentView={currentView}
-                viewModeOpen={viewModeOpen}
-                onChangeView={setCurrentView}
-                onViewModeOpenChange={setViewModeOpen}
-                onPartsChange={setParts}
-                parts={parts}
-                activePartId={activePartId}
-                onPreviewPart={previewPart}
-                onAssemblyControlsReady={(controls) => {
-                  assemblyControlsRef.current = controls;
-                }}
-                designId={selectedDesignId}
-                designName={selectedDesignName}
-                traceId={selectedDesignTraceId}
-                shortcutHelpOpen={shortcutHelpOpen}
-                onShortcutHelpOpenChange={setShortcutHelpOpen}
-                shortcutHudMessage={shortcutHudMessage}
-              />
-              <RightPanel
-                open={chatPanelOpen}
-                parts={parts}
-                activePartId={activePartId}
-                onPreviewPart={previewPart}
-                onToggle={toggleChatPanel}
-                hasSelectedPack={Boolean(selectedDesignId)}
-                showJavaScriptDownload={isDevelopmentEnvironment}
-                onDownloadZip={downloadCurrentPackZip}
-                onDownloadJavaScript={downloadCurrentPackJavaScript}
-              />
-              {!chatPanelOpen ? (
-                <button
-                  type="button"
-                  className="absolute right-0 top-24 z-30 hidden h-12 w-7 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/86 text-muted-foreground shadow-lg backdrop-blur transition-all hover:w-9 hover:bg-background hover:text-foreground md:flex"
-                  onClick={toggleChatPanel}
-                  aria-label="Show activity panel"
-                  aria-expanded={chatPanelOpen}
-                >
-                  <ChevronsLeft className="size-5" />
-                </button>
-              ) : null}
-              {!mobileChatOpen ? (
-                <button
-                  type="button"
-                  className="absolute right-0 top-24 z-30 flex h-12 w-8 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/88 text-muted-foreground shadow-lg backdrop-blur md:hidden"
-                  onClick={() => {
-                    setRightPanelMode('create');
-                    setMobileChatOpen(true);
+        {isStudioHome ? (
+          <StudioHome
+            projects={projectItems}
+            workspaceGenerationStatuses={workspaceGenerationStatuses}
+            projectsLoading={projectsLoading}
+            projectsRefreshing={projectsRefreshing}
+            onCreateNewPack={handleOpenNewPackPage}
+            onOpenProjectManager={() => setProjectListDialogOpen(true)}
+            onSelectProject={handleSelectProject}
+          />
+        ) : (
+          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible bg-[color:var(--background-panel)]/80 md:flex-row">
+            <section className="flex min-h-0 flex-1 min-w-0 overflow-hidden">
+              <div
+                className="relative flex min-h-0 flex-1 min-w-0"
+                onKeyDownCapture={handleShortcutScopeKeyDownCapture}
+              >
+                <ViewerPanel
+                  currentView={currentView}
+                  viewModeOpen={viewModeOpen}
+                  onChangeView={setCurrentView}
+                  onViewModeOpenChange={setViewModeOpen}
+                  onPartsChange={setParts}
+                  parts={parts}
+                  activePartId={activePartId}
+                  onPreviewPart={previewPart}
+                  onAssemblyControlsReady={(controls) => {
+                    assemblyControlsRef.current = controls;
                   }}
-                  aria-label="Show activity panel"
-                  aria-expanded={mobileChatOpen}
-                >
-                  <ChevronsLeft className="size-5" />
-                </button>
-              ) : null}
-              {mobileChatOpen ? (
-                <div className="absolute inset-y-0 right-0 z-40 w-[90vw] max-w-sm md:hidden">
-                  <ChatPanel
-                    variant="mobile"
-                    open={mobileChatOpen}
-                    onToggle={() => setMobileChatOpen(false)}
-                    hasSelectedPack={Boolean(selectedDesignId)}
-                    showJavaScriptDownload={isDevelopmentEnvironment}
-                    parts={parts}
-                    activePartId={activePartId}
-                    onDownloadZip={downloadCurrentPackZip}
-                    onDownloadJavaScript={downloadCurrentPackJavaScript}
-                    onPreviewPart={previewPart}
-                  />
-                </div>
-              ) : null}
-            </div>
-          </section>
-        </main>
+                  designId={selectedDesignId}
+                  designName={selectedDesignName}
+                  traceId={selectedDesignTraceId}
+                  shortcutHelpOpen={shortcutHelpOpen}
+                  onShortcutHelpOpenChange={setShortcutHelpOpen}
+                  shortcutHudMessage={shortcutHudMessage}
+                />
+                <RightPanel
+                  open={chatPanelOpen}
+                  parts={parts}
+                  activePartId={activePartId}
+                  onPreviewPart={previewPart}
+                  onToggle={toggleChatPanel}
+                  hasSelectedPack={Boolean(selectedDesignId)}
+                  showJavaScriptDownload={isDevelopmentEnvironment}
+                  onDownloadZip={downloadCurrentPackZip}
+                  onDownloadJavaScript={downloadCurrentPackJavaScript}
+                />
+                {!chatPanelOpen ? (
+                  <button
+                    type="button"
+                    className="absolute right-0 top-24 z-30 hidden h-12 w-7 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/86 text-muted-foreground shadow-lg backdrop-blur transition-all hover:w-9 hover:bg-background hover:text-foreground md:flex"
+                    onClick={toggleChatPanel}
+                    aria-label="Show activity panel"
+                    aria-expanded={chatPanelOpen}
+                  >
+                    <ChevronsLeft className="size-5" />
+                  </button>
+                ) : null}
+                {!mobileChatOpen ? (
+                  <button
+                    type="button"
+                    className="absolute right-0 top-24 z-30 flex h-12 w-8 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/88 text-muted-foreground shadow-lg backdrop-blur md:hidden"
+                    onClick={() => {
+                      setRightPanelMode('create');
+                      setMobileChatOpen(true);
+                    }}
+                    aria-label="Show activity panel"
+                    aria-expanded={mobileChatOpen}
+                  >
+                    <ChevronsLeft className="size-5" />
+                  </button>
+                ) : null}
+                {mobileChatOpen ? (
+                  <div className="absolute inset-y-0 right-0 z-40 w-[90vw] max-w-sm md:hidden">
+                    <ChatPanel
+                      variant="mobile"
+                      open={mobileChatOpen}
+                      onToggle={() => setMobileChatOpen(false)}
+                      hasSelectedPack={Boolean(selectedDesignId)}
+                      showJavaScriptDownload={isDevelopmentEnvironment}
+                      parts={parts}
+                      activePartId={activePartId}
+                      onDownloadZip={downloadCurrentPackZip}
+                      onDownloadJavaScript={downloadCurrentPackJavaScript}
+                      onPreviewPart={previewPart}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </main>
+        )}
 
         <Dialog open={designErrorDialogOpen} onOpenChange={setDesignErrorDialogOpen}>
           <DialogContent>

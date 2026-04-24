@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   AlertTriangle,
   ChevronDown,
@@ -51,6 +52,7 @@ type AppHeaderProps = {
   showProjectMenu?: boolean;
   hideProjectMenuOnMobile?: boolean;
   showBrand?: boolean;
+  brandHref?: string;
   projectMenuRightSlot?: ReactNode;
   userMenuLeftSlot?: ReactNode;
   user: { displayName?: string | null; email?: string | null } | null;
@@ -75,6 +77,7 @@ export function AppHeader({
   showProjectMenu = true,
   hideProjectMenuOnMobile = false,
   showBrand = true,
+  brandHref,
   projectMenuRightSlot,
   userMenuLeftSlot,
   user,
@@ -122,7 +125,13 @@ export function AppHeader({
       <div className="flex min-w-0 items-center gap-3">
         {showBrand ? (
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold leading-tight">Ascoor</h1>
+            {brandHref ? (
+              <Link href={brandHref} className="text-lg font-semibold leading-tight">
+                Ascoor
+              </Link>
+            ) : (
+              <h1 className="text-lg font-semibold leading-tight">Ascoor</h1>
+            )}
           </div>
         ) : null}
         {showProjectMenu && (

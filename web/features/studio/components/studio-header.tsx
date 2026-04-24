@@ -2,6 +2,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { AppHeader } from '@shared/components/layout/app-header';
+import { paths } from '@/shared/constants/paths';
 import { useStudioStore } from '../stores/use-studio-store';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signOutUser } from '@/features/auth/use-auth-init';
@@ -18,6 +19,9 @@ type StudioHeaderProps = {
   projectMenuRightSlot?: ReactNode;
   userMenuLeftSlot?: ReactNode;
   hideProjectMenuOnMobile?: boolean;
+  projectNameOverride?: string | null;
+  showBrand?: boolean;
+  showProjectMenu?: boolean;
 };
 
 export function StudioHeader({
@@ -31,6 +35,9 @@ export function StudioHeader({
   projectMenuRightSlot,
   userMenuLeftSlot,
   hideProjectMenuOnMobile,
+  projectNameOverride,
+  showBrand = false,
+  showProjectMenu = true,
 }: StudioHeaderProps) {
   const { projectId, projectName, projects, pendingDesigns } = useStudioStore();
   const { user, status } = useAuthStore();
@@ -43,7 +50,7 @@ export function StudioHeader({
     <AppHeader
       projectMenuOpen={projectMenuOpen}
       onProjectMenuChange={onProjectMenuChange}
-      projectName={projectName}
+      projectName={projectNameOverride ?? projectName}
       projectId={projectId}
       projects={projects}
       projectGenerationStatuses={projectGenerationStatuses}
@@ -53,7 +60,9 @@ export function StudioHeader({
       projectsLoading={projectsLoading}
       projectsRefreshing={projectsRefreshing}
       hideProjectMenuOnMobile={hideProjectMenuOnMobile}
-      showBrand={false}
+      showBrand={showBrand}
+      brandHref={paths.studio}
+      showProjectMenu={showProjectMenu}
       projectMenuRightSlot={projectMenuRightSlot}
       userMenuLeftSlot={userMenuLeftSlot}
       user={user}
