@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { LandingFooter } from '@/features/landing/landing-footer';
 import { LandingHeader } from '@/features/landing/landing-header';
-import { LandingHeaderActions } from '@/features/landing/landing-header-actions';
+import { LandingHeaderActionButton } from '@/features/landing/landing-header-actions';
 import { HeroMainVisual } from '@/features/landing/hero-main-visual';
 import { defaultOgImagePath } from '@shared/constants/seo';
 import { paths } from '@shared/constants/paths';
@@ -113,7 +113,7 @@ export default function HomePage() {
             </h1>
 
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <LandingHeaderActions />
+              <LandingHeaderActionButton />
               <a
                 className="inline-flex items-center justify-center rounded-md border border-[#cfe0cf] bg-white px-4 py-2 text-sm font-medium text-[#233226] transition hover:bg-[#f0f6f0]"
                 href={paths.pricing}

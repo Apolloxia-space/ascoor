@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
   Pencil,
   Search,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 
@@ -61,7 +60,6 @@ type ProjectListDialogProps = {
   onOpenChange: (open: boolean) => void;
   onSelectProject: (id: string, name: string) => void;
   onDeleteCurrentProject: () => void;
-  onCreateNewPack?: () => void;
 };
 
 export function ProjectListDialog({
@@ -69,7 +67,6 @@ export function ProjectListDialog({
   onOpenChange,
   onSelectProject,
   onDeleteCurrentProject,
-  onCreateNewPack,
 }: ProjectListDialogProps) {
   const PROJECTS_PAGE_SIZE = 20;
   const { projects, projectId, pendingDesigns, setProject, setProjects } = useStudioStore();
@@ -121,6 +118,8 @@ export function ProjectListDialog({
     if (!generationStatus) return null;
     const isFailed = generationStatus.kind === 'failed';
     const isGenerating = generationStatus.kind === 'queued' || generationStatus.kind === 'running';
+    if (!isFailed && !isGenerating) return null;
+    const statusLabel = isFailed ? 'Failed' : 'Generating';
 
     return (
       <Badge
@@ -130,7 +129,7 @@ export function ProjectListDialog({
       >
         {isFailed ? <AlertTriangle className="size-3" /> : null}
         {isGenerating ? <Loader2 className="size-3 animate-spin" /> : null}
-        <span className="truncate">{generationStatus.label}</span>
+        <span className="truncate">{statusLabel}</span>
       </Badge>
     );
   };
@@ -225,7 +224,7 @@ export function ProjectListDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <div className="sr-only">
           <DialogTitle>Select a workspace</DialogTitle>
           <DialogDescription>Select a workspace to get started.</DialogDescription>
@@ -234,7 +233,7 @@ export function ProjectListDialog({
           className="flex min-h-[520px] flex-col bg-[color:var(--background-panel)] text-[color:var(--text-primary)]"
           style={{ height: 'min(90vh, 900px)' }}
         >
-          <div className="flex flex-col gap-3 border-b border-white/10 px-6 py-5">
+          <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-5 sm:px-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
               Workspaces
             </p>
@@ -251,23 +250,13 @@ export function ProjectListDialog({
                   />
                 </InputGroup>
               </div>
-              {onCreateNewPack ? (
-                <Button
-                  type="button"
-                  className="rounded-lg"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onCreateNewPack();
-                  }}
-                >
-                  <Sparkles className="size-4" />
-                  New Pack
-                </Button>
-              ) : null}
             </div>
           </div>
 
-          <div ref={listContainerRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <div
+            ref={listContainerRef}
+            className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6"
+          >
             {projectPagesQuery.isPending ? (
               <div className="space-y-2 py-1">
                 {[0, 1, 2, 3, 4].map((index) => (
@@ -305,7 +294,7 @@ export function ProjectListDialog({
             ) : (
               <div className="space-y-1">
                 {pagedProjects.map((project) => (
-                  <div key={project.id} className="flex items-center gap-2">
+                  <div key={project.id} className="flex min-w-0 items-center gap-2">
                     <div className="flex-1 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:justify-start [&_[data-slot=button]]:text-left">
                       <Button
                         variant="ghost"
@@ -319,11 +308,6 @@ export function ProjectListDialog({
                           <span className="block truncate text-sm font-semibold text-[color:var(--text-primary)]">
                             {formatWorkspaceListName(project.name)}
                           </span>
-                          {projectGenerationStatuses[project.id]?.partSummary ? (
-                            <span className="block truncate text-xs text-[color:var(--text-muted)]">
-                              {projectGenerationStatuses[project.id]?.partSummary}
-                            </span>
-                          ) : null}
                         </span>
                         {renderGenerationStatus(projectGenerationStatuses[project.id])}
                         {projectId === project.id && <Badge variant="secondary">Selected</Badge>}

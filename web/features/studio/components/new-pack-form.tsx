@@ -793,7 +793,7 @@ export function NewPackForm({
               Browse by group or search across all example packs.
             </DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="border-b border-border/70 px-6 py-4">
               <Input
                 value={presetSearchInput}
@@ -802,7 +802,7 @@ export function NewPackForm({
                 autoFocus
               />
             </div>
-            <div className="flex h-full min-h-0 flex-col sm:flex-row">
+            <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
               <div className="shrink-0 border-b border-border/70 sm:w-56 sm:border-b-0 sm:border-r sm:border-border/70">
                 <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:block sm:space-y-1 sm:overflow-visible">
                   {presetGroups.map((group) => (
@@ -825,7 +825,7 @@ export function NewPackForm({
                   ))}
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-8 sm:px-5 sm:pb-5">
                 <div className="grid gap-2 md:grid-cols-2">
                   {(normalizedPresetSearch
                     ? filteredPresetOptions
@@ -905,7 +905,7 @@ export function NewPackForm({
               Browse by group or search across all themes.
             </DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="border-b border-border/70 px-6 py-4">
               <Input
                 value={themeSearchInput}
@@ -914,7 +914,7 @@ export function NewPackForm({
                 autoFocus
               />
             </div>
-            <div className="flex h-full min-h-0 flex-col sm:flex-row">
+            <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
               <div className="shrink-0 border-b border-border/70 sm:w-56 sm:border-b-0 sm:border-r sm:border-border/70">
                 <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:block sm:space-y-1 sm:overflow-visible">
                   {themeGroups.map((group) => (
@@ -937,7 +937,7 @@ export function NewPackForm({
                   ))}
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-8 sm:px-5 sm:pb-5">
                 <div className="grid gap-2 md:grid-cols-2">
                   {(normalizedThemeSearch
                     ? filteredThemeOptions
@@ -1014,7 +1014,7 @@ export function NewPackForm({
               Browse by group or search across all categories.
             </DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="border-b border-border/70 px-6 py-4">
               <Input
                 value={packTypeSearchInput}
@@ -1023,7 +1023,7 @@ export function NewPackForm({
                 autoFocus
               />
             </div>
-            <div className="flex h-full min-h-0 flex-col sm:flex-row">
+            <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
               <div className="shrink-0 border-b border-border/70 sm:w-56 sm:border-b-0 sm:border-r sm:border-border/70">
                 <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:block sm:space-y-1 sm:overflow-visible">
                   {packTypeGroups.map((group) => (
@@ -1046,7 +1046,7 @@ export function NewPackForm({
                   ))}
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-8 sm:px-5 sm:pb-5">
                 <div className="grid gap-2 md:grid-cols-2">
                   {(normalizedPackTypeSearch
                     ? filteredPackTypeOptions

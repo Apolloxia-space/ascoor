@@ -425,12 +425,12 @@ export function SettingsPage() {
             orientation="vertical"
             className="flex w-full flex-col gap-6 lg:flex-row"
           >
-            <TabsList className="flex h-auto w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto lg:w-60 lg:flex-col lg:flex-nowrap">
+            <TabsList className="flex h-auto w-full !flex-row flex-nowrap items-center justify-start gap-2 overflow-x-auto bg-transparent p-0 lg:w-60 lg:!flex-col lg:flex-nowrap lg:overflow-visible">
               {settingsTabs.map(({ value, label }) => (
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="flex h-10 w-auto flex-none justify-start gap-2 border-0 px-3 py-2 data-[state=active]:shadow-none lg:w-full"
+                  className="flex h-10 !w-auto flex-none justify-start gap-2 rounded-md border-0 px-3 py-2 text-muted-foreground hover:bg-accent/40 hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none lg:!w-full"
                 >
                   {label}
                 </TabsTrigger>

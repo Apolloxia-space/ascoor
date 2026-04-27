@@ -439,6 +439,7 @@ export function StudioPage() {
   );
 
   useEffect(() => {
+    if (status !== 'authenticated') return;
     if (!projectsQuery.isSuccess) return;
     const nextProjects = projectItems.map((project) => ({ id: project.id, name: project.name }));
     const sameProjects =
@@ -466,6 +467,7 @@ export function StudioPage() {
       setProject(current.id, current.name);
     }
   }, [
+    status,
     projectsQuery.isSuccess,
     projectItems,
     projects,
@@ -657,7 +659,6 @@ export function StudioPage() {
         onOpenChange={setProjectListDialogOpen}
         onSelectProject={handleSelectProject}
         onDeleteCurrentProject={handleCloseProject}
-        onCreateNewPack={handleOpenNewPackPage}
       />
       <div className={cn('flex h-full min-h-0 flex-col transition-all')}>
         <StudioHeader

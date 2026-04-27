@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Settings } from 'lucide-react';
+import { Home, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signOutUser } from '@/features/auth/use-auth-init';
@@ -29,15 +29,10 @@ export function NewPackPage() {
         showBrand
         brandHref={paths.studio}
         projectMenuRightSlot={
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="rounded-lg"
-            onClick={() => router.push(paths.studio)}
-          >
-            <ArrowLeft className="size-4" />
-            Studio
+          <Button asChild type="button" variant="ghost" size="icon">
+            <a href={paths.studio} aria-label="Studio home">
+              <Home className="size-5" />
+            </a>
           </Button>
         }
         userMenuLeftSlot={
