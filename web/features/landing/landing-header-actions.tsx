@@ -25,7 +25,7 @@ export function LandingHeaderActions() {
 
   return (
     <Button
-      className="h-auto rounded-full bg-primary px-4 py-1.5 font-medium text-primary-foreground shadow-[var(--shadow-card-active)] hover:bg-[color:var(--brand-600)]"
+      className="h-auto rounded-md bg-[#e7a8b0] px-4 py-1.5 font-medium text-[#233226] shadow-[0_12px_24px_rgba(35,50,38,0.08)] hover:bg-[#de959f]"
       type="button"
       onClick={handleCTA}
       disabled={isBusy}

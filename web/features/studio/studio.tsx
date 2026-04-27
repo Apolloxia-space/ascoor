@@ -92,8 +92,6 @@ const SHORTCUT_BLOCK_SELECTOR = [
 const getSingleRouteParam = (value: string | Array<string> | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
-const isDevelopmentEnvironment = process.env.NODE_ENV === 'development';
-
 export function StudioPage() {
   useStudioPersist();
   const {
@@ -942,7 +940,7 @@ export function StudioPage() {
                   onPreviewPart={previewPart}
                   onToggle={toggleChatPanel}
                   hasSelectedPack={Boolean(selectedDesignId)}
-                  showJavaScriptDownload={isDevelopmentEnvironment}
+                  showJavaScriptDownload={false}
                   onDownloadZip={downloadCurrentPackZip}
                   onDownloadJavaScript={downloadCurrentPackJavaScript}
                 />
@@ -978,7 +976,7 @@ export function StudioPage() {
                       open={mobileChatOpen}
                       onToggle={() => setMobileChatOpen(false)}
                       hasSelectedPack={Boolean(selectedDesignId)}
-                      showJavaScriptDownload={isDevelopmentEnvironment}
+                      showJavaScriptDownload={false}
                       parts={parts}
                       activePartId={activePartId}
                       onDownloadZip={downloadCurrentPackZip}

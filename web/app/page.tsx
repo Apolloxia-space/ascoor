@@ -1,18 +1,28 @@
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { ArrowRight, Braces, Printer } from 'lucide-react';
-import { HeroSignupCard } from '@/features/landing/hero-signup-card';
+import { ArrowRight } from 'lucide-react';
+
 import { LandingFooter } from '@/features/landing/landing-footer';
-import { LandingGlbPreview } from '@/features/landing/landing-glb-preview';
 import { LandingHeader } from '@/features/landing/landing-header';
-import { XPostEmbed } from '@/features/landing/x-post-embed';
-import { PlanInclusions } from '@/features/plan/components/plan-inclusions';
-import { planDefinitions } from '@/features/plan/plan-definitions';
-import { defaultDescription, defaultOgImagePath } from '@shared/constants/seo';
+import { LandingHeaderActions } from '@/features/landing/landing-header-actions';
+import { HeroMainVisual } from '@/features/landing/hero-main-visual';
+import { defaultOgImagePath } from '@shared/constants/seo';
 import { paths } from '@shared/constants/paths';
 
-const pageTitle = 'Generate, Edit, and Export 3D in the Browser';
-const pageDescription = defaultDescription;
+const pageTitle = 'Generate Game Asset Packs in the Browser';
+const pageDescription =
+  'Ascoor helps you generate prototype game asset packs in the browser, review the result, and export what you need.';
+const heroStudioPreviewPath = '/landing/studio-cyberpunk-pack-preview-main-v20260427-180120.webp';
+const studioPreviewVideoPath = '/landing/video/studio-preview-v20260424-194713.mp4';
+const themeExamplePickerPath =
+  '/landing/screenshots/example-picker-sci-fi-futuristic-v20260427-111531.webp';
+const themePickerPath = '/landing/screenshots/theme-picker-fantasy-historical-v20260427-160212.webp';
+const studioHomeGalleryPath =
+  '/landing/screenshots/studio-home-continue-working-v20260427-160132.webp';
+const assetCategoryPickerPath =
+  '/landing/screenshots/asset-category-picker-transport-transit-v20260427-152254.webp';
+const packCompletedPath =
+  '/landing/screenshots/pack-completed-download-zip-v20260427-152127.webp';
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -34,283 +44,152 @@ export const metadata: Metadata = {
   },
 };
 
-const heroDemoVideoPath = '/hero/demo-v20260325.mp4';
-const draftModelImagePath = '/landing/draft-first-model-v20260325.webp';
-const refinedModelImagePath = '/landing/refine-lantan-v20260325.webp';
-const sampleGlbPath = '/landing/Japanese Garden Stone Lantern Model-v20260325.glb';
-
-type StoryVisualKind = 'draft' | 'edit' | 'export';
-
-type StorySection = {
-  id: string;
-  eyebrow: string;
-  title: string;
-  description: string;
-  points: Array<string>;
-  visual: StoryVisualKind;
-};
-
-const storySections: Array<StorySection> = [
+const visualFrames = [
   {
-    id: 'drafts',
-    eyebrow: 'Draft Fast',
-    title: 'Get to a usable first model in minutes',
+    eyebrow: 'Studio preview',
+    title: 'Live pack preview',
     description:
-      'Ascoor is strongest when the goal is speed to first draft. Start from a prompt, inspect the result, and decide what to refine next.',
-    points: ['Move from idea to 3D form without opening a heavyweight desktop workflow first.'],
-    visual: 'draft',
+      'Preview one asset at a time and check shape, color, and readability before export.',
+    mediaType: 'video',
+    src: studioPreviewVideoPath,
   },
   {
-    id: 'editing',
-    eyebrow: 'Refine In Browser',
-    title: 'Fix structure and transforms before export',
+    eyebrow: 'Start from an example',
+    title: 'Preset picker',
     description:
-      'The product is not just about generating assets. It gives you a lightweight edit pass so you can clean up the draft before it hits the next stage.',
-    points: [
-      'Inspect the structure tree to understand what was generated.',
-      'Adjust transforms and obvious problems without leaving the browser.',
-    ],
-    visual: 'edit',
+      'Start from a ready-made pack direction instead of writing the whole structure from scratch.',
+    mediaType: 'image',
+    src: themeExamplePickerPath,
+    alt: 'Ascoor example picker showing fantasy and historical pack presets',
   },
   {
-    id: 'exports',
-    eyebrow: 'Export For Real Use',
-    title: 'Export into web, print, or handoff workflows',
+    eyebrow: 'Theme',
+    title: 'Theme picker',
     description:
-      'The value is in what happens after generation. Use the same draft-to-edit flow, then export your model for the web, 3D printing, or the next step in your work.',
-    points: [
-      'Export models for websites and browser-based 3D scenes.',
-      'Prepare drafts for quick 3D print tests and physical prototypes.',
-      'Share cleaned-up models for the next person, tool, or workflow.',
-    ],
-    visual: 'export',
-  },
-];
-
-type LandingPlan = {
-  name: string;
-  price: string;
-  billing: string;
-  priceNote: string;
-  description: string;
-  features: Array<string>;
-  limitResetNote: string;
-  cta: string;
-  highlight?: boolean;
-};
-
-const plans: Array<LandingPlan> = [
-  {
-    ...planDefinitions.free,
-    cta: 'Start free',
+      'Browse grouped themes and choose a world style before you fine-tune the pack.',
+    mediaType: 'image',
+    src: themePickerPath,
+    alt: 'Ascoor theme picker showing fantasy and historical themes',
   },
   {
-    ...planDefinitions.hobby,
-    cta: 'Upgrade to Hobby',
-    highlight: true,
+    eyebrow: 'Asset category',
+    title: 'Category picker',
+    description:
+      'Narrow the pack toward vehicles, transit, props, or other production needs.',
+    mediaType: 'image',
+    src: assetCategoryPickerPath,
+    alt: 'Ascoor asset category picker showing transport and transit options',
   },
   {
-    ...planDefinitions.pro,
-    cta: 'Upgrade to Pro',
+    eyebrow: 'Pack completed',
+    title: 'Download ZIP',
+    description:
+      'When the pack is ready, every part stays visible and the full set can be exported from one place.',
+    mediaType: 'image',
+    src: packCompletedPath,
+    alt: 'Ascoor completed pack panel showing download ZIP and part list',
   },
-];
+  {
+    eyebrow: 'Studio home',
+    title: 'Workspace gallery',
+    description:
+      'Keep completed packs visible from the home screen and reopen them when needed.',
+    mediaType: 'image',
+    src: studioHomeGalleryPath,
+    alt: 'Ascoor studio home showing recent workspace cards',
+  },
+] as const;
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-[-220px] h-[560px] bg-[radial-gradient(circle_at_top,rgba(218,154,157,0.24),transparent_52%)]" />
-        <div className="pointer-events-none absolute left-[-80px] top-[220px] h-[340px] w-[340px] rounded-full bg-[color:var(--brand-500-60)] blur-[140px]" />
-        <div className="pointer-events-none absolute right-[-120px] top-[120px] h-[360px] w-[360px] rounded-full bg-[color:var(--accent-purple)]/18 blur-[140px]" />
-        <LandingHeader />
+    <main className="min-h-screen bg-[#f7fbf7] text-[#233226]">
+      <LandingHeader />
 
-        <section className="px-4 pb-16 pt-28 sm:pb-20 md:pt-32">
-          <div className="mx-auto max-w-6xl">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-primary">
-                Browser-Based 3D Workflow
-              </p>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
-                Generate, refine, and export 3D without leaving the browser.
-              </h1>
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                Ascoor helps you get to a first 3D draft fast, fix the important parts, and export
-                your model for the web, 3D printing, and whatever comes next.
-              </p>
-            </div>
+      <section className="overflow-hidden px-4 pb-18 pt-28 sm:pb-20 md:pt-32">
+        <div className="mx-auto flex max-w-7xl flex-col gap-10">
+          <div className="mx-auto max-w-4xl text-center">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl lg:whitespace-nowrap">
+              Full asset packs built around one theme in minutes.
+            </h1>
 
-            <div className="mx-auto mt-8 max-w-md">
-              <HeroSignupCard />
-            </div>
-
-            <div className="mx-auto mt-10 max-w-[56rem]">
-              <div className="relative overflow-hidden rounded-[24px]">
-                <video
-                  className="h-full min-h-[250px] w-full object-cover md:min-h-[330px] lg:min-h-[430px]"
-                  src={heroDemoVideoPath}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  aria-label="Ascoor create, edit, and export workflow demo"
-                />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,0.72))] px-5 pb-5 pt-16 sm:px-6 sm:pb-6">
-                  <div className="max-w-2xl">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/64">
-                      Create → Edit → Export
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <p className="mt-3 px-2 text-center text-xs leading-relaxed text-muted-foreground">
-                Top demo shows the broader create-edit-export flow across browser-based 3D work.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <section id="workflow" className="py-20">
-        <div className="mx-auto flex max-w-6xl flex-col gap-16 px-4">
-          {storySections.map((section, index) => (
-            <div
-              key={section.id}
-              className={`grid items-center gap-8 lg:grid-cols-2 lg:gap-12 ${
-                index % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''
-              }`}
-            >
-              <div className="max-w-xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-                  {section.eyebrow}
-                </p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-                  {section.title}
-                </h2>
-                <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                  {section.description}
-                </p>
-                <div className="mt-6 space-y-4">
-                  {section.points.map((point) => (
-                    <div key={point} className="flex items-start gap-3">
-                      <div className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-                        <ArrowRight className="size-3.5" />
-                      </div>
-                      <p className="text-sm leading-relaxed text-foreground">{point}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <StoryVisual kind={section.visual} />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="use-cases" className="bg-muted/40 py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              Use Cases
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-              Built for web scenes, print prototypes, and handoff
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              The strongest use cases are the ones where getting a draft fast, fixing it lightly,
-              and exporting cleanly saves real production time.
-            </p>
-          </div>
-          <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-2">
-            <UseCaseCard
-              icon={Braces}
-              title="Web 3D"
-              description="Create 3D drafts for websites and browser-based scenes without spending the first hour modeling everything by hand."
-              tags={['Web', '3D', 'Browser']}
-            />
-            <UseCaseCard
-              icon={Printer}
-              title="3D Print"
-              description="Create rough printable concepts, fix obvious issues, and move quickly into the next print test."
-              tags={['3D Print', 'Prototype', 'Iteration']}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20">
-        <div className="mx-auto max-w-5xl px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              Example Output
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-              One published example from the workflow
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              This embedded post is one outward-facing example of the same draft-edit-export loop
-              shown above.
-            </p>
-          </div>
-          <div className="mx-auto mt-10 max-w-3xl">
-            <XPostEmbed />
-          </div>
-        </div>
-      </section>
-
-      <section id="plans" className="pb-20 pt-8">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Pricing</p>
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              Pricing for prototype game assets
-            </h2>
-            <a className="text-sm text-primary hover:underline" href={paths.pricing}>
-              View full pricing page
-            </a>
-          </div>
-          <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative flex h-full flex-col rounded-3xl border border-border/60 bg-card/80 p-6 ${
-                  plan.highlight ? 'shadow-[var(--shadow-card-active)]' : ''
-                }`}
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              <LandingHeaderActions />
+              <a
+                className="inline-flex items-center justify-center rounded-md border border-[#cfe0cf] bg-white px-4 py-2 text-sm font-medium text-[#233226] transition hover:bg-[#f0f6f0]"
+                href={paths.pricing}
               >
-                <h3 className="text-xl font-semibold">{plan.name}</h3>
-                <div className="mt-3 flex items-end gap-2">
-                  <div className="text-3xl font-semibold">{plan.price}</div>
-                  {plan.billing && (
-                    <span className="text-sm text-muted-foreground">{plan.billing}</span>
-                  )}
+                View pricing
+              </a>
+            </div>
+          </div>
+
+          <HeroMainVisual
+            imageSrc={heroStudioPreviewPath}
+            imageAlt="Ascoor studio showing a cyberpunk asset pack preview with a vending machine part selected"
+          />
+        </div>
+      </section>
+
+      <section id="use-cases" className="py-18">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+              Create cohesive asset packs
+              <br />
+              for a smoother game workflow.
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            {visualFrames.map((frame) => (
+              <VisualFrameCard key={frame.title} {...frame} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="plans" className="border-t border-[#dce8dc] bg-white py-18">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="rounded-lg border border-[#dce8dc] bg-white p-6 shadow-[0_16px_36px_rgba(35,50,38,0.06)] md:p-8">
+            <div className="grid gap-6 md:grid-cols-[128px_minmax(0,1fr)] md:items-center">
+              <div className="flex justify-center md:justify-start">
+                <div className="flex size-24 items-center justify-center md:size-28">
+                  <Image
+                    src="/favicon.ico"
+                    alt="Ascoor logo"
+                    width={96}
+                    height={96}
+                    className="size-16 object-contain md:size-20"
+                  />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{plan.priceNote}</p>
-                {plan.description ? (
-                  <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
-                ) : null}
-                <PlanInclusions
-                  className="mt-6"
-                  listClassName="space-y-3 text-sm text-muted-foreground"
-                  itemClassName="flex items-center gap-2 text-foreground"
-                  noteClassName="mt-4 text-xs text-muted-foreground"
-                  features={plan.features}
-                  limitResetNote={plan.limitResetNote}
-                />
-                <div className="mt-6 md:mt-auto md:pt-6">
+              </div>
+              <div className="text-center md:text-left">
+                <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+                  Start today
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#5c6f61] md:text-base">
+                  Choose a plan and streamline your game workflow. No credit card is required for
+                  the free trial.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3 md:justify-start">
                   <a
-                    className="inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                    className="inline-flex items-center justify-center rounded-md bg-[#e7a8b0] px-4 py-2 text-sm font-medium text-[#233226] transition hover:bg-[#de959f]"
                     href={paths.plan}
                   >
-                    {plan.cta}
+                    Start free
+                  </a>
+                  <a
+                    className="inline-flex items-center gap-2 rounded-md border border-[#dce8dc] bg-white px-4 py-2 text-sm font-medium text-[#233226] transition hover:bg-[#f3f7f3]"
+                    href={paths.pricing}
+                  >
+                    See pricing
+                    <ArrowRight className="size-4" />
                   </a>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-            Free includes a small monthly generation allowance. Paid plans renew monthly. Taxes may
-            apply.
-          </p>
+
         </div>
       </section>
 
@@ -319,70 +198,54 @@ export default function HomePage() {
   );
 }
 
-function UseCaseCard({
-  icon: Icon,
+function VisualFrameCard({
+  eyebrow,
   title,
   description,
-  tags,
+  mediaType,
+  src,
+  alt,
 }: {
-  icon: typeof Braces;
+  eyebrow: string;
   title: string;
   description: string;
-  tags: Array<string>;
+  mediaType: 'image' | 'video';
+  src: string;
+  alt?: string;
 }) {
   return (
-    <div className="rounded-3xl border border-border/60 bg-background/88 p-6 shadow-[var(--shadow-card)]">
-      <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-        <Icon className="size-5" />
+    <div className="overflow-hidden rounded-lg border border-[#d4e8d5] bg-[#fbfdfb] shadow-[0_14px_30px_rgba(35,50,38,0.05)]">
+      <div className="grid lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
+        <div className="border-b border-[#dce8dc] bg-white px-5 py-5 lg:border-b-0 lg:border-r">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#2f7a4b]">
+            {eyebrow}
+          </p>
+          <h3 className="mt-3 text-xl font-semibold text-[#233226]">{title}</h3>
+          <p className="mt-3 text-sm leading-6 text-[#5c6f61]">{description}</p>
+        </div>
+        <div className="flex min-h-[260px] items-center justify-center bg-[#eef8ef] p-4">
+          {mediaType === 'video' ? (
+            <video
+              className="block h-full max-h-[320px] w-full rounded-md bg-[#eef8ef] object-contain"
+              src={src}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+            />
+          ) : (
+            <Image
+              src={src}
+              alt={alt ?? title}
+              width={1719}
+              height={827}
+              className="block h-full max-h-[320px] w-full rounded-md bg-[#eef8ef] object-contain object-top"
+            />
+          )}
+        </div>
       </div>
-      <h3 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h3>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{description}</p>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-medium text-foreground"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StoryVisual({ kind }: { kind: StoryVisualKind }) {
-  if (kind === 'draft') {
-    return (
-      <div className="overflow-hidden rounded-[32px] bg-[#0c1324] shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-        <Image
-          src={draftModelImagePath}
-          alt="Ascoor showing a first generated 3D model draft in the browser"
-          width={1344}
-          height={1008}
-          className="block h-full w-full object-cover"
-        />
-      </div>
-    );
-  }
-
-  if (kind === 'edit') {
-    return (
-      <div className="overflow-hidden rounded-[32px] border border-border/60 bg-[#0c1324] shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
-        <Image
-          src={refinedModelImagePath}
-          alt="Ascoor editor showing a refined 3D model in browser edit mode"
-          width={1344}
-          height={1008}
-          className="block h-full w-full"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-hidden rounded-[32px] border border-[#23324d]/70 bg-[radial-gradient(circle_at_50%_18%,rgba(37,60,102,0.46),rgba(11,18,36,0.96)_56%,rgba(6,10,22,1))] shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
-      <LandingGlbPreview className="h-[320px] w-full md:h-[380px]" src={sampleGlbPath} />
     </div>
   );
 }
