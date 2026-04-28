@@ -17,7 +17,7 @@ export const assetPackPlanInSchema = z.object({
   prompt: z.string().min(1),
   userPrompt: z.string().min(1).nullish(),
   userId: z.string().nullish(),
-  designId: z.string().nullish(),
+  packGenerationJobId: z.string().nullish(),
   traceId: z.string().nullish(),
   requestId: z.string().nullish(),
 });

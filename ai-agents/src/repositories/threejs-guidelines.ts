@@ -15,7 +15,7 @@ export const threeJsRuntimeRules = [...runtimeRules];
 export const threeJsStructureRules: Array<string> = [];
 export const threeJsPromptRules: Array<string> = [];
 
-export const threeJsDesignSystemInstruction = joinInstructionSentences(runtimeRules);
+export const threeJsAssetPackSystemInstruction = joinInstructionSentences(runtimeRules);
 
 export function buildThreeJsCompiledPrompt(userPrompt: string): string {
   return `Write three.js code that creates the object requested below.

@@ -62,7 +62,7 @@ import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signOutUser } from '@/features/auth/use-auth-init';
 import { useStudioStore } from '@/features/studio/stores/use-studio-store';
 import { StudioHeader } from '@/features/studio/components/studio-header';
-import { ProjectListDialog } from '@/features/studio/components/dialogs/project-list-dialog';
+import { WorkspaceListDialog } from '@/features/studio/components/dialogs/workspace-list-dialog';
 import { buildStudioNewPath, buildStudioPath } from '@/features/studio/lib/paths';
 
 const settingsTabs = [
@@ -134,10 +134,10 @@ export function SettingsPage() {
   const user = useAuthStore((state) => state.user);
   const authStatus = useAuthStore((state) => state.status);
   const setUser = useAuthStore((state) => state.setUser);
-  const projectMenuOpen = useStudioStore((state) => state.projectMenuOpen);
-  const setProjectMenuOpen = useStudioStore((state) => state.setProjectMenuOpen);
-  const setProject = useStudioStore((state) => state.setProject);
-  const clearProject = useStudioStore((state) => state.clearProject);
+  const workspaceMenuOpen = useStudioStore((state) => state.workspaceMenuOpen);
+  const setWorkspaceMenuOpen = useStudioStore((state) => state.setWorkspaceMenuOpen);
+  const setWorkspace = useStudioStore((state) => state.setWorkspace);
+  const clearWorkspace = useStudioStore((state) => state.clearWorkspace);
   const usernameInputId = useId();
   const emailInputId = useId();
   const cancelReasonId = useId();
@@ -154,7 +154,7 @@ export function SettingsPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
+  const [workspaceListDialogOpen, setWorkspaceListDialogOpen] = useState(false);
   const billingQuery = useGetBillingStatus({ query: { enabled: !!user } });
   const usageQuery = useGetBillingUsage({ query: { enabled: !!user } });
   const portalSessionMutation = useCreateBillingPortalSession({
@@ -361,7 +361,7 @@ export function SettingsPage() {
     try {
       await deleteUserMutation.mutateAsync();
       queryClient.clear();
-      clearProject();
+      clearWorkspace();
       setDeleteDialogOpen(false);
       toast.success('Account deleted.');
       await signOutUser();
@@ -386,13 +386,13 @@ export function SettingsPage() {
   const usageResetDate = usageData?.periodEnd ? formatBillingDate(usageData.periodEnd) : null;
   const isUsageLoading = usageQuery.isLoading;
 
-  const handleSelectProject = (id: string, name: string) => {
-    setProject(id, name);
+  const handleSelectWorkspace = (id: string, name: string) => {
+    setWorkspace(id, name);
     router.push(buildStudioPath(id));
   };
 
-  const handleCloseProject = () => {
-    clearProject();
+  const handleCloseWorkspace = () => {
+    clearWorkspace();
     router.push(paths.studio);
   };
 
@@ -406,20 +406,20 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <ProjectListDialog
-        open={projectListDialogOpen}
-        onOpenChange={setProjectListDialogOpen}
-        onSelectProject={handleSelectProject}
-        onDeleteCurrentProject={handleCloseProject}
+      <WorkspaceListDialog
+        open={workspaceListDialogOpen}
+        onOpenChange={setWorkspaceListDialogOpen}
+        onSelectWorkspace={handleSelectWorkspace}
+        onDeleteCurrentWorkspace={handleCloseWorkspace}
       />
       <StudioHeader
-        projectMenuOpen={projectMenuOpen}
-        onProjectMenuChange={setProjectMenuOpen}
-        onSelectProject={handleSelectProject}
-        onCloseProject={handleCloseProject}
-        onOpenProjectManager={() => setProjectListDialogOpen(true)}
+        workspaceMenuOpen={workspaceMenuOpen}
+        onWorkspaceMenuChange={setWorkspaceMenuOpen}
+        onSelectWorkspace={handleSelectWorkspace}
+        onCloseWorkspace={handleCloseWorkspace}
+        onOpenWorkspaceManager={() => setWorkspaceListDialogOpen(true)}
         showBrand
-        projectMenuRightSlot={
+        workspaceMenuRightSlot={
           <>
             <Button asChild type="button" variant="ghost" size="icon">
               <a href={paths.studio} aria-label="Studio home">

@@ -36,15 +36,15 @@ import { Kbd, KbdGroup } from '@shared/components/ui/kbd';
 import { cn } from '@shared/lib/utils';
 import { apiFetcher, buildTraceId } from '@shared/api/fetcher';
 import {
-  getDesignAssetContent,
+  getAssetPackAssetContent,
   getGetBillingStatusQueryKey,
-  getListProjectsQueryKey,
-  getListProjectDesignsQueryKey,
-  reportDesignPreviewResult,
-  useUpdateProjectThumbnailContent,
+  getListWorkspacesQueryKey,
+  getListWorkspaceAssetPacksQueryKey,
+  reportAssetPackPreviewResult,
+  useUpdateWorkspaceThumbnailContent,
 } from '@shared/api/generated/client';
-import { useDesignDetail } from '../hooks/use-design-detail';
-import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from '../messages';
+import { useAssetPackDetail } from '../hooks/use-asset-pack-detail';
+import { PACK_GENERATION_FAILED_MESSAGE, PACK_GENERATION_FAILED_TITLE } from '../messages';
 import { toast } from 'sonner';
 
 type ViewerPanelProps = {
@@ -64,9 +64,9 @@ type ViewerPanelProps = {
     downloadJavaScript: () => void;
     openPrompt: () => void;
   }) => void;
-  designId?: string | null;
-  designName?: string | null;
-  projectThumbnailAssetUri?: string | null;
+  assetPackId?: string | null;
+  assetPackName?: string | null;
+  workspaceThumbnailAssetUri?: string | null;
   traceId?: string | null;
   shortcutHelpOpen?: boolean;
   onShortcutHelpOpenChange?: (open: boolean) => void;
@@ -76,9 +76,9 @@ type ViewerPanelProps = {
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 const isDevelopmentEnvironment = process.env.NODE_ENV === 'development';
 
-const resolveAssetContentUrl = (designId: string | null | undefined, type: 'ts') => {
-  if (!designId || !API_BASE_URL) return null;
-  return `${API_BASE_URL}/designs/${designId}/assets/content?type=${type}`;
+const resolveAssetContentUrl = (assetPackId: string | null | undefined, type: 'ts') => {
+  if (!assetPackId || !API_BASE_URL) return null;
+  return `${API_BASE_URL}/asset-packs/${assetPackId}/assets/content?type=${type}`;
 };
 
 export function ViewerPanel({
@@ -91,9 +91,9 @@ export function ViewerPanel({
   activePartId = null,
   onPreviewPart,
   onAssemblyControlsReady,
-  designId,
-  designName,
-  projectThumbnailAssetUri = null,
+  assetPackId,
+  assetPackName,
+  workspaceThumbnailAssetUri = null,
   traceId,
   shortcutHelpOpen = false,
   onShortcutHelpOpenChange,
@@ -113,16 +113,16 @@ export function ViewerPanel({
   const reportedPreviewResultRef = useRef<string | null>(null);
   const uploadedThumbnailRef = useRef<string | null>(null);
   const [renderSucceeded, setRenderSucceeded] = useState(false);
-  const uploadThumbnailMutation = useUpdateProjectThumbnailContent({
+  const uploadThumbnailMutation = useUpdateWorkspaceThumbnailContent({
     mutation: {
       mutationFn: async ({
-        projectId,
+        workspaceId,
         data,
       }: {
-        projectId: string;
+        workspaceId: string;
         data: Blob;
       }) =>
-        apiFetcher(`/projects/${projectId}/thumbnail/content`, {
+        apiFetcher(`/workspaces/${workspaceId}/thumbnail/content`, {
           method: 'PUT',
           body: data,
           headers: {
@@ -130,7 +130,7 @@ export function ViewerPanel({
           },
         }),
       onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+        await queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey() });
       },
     },
     request: {
@@ -140,27 +140,27 @@ export function ViewerPanel({
     },
   });
 
-  const fileDetailQuery = useDesignDetail(designId);
+  const fileDetailQuery = useAssetPackDetail(assetPackId);
   const refetchFileDetail = fileDetailQuery.refetch;
   const fileDetailResponse = fileDetailQuery.data;
   const fileDetail = fileDetailResponse?.status === 200 ? fileDetailResponse.data : undefined;
-  const designData = fileDetail?.design;
-  const latestDesignJob = fileDetail?.latestDesignJob ?? null;
-  const previewStatus = designData?.previewStatus;
-  const assetUriTs = designData?.assetUriTs ?? null;
+  const assetPackData = fileDetail?.assetPack;
+  const latestPackGenerationJob = fileDetail?.latestPackGenerationJob ?? null;
+  const previewStatus = assetPackData?.previewStatus;
+  const assetUriTs = assetPackData?.assetUriTs ?? null;
 
   const tsContentUrl = useMemo(() => {
     if (!assetUriTs) return null;
-    return resolveAssetContentUrl(designId, 'ts');
-  }, [designId, assetUriTs]);
+    return resolveAssetContentUrl(assetPackId, 'ts');
+  }, [assetPackId, assetUriTs]);
 
   const exportUrlTs = useMemo(() => {
     if (!isDevelopmentEnvironment) return null;
-    return resolveAssetContentUrl(designId, 'ts');
-  }, [designId]);
+    return resolveAssetContentUrl(assetPackId, 'ts');
+  }, [assetPackId]);
 
   const hasRenderableModel = Boolean(
-    designId && !isLoading && !loadError && !parseError && (modelCode || modelData),
+    assetPackId && !isLoading && !loadError && !parseError && (modelCode || modelData),
   );
   const activePartIndex = useMemo(() => {
     if (parts.length === 0) return -1;
@@ -185,8 +185,8 @@ export function ViewerPanel({
       (previewStatus === 'failed' && !isLoading && !modelCode && !modelData),
   );
   const canGenerateThumbnail = Boolean(
-    designId &&
-      designData?.projectId &&
+    assetPackId &&
+      assetPackData?.workspaceId &&
       renderSucceeded &&
       !loadError &&
       !parseError &&
@@ -195,9 +195,9 @@ export function ViewerPanel({
   );
 
   const captureAndUploadThumbnail = useCallback(async () => {
-    const projectId = designData?.projectId ?? null;
+    const workspaceId = assetPackData?.workspaceId ?? null;
     const firstPartId = parts[0]?.id ?? null;
-    if (!designId || !projectId || !firstPartId) return false;
+    if (!assetPackId || !workspaceId || !firstPartId) return false;
     if (uploadThumbnailMutation.isPending) return false;
 
     const previousPartId = activePartId;
@@ -212,7 +212,7 @@ export function ViewerPanel({
 
         const blob = await viewerRef.current?.captureThumbnail();
         if (blob) {
-          await uploadThumbnailMutation.mutateAsync({ projectId, data: blob });
+          await uploadThumbnailMutation.mutateAsync({ workspaceId, data: blob });
           return true;
         }
 
@@ -230,14 +230,14 @@ export function ViewerPanel({
     }
   }, [
     activePartId,
-    designData?.projectId,
-    designId,
+    assetPackData?.workspaceId,
+    assetPackId,
     parts,
     uploadThumbnailMutation,
   ]);
 
   const promptContent = useMemo(() => {
-    if (!designId) {
+    if (!assetPackId) {
       return 'Select a pack to view its prompt.';
     }
     if (fileDetailQuery.isPending) {
@@ -246,17 +246,17 @@ export function ViewerPanel({
     if (fileDetailQuery.isError) {
       return 'Failed to load prompt for this pack.';
     }
-    const userPrompt = latestDesignJob?.userPrompt?.trim() ?? '';
+    const userPrompt = latestPackGenerationJob?.userPrompt?.trim() ?? '';
     if (!userPrompt) {
       return 'No prompt is linked to this pack yet.';
     }
     return `User Prompt\n${userPrompt}`;
-  }, [designId, fileDetailQuery.isError, fileDetailQuery.isPending, latestDesignJob?.userPrompt]);
+  }, [assetPackId, fileDetailQuery.isError, fileDetailQuery.isPending, latestPackGenerationJob?.userPrompt]);
 
   useEffect(() => {
-    if (!promptDialogOpen || !designId) return;
+    if (!promptDialogOpen || !assetPackId) return;
     void refetchFileDetail();
-  }, [promptDialogOpen, designId, refetchFileDetail]);
+  }, [promptDialogOpen, assetPackId, refetchFileDetail]);
 
   useEffect(() => {
     setViewerErrorDialogOpen(hasViewerError);
@@ -266,15 +266,15 @@ export function ViewerPanel({
     setLoadError(null);
     setParseError(null);
     setRenderSucceeded(false);
-    setIsLoading(Boolean(designId));
+    setIsLoading(Boolean(assetPackId));
     reportedPreviewResultRef.current = null;
     uploadedThumbnailRef.current = null;
-  }, [designId]);
+  }, [assetPackId]);
 
   useEffect(() => {
     if (!tsContentUrl) {
-      const waitingForDesignDetail = Boolean(designId) && fileDetailQuery.isPending;
-      if (waitingForDesignDetail) {
+      const waitingForAssetPackDetail = Boolean(assetPackId) && fileDetailQuery.isPending;
+      if (waitingForAssetPackDetail) {
         setIsLoading(true);
         setLoadError(null);
         setParseError(null);
@@ -303,7 +303,7 @@ export function ViewerPanel({
           },
         } satisfies RequestInit;
         if (tsContentUrl) {
-          const response = await getDesignAssetContent(designId ?? '', { type: 'ts' }, requestInit);
+          const response = await getAssetPackAssetContent(assetPackId ?? '', { type: 'ts' }, requestInit);
           if (response.status !== 200) {
             throw new Error(`HTTP ${response.status}`);
           }
@@ -330,7 +330,7 @@ export function ViewerPanel({
 
     load();
     return () => controller.abort();
-  }, [designId, fileDetailQuery.isPending, tsContentUrl, traceId]);
+  }, [assetPackId, fileDetailQuery.isPending, tsContentUrl, traceId]);
 
   const handleModelParseError = useCallback((message: string | null) => {
     setParseError(message);
@@ -338,9 +338,9 @@ export function ViewerPanel({
   }, []);
 
   useEffect(() => {
-    const designJobId = latestDesignJob?.designJobId ?? null;
-    const projectId = designData?.projectId ?? null;
-    if (!designId || !designJobId || latestDesignJob?.status !== 'succeeded') {
+    const packGenerationJobId = latestPackGenerationJob?.packGenerationJobId ?? null;
+    const workspaceId = assetPackData?.workspaceId ?? null;
+    if (!assetPackId || !packGenerationJobId || latestPackGenerationJob?.status !== 'succeeded') {
       return;
     }
 
@@ -359,8 +359,8 @@ export function ViewerPanel({
 
     const reportKey =
       nextStatus === 'failed'
-        ? `${designId}:${designJobId}:${nextStatus}:${parseError}`
-        : `${designId}:${designJobId}:${nextStatus}`;
+        ? `${assetPackId}:${packGenerationJobId}:${nextStatus}:${parseError}`
+        : `${assetPackId}:${packGenerationJobId}:${nextStatus}`;
     if (reportedPreviewResultRef.current === reportKey) {
       return;
     }
@@ -371,8 +371,8 @@ export function ViewerPanel({
 
     void (async () => {
       try {
-        await reportDesignPreviewResult(
-          designId,
+        await reportAssetPackPreviewResult(
+          assetPackId,
           nextStatus === 'failed'
             ? { status: 'failed', errorMessage: parseError ?? undefined }
             : { status: 'succeeded' },
@@ -387,8 +387,8 @@ export function ViewerPanel({
         }
         await Promise.all([
           refetchFileDetail(),
-          projectId
-            ? queryClient.invalidateQueries({ queryKey: getListProjectDesignsQueryKey(projectId) })
+          workspaceId
+            ? queryClient.invalidateQueries({ queryKey: getListWorkspaceAssetPacksQueryKey(workspaceId) })
             : Promise.resolve(),
           queryClient.invalidateQueries({ queryKey: getGetBillingStatusQueryKey() }),
         ]);
@@ -403,11 +403,11 @@ export function ViewerPanel({
       cancelled = true;
     };
   }, [
-    designData?.projectId,
-    designId,
+    assetPackData?.workspaceId,
+    assetPackId,
     loadError,
-    latestDesignJob?.designJobId,
-    latestDesignJob?.status,
+    latestPackGenerationJob?.packGenerationJobId,
+    latestPackGenerationJob?.status,
     parseError,
     previewStatus,
     queryClient,
@@ -419,12 +419,12 @@ export function ViewerPanel({
   useEffect(() => {
     if (
       !canGenerateThumbnail ||
-      projectThumbnailAssetUri
+      workspaceThumbnailAssetUri
     ) {
       return;
     }
 
-    const uploadKey = `${designId}:initial-thumbnail`;
+    const uploadKey = `${assetPackId}:initial-thumbnail`;
     if (uploadedThumbnailRef.current === uploadKey) {
       return;
     }
@@ -453,8 +453,8 @@ export function ViewerPanel({
   }, [
     canGenerateThumbnail,
     captureAndUploadThumbnail,
-    designId,
-    projectThumbnailAssetUri,
+    assetPackId,
+    workspaceThumbnailAssetUri,
   ]);
 
   const handleRetryThumbnail = useCallback(async () => {
@@ -508,14 +508,14 @@ export function ViewerPanel({
       if (!blob) {
         throw new Error('No parts loaded');
       }
-      downloadBlob(blob, buildPartsZipDownloadName(designName));
+      downloadBlob(blob, buildPartsZipDownloadName(assetPackName));
       toast.success('Parts ZIP exported.');
     } catch (_error) {
       toast.error('Failed to export parts ZIP.');
     } finally {
       setIsExportingPartsZip(false);
     }
-  }, [designName, hasRenderableModel, isExportingPartsZip]);
+  }, [assetPackName, hasRenderableModel, isExportingPartsZip]);
 
   const handleExportTs = useCallback(async () => {
     if (isExportingTs) return;
@@ -523,7 +523,7 @@ export function ViewerPanel({
       toast.error('JavaScript download is only available in development.');
       return;
     }
-    if (!designId) {
+    if (!assetPackId) {
       toast.warning('Please select a pack.');
       return;
     }
@@ -537,8 +537,8 @@ export function ViewerPanel({
     }
     try {
       setIsExportingTs(true);
-      const response = await getDesignAssetContent(
-        designId,
+      const response = await getAssetPackAssetContent(
+        assetPackId,
         { type: 'ts' },
         {
           headers: {
@@ -553,7 +553,7 @@ export function ViewerPanel({
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = buildDownloadName(designName, '.js');
+      link.download = buildDownloadName(assetPackName, '.js');
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -564,7 +564,7 @@ export function ViewerPanel({
     } finally {
       setIsExportingTs(false);
     }
-  }, [assetUriTs, designId, designName, exportUrlTs, isExportingTs, traceId]);
+  }, [assetUriTs, assetPackId, assetPackName, exportUrlTs, isExportingTs, traceId]);
 
   useEffect(() => {
     if (!onAssemblyControlsReady) return;
@@ -628,7 +628,7 @@ export function ViewerPanel({
 
       <div className="absolute right-4 top-4 z-10">
         <div className="flex items-center gap-2">
-          {!projectThumbnailAssetUri && canGenerateThumbnail ? (
+          {!workspaceThumbnailAssetUri && canGenerateThumbnail ? (
             <Button
               type="button"
               variant="ghost"
@@ -797,8 +797,8 @@ export function ViewerPanel({
       <Dialog open={viewerErrorDialogOpen} onOpenChange={setViewerErrorDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{DESIGN_FAILED_TITLE}</DialogTitle>
-            <DialogDescription>{DESIGN_FAILED_MESSAGE}</DialogDescription>
+            <DialogTitle>{PACK_GENERATION_FAILED_TITLE}</DialogTitle>
+            <DialogDescription>{PACK_GENERATION_FAILED_MESSAGE}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setViewerErrorDialogOpen(false)}>Close</Button>

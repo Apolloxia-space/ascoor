@@ -23,7 +23,7 @@ const sections = [
     body: [
       'Account information (such as name, email address, and authentication identifiers).',
       'Usage data (such as pages visited, features used, and timestamps).',
-      'Content you submit (prompts, 3D design instructions, and generated outputs).',
+      'Content you submit (prompts, 3D asset pack instructions, and generated outputs).',
       'Billing details are processed by Stripe. The operator does not store full payment card numbers.',
     ],
   },
@@ -41,7 +41,7 @@ const sections = [
     title: '4. Sharing of Information',
     body: [
       'The operator shares information with service providers who help operate the Service (for example, payment processing).',
-      'The operator may share prompts, 3D design instructions, attachments, and related metadata with AI/cloud service providers strictly for processing, hosting, safety filtering, and model-related improvement of the Service.',
+      'The operator may share prompts, 3D asset pack instructions, attachments, and related metadata with AI/cloud service providers strictly for processing, hosting, safety filtering, and model-related improvement of the Service.',
       'The operator may share information to comply with legal obligations, enforce the Terms, or protect rights and safety.',
     ],
   },

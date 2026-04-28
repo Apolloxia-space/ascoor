@@ -8,27 +8,27 @@ const requiredIdentifier = () => z.string().trim().min(1);
 const RENDER_FAILURE_MAX_CHARS = 2000;
 const PREVIEW_RESULT_STATUSES = ['succeeded', 'failed'] as const;
 
-export const createDesignJobBodySchema = z
+export const createPackGenerationJobBodySchema = z
   .object({
-    projectId: requiredIdentifier(),
+    workspaceId: requiredIdentifier(),
     userPrompt: requiredTrimmedString(CREATE_FORM_MAX_CHARS),
   })
   .strict();
 
-export const createDesignBodySchema = z
+export const createAssetPackBodySchema = z
   .object({
-    projectId: requiredIdentifier(),
+    workspaceId: requiredIdentifier(),
     displayName: requiredTrimmedString(DEFAULT_FORM_MAX_CHARS),
   })
   .strict();
 
-export const updateDesignBodySchema = z
+export const updateAssetPackBodySchema = z
   .object({
     displayName: requiredTrimmedString(DEFAULT_FORM_MAX_CHARS),
   })
   .strict();
 
-export const reportDesignPreviewResultBodySchema = z
+export const reportAssetPackPreviewResultBodySchema = z
   .object({
     status: z.enum(PREVIEW_RESULT_STATUSES),
     errorMessage: z.string().trim().max(RENDER_FAILURE_MAX_CHARS).optional(),
@@ -44,13 +44,13 @@ export const reportDesignPreviewResultBodySchema = z
   })
   .strict();
 
-export const createProjectBodySchema = z
+export const createWorkspaceBodySchema = z
   .object({
     name: requiredTrimmedString(DEFAULT_FORM_MAX_CHARS),
   })
   .strict();
 
-export const updateProjectBodySchema = z
+export const updateWorkspaceBodySchema = z
   .object({
     name: requiredTrimmedString(DEFAULT_FORM_MAX_CHARS),
   })

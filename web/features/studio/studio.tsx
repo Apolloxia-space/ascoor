@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { viewModes } from '@/mock/studio';
 import type { ApiError } from '@/shared/api/fetcher';
-import { getDesign, useListProjectDesigns, useListProjects } from '@/shared/api/generated/client';
+import { getAssetPack, useListWorkspaceAssetPacks, useListWorkspaces } from '@/shared/api/generated/client';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
 import {
@@ -35,20 +35,20 @@ import { paths } from '@/shared/constants/paths';
 import { useIsMobile } from '@/shared/hooks/use-mobile';
 import { cn } from '@/shared/lib/utils';
 import { ChatPanel } from './components/chat-panel';
-import { ProjectListDialog } from './components/dialogs/project-list-dialog';
+import { WorkspaceListDialog } from './components/dialogs/workspace-list-dialog';
 import { RightPanel } from './components/right-panel';
 import { StudioHome } from './components/studio-home';
 import { StudioHeader } from './components/studio-header';
 import { ViewerPanel } from './components/viewer-panel';
-import { useDesignMonitor } from './hooks/use-design-monitor';
+import { useAssetPackMonitor } from './hooks/use-asset-pack-monitor';
 import { useStudioApi } from './hooks/use-studio-api';
 import { useStudioPersist } from './hooks/use-studio-persist';
 import { buildStudioNewPath, buildStudioPath } from './lib/paths';
 import { getWorkspaceGenerationStatuses } from './lib/workspace-generation-status';
 import type { PartNode } from './lib/model-parts';
-import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from './messages';
+import { PACK_GENERATION_FAILED_MESSAGE, PACK_GENERATION_FAILED_TITLE } from './messages';
 import { useStudioStore } from './stores/use-studio-store';
-import type { ProjectDesignSummary, ProjectResponseData } from '@/shared/api/generated/schemas';
+import type { WorkspaceAssetPackSummary, WorkspaceResponseData } from '@/shared/api/generated/schemas';
 
 const isApiNotFoundError = (error: unknown): error is ApiError<{ error?: string }> => {
   if (!error || typeof error !== 'object') return false;
@@ -56,12 +56,12 @@ const isApiNotFoundError = (error: unknown): error is ApiError<{ error?: string 
   return (error as { status?: unknown }).status === 404;
 };
 
-const getDesignTimestamp = (design: ProjectDesignSummary) => {
-  return Date.parse(design.updatedAt || design.createdAt) || 0;
+const getAssetPackTimestamp = (assetPack: WorkspaceAssetPackSummary) => {
+  return Date.parse(assetPack.updatedAt || assetPack.createdAt) || 0;
 };
 
-const getProjectFileDesign = (designs: Array<ProjectDesignSummary>) => {
-  return [...designs].sort((a, b) => getDesignTimestamp(b) - getDesignTimestamp(a))[0] ?? null;
+const getLatestAssetPack = (assetPacks: Array<WorkspaceAssetPackSummary>) => {
+  return [...assetPacks].sort((a, b) => getAssetPackTimestamp(b) - getAssetPackTimestamp(a))[0] ?? null;
 };
 
 const normalizeWorkspaceTitle = (title?: string | null) => {
@@ -73,10 +73,10 @@ const formatWorkspaceListName = (name: string) => {
   return name.length > 30 ? `${name.slice(0, 27)}...` : name;
 };
 
-const getGeneratedDesignTitle = async (designId: string) => {
-  const response = await getDesign(designId);
+const getGeneratedAssetPackTitle = async (assetPackId: string) => {
+  const response = await getAssetPack(assetPackId);
   if (response.status !== 200) return null;
-  return response.data.latestDesignJob?.title ?? null;
+  return response.data.latestPackGenerationJob?.title ?? null;
 };
 
 const SHORTCUT_BLOCK_SELECTOR = [
@@ -95,45 +95,45 @@ const getSingleRouteParam = (value: string | Array<string> | undefined) =>
 export function StudioPage() {
   useStudioPersist();
   const {
-    projectId,
-    projectName,
-    projects,
-    pendingDesigns,
-    setProject,
-    setProjects,
-    clearProject,
+    workspaceId,
+    workspaceName,
+    workspaces,
+    pendingPackGenerations,
+    setWorkspace,
+    setWorkspaces,
+    clearWorkspace,
     chatPanelOpen,
     currentView,
-    projectMenuOpen,
+    workspaceMenuOpen,
     viewModeOpen,
     toggleChatPanel,
     setRightPanelMode,
     setCurrentView,
-    setProjectMenuOpen,
+    setWorkspaceMenuOpen,
     setViewModeOpen,
   } = useStudioStore();
   const status = useAuthStore((state) => state.status);
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams<{
-    projectId?: string | Array<string>;
+    workspaceId?: string | Array<string>;
   }>();
   const isMobile = useIsMobile();
-  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
-  const [selectedDesignName, setSelectedDesignName] = useState<string | null>(null);
-  const [selectedDesignTraceId, setSelectedDesignTraceId] = useState<string | null>(null);
-  const [designErrorDialogOpen, setDesignErrorDialogOpen] = useState(false);
-  const [designErrorMessage, setDesignErrorMessage] = useState(DESIGN_FAILED_MESSAGE);
+  const [selectedAssetPackId, setSelectedAssetPackId] = useState<string | null>(null);
+  const [selectedAssetPackName, setSelectedAssetPackName] = useState<string | null>(null);
+  const [selectedAssetPackTraceId, setSelectedAssetPackTraceId] = useState<string | null>(null);
+  const [assetPackErrorDialogOpen, setAssetPackErrorDialogOpen] = useState(false);
+  const [assetPackErrorMessage, setAssetPackErrorMessage] = useState(PACK_GENERATION_FAILED_MESSAGE);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
-  const [invalidRouteProjectId, setInvalidRouteProjectId] = useState<string | null>(null);
+  const [workspaceListDialogOpen, setWorkspaceListDialogOpen] = useState(false);
+  const [invalidRouteWorkspaceId, setInvalidRouteWorkspaceId] = useState<string | null>(null);
   const [parts, setParts] = useState<Array<PartNode>>([]);
   const [activePartId, setActivePartId] = useState<string | null>(null);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [shortcutHudMessage, setShortcutHudMessage] = useState<string | null>(null);
   const shortcutHudTimerRef = useRef<number | null>(null);
-  const workspaceTitleSyncProjectIdsRef = useRef<Set<string>>(new Set());
+  const workspaceTitleSyncWorkspaceIdsRef = useRef<Set<string>>(new Set());
   const workspaceTitleSyncInFlightRef = useRef<Set<string>>(new Set());
 
   const assemblyControlsRef = useRef<{
@@ -144,13 +144,13 @@ export function StudioPage() {
     downloadJavaScript: () => void;
     openPrompt: () => void;
   } | null>(null);
-  const { updateProject, invalidateProjects, invalidateProjectDesigns } = useStudioApi();
-  const routeProjectId = getSingleRouteParam(params.projectId) ?? null;
-  const isStudioHome = pathname === paths.studio && !routeProjectId;
-  const activeRouteProjectId =
-    routeProjectId && routeProjectId !== invalidRouteProjectId ? routeProjectId : null;
-  const activeProjectId = activeRouteProjectId ?? (isStudioHome ? '' : projectId ?? '');
-  const projectsQuery = useListProjects(
+  const { updateWorkspace, invalidateWorkspaces, invalidateWorkspaceAssetPacks } = useStudioApi();
+  const routeWorkspaceId = getSingleRouteParam(params.workspaceId) ?? null;
+  const isStudioHome = pathname === paths.studio && !routeWorkspaceId;
+  const activeRouteWorkspaceId =
+    routeWorkspaceId && routeWorkspaceId !== invalidRouteWorkspaceId ? routeWorkspaceId : null;
+  const activeWorkspaceId = activeRouteWorkspaceId ?? (isStudioHome ? '' : workspaceId ?? '');
+  const workspacesQuery = useListWorkspaces(
     { limit: 20 },
     {
       query: {
@@ -159,79 +159,79 @@ export function StudioPage() {
       },
     },
   );
-  const designsQuery = useListProjectDesigns(activeProjectId, {
+  const assetPacksQuery = useListWorkspaceAssetPacks(activeWorkspaceId, {
     query: {
-      enabled: status === 'authenticated' && Boolean(activeProjectId),
+      enabled: status === 'authenticated' && Boolean(activeWorkspaceId),
       staleTime: 60_000,
       retry: false,
     },
   });
-  const projectItems: Array<ProjectResponseData> =
-    projectsQuery.data?.status === 200 ? projectsQuery.data.data.items : [];
-  const designs = designsQuery.data?.status === 200 ? designsQuery.data.data.designs : [];
-  const projectFileDesign = useMemo(() => getProjectFileDesign(designs), [designs]);
-  const currentProject = useMemo(
-    () => projectItems.find((project) => project.id === activeProjectId) ?? null,
-    [activeProjectId, projectItems],
+  const workspaceItems: Array<WorkspaceResponseData> =
+    workspacesQuery.data?.status === 200 ? workspacesQuery.data.data.items : [];
+  const assetPacks = assetPacksQuery.data?.status === 200 ? assetPacksQuery.data.data.assetPacks : [];
+  const latestAssetPack = useMemo(() => getLatestAssetPack(assetPacks), [assetPacks]);
+  const currentWorkspace = useMemo(
+    () => workspaceItems.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
+    [activeWorkspaceId, workspaceItems],
   );
   const workspaceGenerationStatuses = useMemo(
-    () => getWorkspaceGenerationStatuses(pendingDesigns),
-    [pendingDesigns],
+    () => getWorkspaceGenerationStatuses(pendingPackGenerations),
+    [pendingPackGenerations],
   );
-  const projectsLoading = status === 'authenticated' && projectsQuery.isPending;
-  const projectsRefreshing =
-    status === 'authenticated' && projectsQuery.isFetching && !projectsQuery.isPending;
-  const hasSelectedDesignState =
-    selectedDesignId !== null ||
-    selectedDesignName !== null ||
-    selectedDesignTraceId !== null ||
+  const workspacesLoading = status === 'authenticated' && workspacesQuery.isPending;
+  const workspacesRefreshing =
+    status === 'authenticated' && workspacesQuery.isFetching && !workspacesQuery.isPending;
+  const hasSelectedAssetPackState =
+    selectedAssetPackId !== null ||
+    selectedAssetPackName !== null ||
+    selectedAssetPackTraceId !== null ||
     parts.length > 0 ||
     activePartId !== null ||
     shortcutHelpOpen ||
     shortcutHudMessage !== null;
 
-  const clearSelectedDesign = useCallback(() => {
-    if (!hasSelectedDesignState) return;
-    setSelectedDesignId(null);
-    setSelectedDesignName(null);
-    setSelectedDesignTraceId(null);
+  const clearSelectedAssetPack = useCallback(() => {
+    if (!hasSelectedAssetPackState) return;
+    setSelectedAssetPackId(null);
+    setSelectedAssetPackName(null);
+    setSelectedAssetPackTraceId(null);
     setParts([]);
     setActivePartId(null);
     setShortcutHelpOpen(false);
     setShortcutHudMessage(null);
-  }, [activePartId, hasSelectedDesignState, parts.length, shortcutHelpOpen, shortcutHudMessage]);
+  }, [activePartId, hasSelectedAssetPackState, parts.length, shortcutHelpOpen, shortcutHudMessage]);
 
-  const handleSelectProject = useCallback(
-    (nextProjectId: string, _nextProjectName: string) => {
-      clearSelectedDesign();
+  const handleSelectWorkspace = useCallback(
+    (nextWorkspaceId: string, _nextWorkspaceName: string) => {
+      clearSelectedAssetPack();
       setRightPanelMode('create');
-      const nextPath = buildStudioPath(nextProjectId);
+      const nextPath = buildStudioPath(nextWorkspaceId);
       if (pathname !== nextPath) {
         router.push(nextPath);
       }
     },
-    [clearSelectedDesign, pathname, router, setRightPanelMode],
+    [clearSelectedAssetPack, pathname, router, setRightPanelMode],
   );
 
-  const handleCloseProject = useCallback(() => {
-    clearSelectedDesign();
-    if (pathname === paths.studio && (projectId || projectName)) {
-      clearProject();
+  const handleCloseWorkspace = useCallback(() => {
+    clearSelectedAssetPack();
+    if (pathname === paths.studio && (workspaceId || workspaceName)) {
+      clearWorkspace();
     }
     if (pathname !== paths.studio) {
       router.replace(paths.studio);
     }
-  }, [clearProject, clearSelectedDesign, pathname, projectId, projectName, router]);
+  }, [clearWorkspace, clearSelectedAssetPack, pathname, workspaceId, workspaceName, router]);
 
   const handleOpenNewPackPage = useCallback(() => {
     router.push(buildStudioNewPath());
   }, [router]);
 
-  const applySelectedDesign = useCallback(
-    (designId: string, name: string, traceId: string | null = null) => {
-      setSelectedDesignId(designId);
-      setSelectedDesignName(name);
-      setSelectedDesignTraceId(traceId);
+  const applySelectedAssetPack = useCallback(
+    (assetPackId: string, name: string, traceId: string | null = null) => {
+      setSelectedAssetPackId(assetPackId);
+      setSelectedAssetPackName(name);
+      setSelectedAssetPackTraceId(traceId);
       setParts([]);
       setActivePartId(null);
       setShortcutHelpOpen(false);
@@ -242,47 +242,47 @@ export function StudioPage() {
   );
 
   const syncWorkspaceName = useCallback(
-    async (targetProjectId: string, title?: string | null) => {
+    async (targetWorkspaceId: string, title?: string | null) => {
       const nextWorkspaceName = normalizeWorkspaceTitle(title);
       if (!nextWorkspaceName) return false;
 
       const currentState = useStudioStore.getState();
-      const currentProjectName =
-        currentState.projects.find((project) => project.id === targetProjectId)?.name ??
-        (currentState.projectId === targetProjectId ? currentState.projectName : '');
-      if (currentProjectName === nextWorkspaceName) {
+      const currentWorkspaceName =
+        currentState.workspaces.find((workspace) => workspace.id === targetWorkspaceId)?.name ??
+        (currentState.workspaceId === targetWorkspaceId ? currentState.workspaceName : '');
+      if (currentWorkspaceName === nextWorkspaceName) {
         return true;
       }
 
-      const syncKey = `${targetProjectId}:${nextWorkspaceName}`;
+      const syncKey = `${targetWorkspaceId}:${nextWorkspaceName}`;
       if (workspaceTitleSyncInFlightRef.current.has(syncKey)) {
         return false;
       }
       workspaceTitleSyncInFlightRef.current.add(syncKey);
 
       try {
-        const updatedProject = await updateProject(targetProjectId, nextWorkspaceName);
-        const projectSummary = { id: updatedProject.id, name: updatedProject.name };
-        const currentProjects = useStudioStore.getState().projects;
-        const hasProject = currentProjects.some((project) => project.id === updatedProject.id);
-        const nextProjects = hasProject
-          ? currentProjects.map((project) =>
-              project.id === updatedProject.id ? projectSummary : project,
+        const updatedWorkspace = await updateWorkspace(targetWorkspaceId, nextWorkspaceName);
+        const workspaceSummary = { id: updatedWorkspace.id, name: updatedWorkspace.name };
+        const currentWorkspaces = useStudioStore.getState().workspaces;
+        const hasWorkspace = currentWorkspaces.some((workspace) => workspace.id === updatedWorkspace.id);
+        const nextWorkspaces = hasWorkspace
+          ? currentWorkspaces.map((workspace) =>
+              workspace.id === updatedWorkspace.id ? workspaceSummary : workspace,
             )
-          : [projectSummary, ...currentProjects];
-        const projectsChanged =
-          currentProjects.length !== nextProjects.length ||
-          currentProjects.some(
-            (project, index) =>
-              project.id !== nextProjects[index]?.id || project.name !== nextProjects[index]?.name,
+          : [workspaceSummary, ...currentWorkspaces];
+        const workspacesChanged =
+          currentWorkspaces.length !== nextWorkspaces.length ||
+          currentWorkspaces.some(
+            (workspace, index) =>
+              workspace.id !== nextWorkspaces[index]?.id || workspace.name !== nextWorkspaces[index]?.name,
           );
-        if (projectsChanged) {
-          setProjects(nextProjects);
+        if (workspacesChanged) {
+          setWorkspaces(nextWorkspaces);
         }
-        if (useStudioStore.getState().projectId === updatedProject.id) {
-          setProject(updatedProject.id, updatedProject.name);
+        if (useStudioStore.getState().workspaceId === updatedWorkspace.id) {
+          setWorkspace(updatedWorkspace.id, updatedWorkspace.name);
         }
-        invalidateProjects();
+        invalidateWorkspaces();
         return true;
       } catch (_error) {
         return false;
@@ -290,30 +290,30 @@ export function StudioPage() {
         workspaceTitleSyncInFlightRef.current.delete(syncKey);
       }
     },
-    [invalidateProjects, setProject, setProjects, updateProject],
+    [invalidateWorkspaces, setWorkspace, setWorkspaces, updateWorkspace],
   );
 
-  useDesignMonitor({
+  useAssetPackMonitor({
     enabled: status === 'authenticated',
-    onInvalidateProjectDesigns: invalidateProjectDesigns,
-    onDesignSucceeded: (payload) => {
-      if (!payload.designId) return;
-      const generatedDesignId = payload.designId;
-      workspaceTitleSyncProjectIdsRef.current.add(payload.projectId);
+    onInvalidateWorkspaceAssetPacks: invalidateWorkspaceAssetPacks,
+    onAssetPackSucceeded: (payload) => {
+      if (!payload.assetPackId) return;
+      const generatedAssetPackId = payload.assetPackId;
+      workspaceTitleSyncWorkspaceIdsRef.current.add(payload.workspaceId);
 
       void (async () => {
-        const detailTitle = await getGeneratedDesignTitle(generatedDesignId);
+        const detailTitle = await getGeneratedAssetPackTitle(generatedAssetPackId);
         const generatedTitle = normalizeWorkspaceTitle(detailTitle) ? detailTitle : payload.title;
-        return syncWorkspaceName(payload.projectId, generatedTitle);
+        return syncWorkspaceName(payload.workspaceId, generatedTitle);
       })().then((synced) => {
         if (synced) {
-          workspaceTitleSyncProjectIdsRef.current.delete(payload.projectId);
+          workspaceTitleSyncWorkspaceIdsRef.current.delete(payload.workspaceId);
         }
       });
     },
-    onDesignFailed: (_payload) => {
-      setDesignErrorMessage(DESIGN_FAILED_MESSAGE);
-      setDesignErrorDialogOpen(true);
+    onAssetPackFailed: (_payload) => {
+      setAssetPackErrorMessage(PACK_GENERATION_FAILED_MESSAGE);
+      setAssetPackErrorDialogOpen(true);
     },
   });
 
@@ -441,75 +441,75 @@ export function StudioPage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    if (!projectsQuery.isSuccess) return;
-    const nextProjects = projectItems.map((project) => ({ id: project.id, name: project.name }));
-    const sameProjects =
-      nextProjects.length === projects.length &&
-      nextProjects.every(
-        (project, index) =>
-          projects[index]?.id === project.id && projects[index]?.name === project.name,
+    if (!workspacesQuery.isSuccess) return;
+    const nextWorkspaces = workspaceItems.map((workspace) => ({ id: workspace.id, name: workspace.name }));
+    const sameWorkspaces =
+      nextWorkspaces.length === workspaces.length &&
+      nextWorkspaces.every(
+        (workspace, index) =>
+          workspaces[index]?.id === workspace.id && workspaces[index]?.name === workspace.name,
       );
 
-    if (!sameProjects) {
-      setProjects(nextProjects);
+    if (!sameWorkspaces) {
+      setWorkspaces(nextWorkspaces);
     }
 
-    if (projectItems.length === 0) {
-      if (projectId || projectName) {
-        clearProject();
+    if (workspaceItems.length === 0) {
+      if (workspaceId || workspaceName) {
+        clearWorkspace();
       }
       return;
     }
-    if (!projectId) {
+    if (!workspaceId) {
       return;
     }
-    const current = projectItems.find((project) => project.id === projectId) ?? null;
-    if (current && projectName !== current.name) {
-      setProject(current.id, current.name);
+    const current = workspaceItems.find((workspace) => workspace.id === workspaceId) ?? null;
+    if (current && workspaceName !== current.name) {
+      setWorkspace(current.id, current.name);
     }
   }, [
     status,
-    projectsQuery.isSuccess,
-    projectItems,
-    projects,
-    projectId,
-    projectName,
-    setProject,
-    setProjects,
-    clearProject,
+    workspacesQuery.isSuccess,
+    workspaceItems,
+    workspaces,
+    workspaceId,
+    workspaceName,
+    setWorkspace,
+    setWorkspaces,
+    clearWorkspace,
   ]);
 
   useEffect(() => {
-    if (!invalidRouteProjectId) return;
-    if (routeProjectId === invalidRouteProjectId) return;
-    setInvalidRouteProjectId(null);
-  }, [routeProjectId, invalidRouteProjectId]);
+    if (!invalidRouteWorkspaceId) return;
+    if (routeWorkspaceId === invalidRouteWorkspaceId) return;
+    setInvalidRouteWorkspaceId(null);
+  }, [routeWorkspaceId, invalidRouteWorkspaceId]);
 
   useEffect(() => {
-    if (!activeProjectId) return;
-    if (!designsQuery.isError) return;
-    if (!isApiNotFoundError(designsQuery.error)) return;
-    if (routeProjectId === activeProjectId && invalidRouteProjectId !== routeProjectId) {
-      setInvalidRouteProjectId(routeProjectId);
+    if (!activeWorkspaceId) return;
+    if (!assetPacksQuery.isError) return;
+    if (!isApiNotFoundError(assetPacksQuery.error)) return;
+    if (routeWorkspaceId === activeWorkspaceId && invalidRouteWorkspaceId !== routeWorkspaceId) {
+      setInvalidRouteWorkspaceId(routeWorkspaceId);
     }
-    clearSelectedDesign();
-    if (projectId || projectName) {
-      clearProject();
+    clearSelectedAssetPack();
+    if (workspaceId || workspaceName) {
+      clearWorkspace();
     }
     if (pathname !== paths.studio) {
       router.replace(paths.studio);
     }
   }, [
-    activeProjectId,
-    routeProjectId,
-    invalidRouteProjectId,
+    activeWorkspaceId,
+    routeWorkspaceId,
+    invalidRouteWorkspaceId,
     pathname,
-    designsQuery.isError,
-    designsQuery.error,
-    projectId,
-    projectName,
-    clearProject,
-    clearSelectedDesign,
+    assetPacksQuery.isError,
+    assetPacksQuery.error,
+    workspaceId,
+    workspaceName,
+    clearWorkspace,
+    clearSelectedAssetPack,
     router,
   ]);
 
@@ -521,22 +521,22 @@ export function StudioPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      if (projects.length > 0) {
-        setProjects([]);
+      if (workspaces.length > 0) {
+        setWorkspaces([]);
       }
-      clearSelectedDesign();
-      if (projectId || projectName) {
-        clearProject();
+      clearSelectedAssetPack();
+      if (workspaceId || workspaceName) {
+        clearWorkspace();
       }
     }
   }, [
     status,
-    projects.length,
-    projectId,
-    projectName,
-    setProjects,
-    clearProject,
-    clearSelectedDesign,
+    workspaces.length,
+    workspaceId,
+    workspaceName,
+    setWorkspaces,
+    clearWorkspace,
+    clearSelectedAssetPack,
   ]);
 
   useEffect(() => {
@@ -568,79 +568,79 @@ export function StudioPage() {
   useEffect(() => {
     if (status !== 'authenticated') return;
 
-    if (!routeProjectId) {
-      if (pathname === paths.studio && (projectId || projectName)) {
-        clearProject();
+    if (!routeWorkspaceId) {
+      if (pathname === paths.studio && (workspaceId || workspaceName)) {
+        clearWorkspace();
       }
       return;
     }
 
-    if (routeProjectId === invalidRouteProjectId) {
-      if (projectId || projectName) {
-        clearProject();
+    if (routeWorkspaceId === invalidRouteWorkspaceId) {
+      if (workspaceId || workspaceName) {
+        clearWorkspace();
       }
       return;
     }
 
-    const matchedProject =
-      projects.find((project) => project.id === routeProjectId) ??
-      projectItems.find((project) => project.id === routeProjectId) ??
+    const matchedWorkspace =
+      workspaces.find((workspace) => workspace.id === routeWorkspaceId) ??
+      workspaceItems.find((workspace) => workspace.id === routeWorkspaceId) ??
       null;
-    const nextProjectName = matchedProject?.name ?? '';
+    const nextWorkspaceName = matchedWorkspace?.name ?? '';
 
-    if (projectId !== routeProjectId || projectName !== nextProjectName) {
-      setProject(routeProjectId, nextProjectName);
+    if (workspaceId !== routeWorkspaceId || workspaceName !== nextWorkspaceName) {
+      setWorkspace(routeWorkspaceId, nextWorkspaceName);
     }
   }, [
     status,
     pathname,
-    routeProjectId,
-    invalidRouteProjectId,
-    projectId,
-    projectName,
-    projects,
-    projectItems,
-    setProject,
-    clearProject,
+    routeWorkspaceId,
+    invalidRouteWorkspaceId,
+    workspaceId,
+    workspaceName,
+    workspaces,
+    workspaceItems,
+    setWorkspace,
+    clearWorkspace,
   ]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    if (!routeProjectId) return;
-    if (projectId !== routeProjectId) return;
-    if (!designsQuery.isSuccess) return;
+    if (!routeWorkspaceId) return;
+    if (workspaceId !== routeWorkspaceId) return;
+    if (!assetPacksQuery.isSuccess) return;
 
-    if (!projectFileDesign) {
-      if (hasSelectedDesignState) {
-        clearSelectedDesign();
+    if (!latestAssetPack) {
+      if (hasSelectedAssetPackState) {
+        clearSelectedAssetPack();
       }
       return;
     }
 
-    const projectFileDesignName = projectFileDesign.displayName ?? projectName ?? 'Untitled';
-    if (selectedDesignId !== projectFileDesign.id || selectedDesignName !== projectFileDesignName) {
-      applySelectedDesign(projectFileDesign.id, projectFileDesignName);
+    const latestAssetPackName = latestAssetPack.displayName ?? workspaceName ?? 'Untitled';
+    if (selectedAssetPackId !== latestAssetPack.id || selectedAssetPackName !== latestAssetPackName) {
+      applySelectedAssetPack(latestAssetPack.id, latestAssetPackName);
     }
 
-    if (workspaceTitleSyncProjectIdsRef.current.has(routeProjectId)) {
-      workspaceTitleSyncProjectIdsRef.current.delete(routeProjectId);
+    if (workspaceTitleSyncWorkspaceIdsRef.current.has(routeWorkspaceId)) {
+      workspaceTitleSyncWorkspaceIdsRef.current.delete(routeWorkspaceId);
       void (async () => {
-        const generatedTitle = await getGeneratedDesignTitle(projectFileDesign.id);
-        return syncWorkspaceName(routeProjectId, generatedTitle);
+        const generatedTitle = await getGeneratedAssetPackTitle(latestAssetPack.id);
+        return syncWorkspaceName(routeWorkspaceId, generatedTitle);
       })();
     }
   }, [
     status,
-    routeProjectId,
-    projectId,
-    projectName,
-    designsQuery.isSuccess,
-    projectFileDesign,
-    selectedDesignId,
-    selectedDesignName,
-    hasSelectedDesignState,
-    clearSelectedDesign,
-    applySelectedDesign,
+    routeWorkspaceId,
+    workspaceId,
+    workspaceName,
+    assetPacksQuery.isSuccess,
+    latestAssetPack,
+    selectedAssetPackId,
+    selectedAssetPackName,
+    hasSelectedAssetPackState,
+    clearSelectedAssetPack,
+    applySelectedAssetPack,
     syncWorkspaceName,
   ]);
 
@@ -655,25 +655,25 @@ export function StudioPage() {
 
   return (
     <div className="h-screen min-h-0 overflow-hidden">
-      <ProjectListDialog
-        open={projectListDialogOpen}
-        onOpenChange={setProjectListDialogOpen}
-        onSelectProject={handleSelectProject}
-        onDeleteCurrentProject={handleCloseProject}
+      <WorkspaceListDialog
+        open={workspaceListDialogOpen}
+        onOpenChange={setWorkspaceListDialogOpen}
+        onSelectWorkspace={handleSelectWorkspace}
+        onDeleteCurrentWorkspace={handleCloseWorkspace}
       />
       <div className={cn('flex h-full min-h-0 flex-col transition-all')}>
         <StudioHeader
-          projectMenuOpen={projectMenuOpen}
-          onProjectMenuChange={setProjectMenuOpen}
-          onSelectProject={handleSelectProject}
-          onCloseProject={handleCloseProject}
-          onOpenProjectManager={() => setProjectListDialogOpen(true)}
-          projectsLoading={projectsLoading}
-          projectsRefreshing={projectsRefreshing}
-          hideProjectMenuOnMobile
+          workspaceMenuOpen={workspaceMenuOpen}
+          onWorkspaceMenuChange={setWorkspaceMenuOpen}
+          onSelectWorkspace={handleSelectWorkspace}
+          onCloseWorkspace={handleCloseWorkspace}
+          onOpenWorkspaceManager={() => setWorkspaceListDialogOpen(true)}
+          workspacesLoading={workspacesLoading}
+          workspacesRefreshing={workspacesRefreshing}
+          hideWorkspaceMenuOnMobile
           showBrand
-          projectNameOverride={isStudioHome ? 'Studio' : null}
-          projectMenuRightSlot={
+          workspaceNameOverride={isStudioHome ? 'Studio' : null}
+          workspaceMenuRightSlot={
             <>
               {!isStudioHome ? (
                 <>
@@ -755,11 +755,11 @@ export function StudioPage() {
                         type="button"
                         className={mobileMenuItemClass}
                         onClick={() => {
-                          handleCloseProject();
+                          handleCloseWorkspace();
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
                         }}
-                        disabled={!projectId}
+                        disabled={!workspaceId}
                       >
                         <XCircle className="size-4" />
                         Close workspace
@@ -770,7 +770,7 @@ export function StudioPage() {
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setMobileChatOpen(false);
-                          setProjectListDialogOpen(true);
+                          setWorkspaceListDialogOpen(true);
                         }}
                       >
                         <FolderOpen className="size-4" />
@@ -780,15 +780,15 @@ export function StudioPage() {
                         className={cn(mobileMenuSectionTitleClass, 'flex items-center gap-2 pt-2')}
                       >
                         <span>Recent workspace</span>
-                        {projectsRefreshing && !projectsLoading ? (
+                        {workspacesRefreshing && !workspacesLoading ? (
                           <Loader2
                             className="size-3.5 animate-spin"
-                            aria-label="Refreshing recent projects"
+                            aria-label="Refreshing recent workspaces"
                           />
                         ) : null}
                       </div>
                       <div className="max-h-64 space-y-1 overflow-y-auto">
-                        {projectsLoading && projects.length === 0 ? (
+                        {workspacesLoading && workspaces.length === 0 ? (
                           <div className="space-y-2 px-3 py-2">
                             {[0, 1, 2].map((index) => (
                               <div key={index} className="flex items-center gap-2">
@@ -797,11 +797,11 @@ export function StudioPage() {
                               </div>
                             ))}
                           </div>
-                        ) : projects.length === 0 ? (
+                        ) : workspaces.length === 0 ? (
                           <p className="px-3 py-2 text-sm text-muted-foreground">No workspaces</p>
                         ) : (
-                          projects.slice(0, 10).map((project) => {
-                            const generationStatus = workspaceGenerationStatuses[project.id];
+                          workspaces.slice(0, 10).map((workspace) => {
+                            const generationStatus = workspaceGenerationStatuses[workspace.id];
                             const isFailedGeneration = generationStatus?.kind === 'failed';
                             const isActiveGeneration =
                               generationStatus?.kind === 'queued' ||
@@ -810,19 +810,19 @@ export function StudioPage() {
                             return (
                               <button
                                 type="button"
-                                key={project.id}
+                                key={workspace.id}
                                 className={cn(
                                   mobileMenuItemClass,
-                                  projectId === project.id && 'bg-accent text-accent-foreground',
+                                  workspaceId === workspace.id && 'bg-accent text-accent-foreground',
                                 )}
                                 onClick={() => {
-                                  handleSelectProject(project.id, project.name);
+                                  handleSelectWorkspace(workspace.id, workspace.name);
                                   setMobileMenuOpen(false);
                                   setMobileChatOpen(false);
                                 }}
                               >
-                                <span className="min-w-0 flex-1 truncate" title={project.name}>
-                                  {formatWorkspaceListName(project.name)}
+                                <span className="min-w-0 flex-1 truncate" title={workspace.name}>
+                                  {formatWorkspaceListName(workspace.name)}
                                 </span>
                                 {generationStatus ? (
                                   <Badge
@@ -839,7 +839,7 @@ export function StudioPage() {
                                     <span className="truncate">{generationStatus.label}</span>
                                   </Badge>
                                 ) : null}
-                                {projectId === project.id && (
+                                {workspaceId === workspace.id && (
                                   <span className="text-xs text-primary">Current</span>
                                 )}
                               </button>
@@ -900,13 +900,13 @@ export function StudioPage() {
         />
         {isStudioHome ? (
           <StudioHome
-            projects={projectItems as Array<ProjectResponseData & { thumbnailAssetUri?: string | null }>}
+            workspaces={workspaceItems as Array<WorkspaceResponseData & { thumbnailAssetUri?: string | null }>}
             workspaceGenerationStatuses={workspaceGenerationStatuses}
-            projectsLoading={projectsLoading}
-            projectsRefreshing={projectsRefreshing}
+            workspacesLoading={workspacesLoading}
+            workspacesRefreshing={workspacesRefreshing}
             onCreateNewPack={handleOpenNewPackPage}
-            onOpenProjectManager={() => setProjectListDialogOpen(true)}
-            onSelectProject={handleSelectProject}
+            onOpenWorkspaceManager={() => setWorkspaceListDialogOpen(true)}
+            onSelectWorkspace={handleSelectWorkspace}
           />
         ) : (
           <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible md:flex-row">
@@ -927,10 +927,10 @@ export function StudioPage() {
                   onAssemblyControlsReady={(controls) => {
                     assemblyControlsRef.current = controls;
                   }}
-                  designId={selectedDesignId}
-                  designName={selectedDesignName}
-                  projectThumbnailAssetUri={currentProject?.thumbnailAssetUri ?? null}
-                  traceId={selectedDesignTraceId}
+                  assetPackId={selectedAssetPackId}
+                  assetPackName={selectedAssetPackName}
+                  workspaceThumbnailAssetUri={currentWorkspace?.thumbnailAssetUri ?? null}
+                  traceId={selectedAssetPackTraceId}
                   shortcutHelpOpen={shortcutHelpOpen}
                   onShortcutHelpOpenChange={setShortcutHelpOpen}
                   shortcutHudMessage={shortcutHudMessage}
@@ -941,7 +941,7 @@ export function StudioPage() {
                   activePartId={activePartId}
                   onPreviewPart={previewPart}
                   onToggle={toggleChatPanel}
-                  hasSelectedPack={Boolean(selectedDesignId)}
+                  hasSelectedPack={Boolean(selectedAssetPackId)}
                   showJavaScriptDownload={false}
                   onDownloadZip={downloadCurrentPackZip}
                   onDownloadJavaScript={downloadCurrentPackJavaScript}
@@ -977,7 +977,7 @@ export function StudioPage() {
                       variant="mobile"
                       open={mobileChatOpen}
                       onToggle={() => setMobileChatOpen(false)}
-                      hasSelectedPack={Boolean(selectedDesignId)}
+                      hasSelectedPack={Boolean(selectedAssetPackId)}
                       showJavaScriptDownload={false}
                       parts={parts}
                       activePartId={activePartId}
@@ -992,14 +992,14 @@ export function StudioPage() {
           </main>
         )}
 
-        <Dialog open={designErrorDialogOpen} onOpenChange={setDesignErrorDialogOpen}>
+        <Dialog open={assetPackErrorDialogOpen} onOpenChange={setAssetPackErrorDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{DESIGN_FAILED_TITLE}</DialogTitle>
-              <DialogDescription>{designErrorMessage}</DialogDescription>
+              <DialogTitle>{PACK_GENERATION_FAILED_TITLE}</DialogTitle>
+              <DialogDescription>{assetPackErrorMessage}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button onClick={() => setDesignErrorDialogOpen(false)}>Close</Button>
+              <Button onClick={() => setAssetPackErrorDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

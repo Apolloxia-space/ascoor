@@ -33,7 +33,7 @@ export interface BillingRepository {
     idempotencyKey: string;
     periodStart?: Date | null;
     periodEnd?: Date | null;
-    relatedDesignId?: string | null;
+    relatedAssetPackId?: string | null;
     relatedPartId?: string | null;
   }): Promise<boolean>;
   consumeCreditsIfAvailable(params: {
@@ -43,7 +43,7 @@ export interface BillingRepository {
     idempotencyKey: string;
     periodStart: Date;
     periodEnd: Date;
-    relatedDesignId?: string | null;
+    relatedAssetPackId?: string | null;
     relatedPartId?: string | null;
   }): Promise<boolean>;
   findSubscriptionByUserId(userId: string): Promise<Subscription | null>;
@@ -156,7 +156,7 @@ export class BillingRepositoryPostgres implements BillingRepository {
     idempotencyKey: string;
     periodStart?: Date | null;
     periodEnd?: Date | null;
-    relatedDesignId?: string | null;
+    relatedAssetPackId?: string | null;
     relatedPartId?: string | null;
   }): Promise<boolean> {
     const data: CreditLedger = {
@@ -166,7 +166,7 @@ export class BillingRepositoryPostgres implements BillingRepository {
       reason: params.reason,
       periodStart: params.periodStart ?? null,
       periodEnd: params.periodEnd ?? null,
-      relatedDesignId: params.relatedDesignId ?? null,
+      relatedAssetPackId: params.relatedAssetPackId ?? null,
       relatedPartId: params.relatedPartId ?? null,
       idempotencyKey: params.idempotencyKey,
       createdAt: new Date(),
@@ -185,7 +185,7 @@ export class BillingRepositoryPostgres implements BillingRepository {
     idempotencyKey: string;
     periodStart: Date;
     periodEnd: Date;
-    relatedDesignId?: string | null;
+    relatedAssetPackId?: string | null;
     relatedPartId?: string | null;
   }): Promise<boolean> {
     if (!Number.isInteger(params.amount) || params.amount <= 0) {
@@ -226,7 +226,7 @@ export class BillingRepositoryPostgres implements BillingRepository {
             reason: params.reason,
             periodStart: params.periodStart,
             periodEnd: params.periodEnd,
-            relatedDesignId: params.relatedDesignId ?? null,
+            relatedAssetPackId: params.relatedAssetPackId ?? null,
             relatedPartId: params.relatedPartId ?? null,
             idempotencyKey: params.idempotencyKey,
           },

@@ -14,7 +14,7 @@ export class AssetPackPlanUsecase implements IAssetPackPlanUsecase {
     const trace = resolveTraceContext({
       requestId: input.requestId ?? traceContext?.requestId,
       traceId: input.traceId ?? traceContext?.traceId,
-      designId: input.designId ?? traceContext?.designId,
+      packGenerationJobId: input.packGenerationJobId ?? traceContext?.packGenerationJobId,
     });
 
     try {
@@ -31,7 +31,7 @@ export class AssetPackPlanUsecase implements IAssetPackPlanUsecase {
         stage: 'asset_pack_plan',
         requestId: trace.requestId,
         traceId: trace.traceId,
-        designId: trace.designId || undefined,
+        packGenerationJobId: trace.packGenerationJobId || undefined,
         details: { failure_reason: reason },
       });
     }

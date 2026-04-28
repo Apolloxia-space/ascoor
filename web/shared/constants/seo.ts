@@ -13,5 +13,5 @@ const normalizeSiteUrl = (rawUrl?: string) => {
 export const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 export const siteName = 'Ascoor';
 export const defaultDescription =
-  'Ascoor is a browser-based 3D design studio with Create and Edit workspaces, project history, and GLB, STL, and JavaScript exports.';
+  'Ascoor is a browser-based 3D asset pack studio with Create and Edit workspaces, workspace history, and GLB, STL, and JavaScript exports.';
 export const defaultOgImagePath = '/og/default-1200x630-v20260325.jpeg';

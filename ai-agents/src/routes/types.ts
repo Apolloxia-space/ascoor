@@ -4,7 +4,7 @@ export type AppBindings = {
   Variables: {
     requestId: string;
     traceId: string;
-    designId: string | null;
+    packGenerationJobId: string | null;
   };
 };
 

@@ -2,16 +2,16 @@
   {
     "planKey": "free",
     "monthlyCredits": 10,
-    "concurrentDesignLimit": 1
+    "concurrentPackGenerationLimit": 1
   },
   {
     "planKey": "hobby",
     "monthlyCredits": 50,
-    "concurrentDesignLimit": 2
+    "concurrentPackGenerationLimit": 2
   },
   {
     "planKey": "pro",
     "monthlyCredits": 150,
-    "concurrentDesignLimit": 3
+    "concurrentPackGenerationLimit": 3
   }
 ]

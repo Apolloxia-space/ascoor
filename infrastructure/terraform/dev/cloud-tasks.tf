@@ -1,5 +1,5 @@
-resource "google_cloud_tasks_queue" "design_jobs" {
-  name     = "${local.resource_prefix}-design-jobs"
+resource "google_cloud_tasks_queue" "pack_generation_jobs" {
+  name     = "${local.resource_prefix}-pack-generation-jobs"
   location = local.region
 
   rate_limits {

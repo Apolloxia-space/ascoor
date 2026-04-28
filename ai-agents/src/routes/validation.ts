@@ -28,7 +28,7 @@ export async function parseAndValidate<T extends ZodTypeAny>(
       path: c.req.path,
       request_id: c.get('requestId'),
       trace_id: c.get('traceId'),
-      design_id: c.get('designId'),
+      pack_generation_job_id: c.get('packGenerationJobId'),
       errors,
       body_summary: summarizeRequestBody(raw),
     },
@@ -41,7 +41,7 @@ export async function parseAndValidate<T extends ZodTypeAny>(
       message: 'Request validation failed.',
       requestId: c.get('requestId'),
       traceId: c.get('traceId'),
-      designId: c.get('designId') || undefined,
+      packGenerationJobId: c.get('packGenerationJobId') || undefined,
       details: { errors },
     },
   };

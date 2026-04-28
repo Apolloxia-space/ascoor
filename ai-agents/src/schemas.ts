@@ -9,10 +9,10 @@ export {
   type CompilePromptIn,
   type CompilePromptOut,
 } from './entities/prompt-compile';
-export { designInSchema, type DesignIn, type DesignOut } from './entities/design';
+export { assetPackInSchema, type AssetPackIn, type AssetPackOut } from './entities/asset-pack';
 export {
-  designTitleInSchema,
-  type DesignTitleIn,
-  type DesignTitleOut,
+  assetPackTitleInSchema,
+  type AssetPackTitleIn,
+  type AssetPackTitleOut,
 } from './entities/title';
 export type { InvokeErrorOut } from './entities/invoke-error';

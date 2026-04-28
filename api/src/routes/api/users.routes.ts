@@ -13,8 +13,8 @@ export function createUsersRoutes() {
 
   router.post('/bootstrap', async (c) => {
     const md = c.get('md');
-    const projectsUsecase = c.get('usecases').projects;
-    await projectsUsecase.ensureDefaultProject({
+    const workspacesUsecase = c.get('usecases').workspaces;
+    await workspacesUsecase.ensureDefaultWorkspace({
       ownerId: md.userId,
       ownerEmail: md.userEmail ?? null,
       ownerName: md.userName ?? null,

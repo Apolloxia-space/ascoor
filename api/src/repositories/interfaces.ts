@@ -1,21 +1,21 @@
-import type { Design, DesignPartStatus, PreviewStatus, Prisma } from '../generated/prisma/client';
-import type { GeneratedDesignInfo } from '../entities/designs';
+import type { AssetPack, AssetPartStatus, PreviewStatus, Prisma } from '../generated/prisma/client';
+import type { GeneratedAssetPackInfo } from '../entities/assetPacks';
 import type { UploadedObjectInfo } from '../entities/storage';
 
-export interface IDesignRepository {
-  get(id: string): Promise<Design | null>;
-  getOwned(userId: string, id: string): Promise<Design | null>;
-  getOwnedByIds(params: { userId: string; ids: Array<string> }): Promise<Array<Design>>;
-  list(projectId: string): Promise<Array<Design>>;
+export interface IAssetPackRepository {
+  get(id: string): Promise<AssetPack | null>;
+  getOwned(userId: string, id: string): Promise<AssetPack | null>;
+  getOwnedByIds(params: { userId: string; ids: Array<string> }): Promise<Array<AssetPack>>;
+  list(workspaceId: string): Promise<Array<AssetPack>>;
   update(params: {
-    designId: string;
+    assetPackId: string;
     assetUriTs: string;
     previewStatus?: PreviewStatus;
-  }): Promise<Design>;
-  updateDisplayName(params: { designId: string; displayName: string }): Promise<Design>;
-  create(params: { projectId: string; displayName: string }): Promise<Design>;
+  }): Promise<AssetPack>;
+  updateDisplayName(params: { assetPackId: string; displayName: string }): Promise<AssetPack>;
+  create(params: { workspaceId: string; displayName: string }): Promise<AssetPack>;
   createAssetPack(params: {
-    projectId: string;
+    workspaceId: string;
     displayName: string;
     packPlan: Prisma.InputJsonValue;
     parts: Array<{
@@ -23,16 +23,16 @@ export interface IDesignRepository {
       displayName: string;
       description?: string | null;
       prompt: string;
-      status?: DesignPartStatus;
+      status?: AssetPartStatus;
       assetUriTs?: string | null;
       errorMessage?: string | null;
       sortOrder: number;
     }>;
-  }): Promise<Design>;
-  listParts(designId: string): Promise<
+  }): Promise<AssetPack>;
+  listParts(assetPackId: string): Promise<
     Array<{
       id: string;
-      designId: string;
+      assetPackId: string;
       slug: string;
       displayName: string;
       description: string | null;
@@ -46,37 +46,37 @@ export interface IDesignRepository {
     }>
   >;
   createParts(params: {
-    designId: string;
+    assetPackId: string;
     parts: Array<{
       slug: string;
       displayName: string;
       description?: string | null;
       prompt: string;
-      status?: DesignPartStatus;
+      status?: AssetPartStatus;
       assetUriTs?: string | null;
       errorMessage?: string | null;
       sortOrder: number;
     }>;
   }): Promise<void>;
   updatePart(params: {
-    designId: string;
+    assetPackId: string;
     slug: string;
-    status: DesignPartStatus;
+    status: AssetPartStatus;
     assetUriTs?: string | null;
     errorMessage?: string | null;
   }): Promise<void>;
   updatePreview(params: {
-    designId: string;
+    assetPackId: string;
     assetUriTs?: string | null;
     previewStatus: PreviewStatus;
     previewError?: string | null;
-  }): Promise<Design>;
+  }): Promise<AssetPack>;
   updateEditedAsset(params: {
-    designId: string;
+    assetPackId: string;
     editedAssetUriGlb: string | null;
     editedAssetUpdatedAt: Date | null;
-  }): Promise<Design>;
-  delete(designId: string): Promise<Design>;
+  }): Promise<AssetPack>;
+  delete(assetPackId: string): Promise<AssetPack>;
 }
 
 export interface IGcsRepository {
@@ -88,7 +88,7 @@ export interface IGcsRepository {
     userId?: string;
     filename?: string;
     ext?: string;
-  }): Promise<GeneratedDesignInfo>;
+  }): Promise<GeneratedAssetPackInfo>;
   uploadBinary(params: {
     content: Uint8Array;
     contentType: string;

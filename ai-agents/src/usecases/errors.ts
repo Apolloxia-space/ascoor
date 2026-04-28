@@ -4,7 +4,7 @@ export class InvokeError extends Error {
   stage?: string;
   requestId?: string;
   traceId?: string;
-  designId?: string;
+  packGenerationJobId?: string;
   details?: Record<string, unknown>;
 
   constructor(params: {
@@ -14,7 +14,7 @@ export class InvokeError extends Error {
     stage?: string;
     requestId?: string;
     traceId?: string;
-    designId?: string;
+    packGenerationJobId?: string;
     details?: Record<string, unknown>;
   }) {
     super(params.message);
@@ -24,7 +24,7 @@ export class InvokeError extends Error {
     this.stage = params.stage;
     this.requestId = params.requestId;
     this.traceId = params.traceId;
-    this.designId = params.designId;
+    this.packGenerationJobId = params.packGenerationJobId;
     this.details = params.details;
   }
 }
@@ -36,7 +36,7 @@ export function toInvokeErrorOut(error: InvokeError): {
     stage?: string;
     requestId?: string;
     traceId?: string;
-    designId?: string;
+    packGenerationJobId?: string;
     details?: Record<string, unknown>;
   };
 } {
@@ -47,7 +47,7 @@ export function toInvokeErrorOut(error: InvokeError): {
       stage: error.stage,
       requestId: error.requestId,
       traceId: error.traceId,
-      designId: error.designId,
+      packGenerationJobId: error.packGenerationJobId,
       details: error.details,
     },
   };

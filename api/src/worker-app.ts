@@ -10,11 +10,11 @@ export function createWorkerApp(dependencies: AppDependencies) {
 
   app.use('*', async (c, next) => {
     const requestId = randomUUID();
-    const designId = c.req.header('x-design-id')?.trim() || null;
+    const packGenerationJobId = c.req.header('x-pack-generation-job-id')?.trim() || null;
     const incomingTraceId = c.req.header('x-trace-id')?.trim() || null;
-    const traceId = incomingTraceId ?? designId ?? requestId;
+    const traceId = incomingTraceId ?? packGenerationJobId ?? requestId;
     c.set('requestId', requestId);
-    c.set('designId', designId);
+    c.set('packGenerationJobId', packGenerationJobId);
     c.set('traceId', traceId);
     c.header('X-Request-Id', requestId);
     c.header('X-Trace-Id', traceId);
@@ -23,9 +23,9 @@ export function createWorkerApp(dependencies: AppDependencies) {
 
   app.use('*', async (c, next) => {
     c.set('usecases', {
-      designs: dependencies.designsUsecase,
-      designJobs: dependencies.designJobsUsecase,
-      projects: dependencies.projectsUsecase,
+      assetPacks: dependencies.assetPacksUsecase,
+      packGenerationJobs: dependencies.packGenerationJobsUsecase,
+      workspaces: dependencies.workspacesUsecase,
       users: dependencies.usersUsecase,
       billing: dependencies.billingUsecase,
     });

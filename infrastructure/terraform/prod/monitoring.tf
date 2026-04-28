@@ -9,7 +9,7 @@ resource "google_monitoring_notification_channel" "primary_email" {
 
 resource "google_logging_metric" "design_finished_total" {
   name        = "${local.resource_prefix}_design_finished_total"
-  description = "Count of design jobs that reached finished state."
+  description = "Count of pack generation jobs that reached finished state."
 
   filter = <<-EOT
 resource.type="cloud_run_revision"
@@ -25,7 +25,7 @@ EOT
 
 resource "google_logging_metric" "design_failed_total" {
   name        = "${local.resource_prefix}_design_failed_total"
-  description = "Count of design jobs that finished in failed state."
+  description = "Count of pack generation jobs that finished in failed state."
 
   filter = <<-EOT
 resource.type="cloud_run_revision"
@@ -42,7 +42,7 @@ EOT
 
 resource "google_logging_metric" "design_duration_ms" {
   name            = "${local.resource_prefix}_design_duration_ms"
-  description     = "Design processing duration (milliseconds) from structured logs."
+  description     = "Pack generation processing duration (milliseconds) from structured logs."
   value_extractor = "EXTRACT(jsonPayload.duration_ms)"
 
   filter = <<-EOT
@@ -68,7 +68,7 @@ EOT
 
 resource "google_logging_metric" "design_stale_recovered_total" {
   name        = "${local.resource_prefix}_design_stale_recovered_total"
-  description = "Count of stale running design jobs that were force-failed."
+  description = "Count of stale running pack generation jobs that were force-failed."
 
   filter = <<-EOT
 resource.type="cloud_run_revision"
@@ -84,7 +84,7 @@ EOT
 
 resource "google_logging_metric" "design_stage_failed_total" {
   name        = "${local.resource_prefix}_design_stage_failed_total"
-  description = "Count of design stage failures by stage and error code."
+  description = "Count of pack generation stage failures by stage and error code."
 
   filter = <<-EOT
 resource.type="cloud_run_revision"
@@ -100,13 +100,13 @@ EOT
     labels {
       key         = "stage"
       value_type  = "STRING"
-      description = "Design pipeline stage"
+      description = "Pack generation pipeline stage"
     }
 
     labels {
       key         = "error_code"
       value_type  = "STRING"
-      description = "Design failure code"
+      description = "Pack generation failure code"
     }
   }
 
@@ -118,7 +118,7 @@ EOT
 
 resource "google_logging_metric" "design_trace_failed_total" {
   name        = "${local.resource_prefix}_design_trace_failed_total"
-  description = "Count of design traces that ended in failed status."
+  description = "Count of pack generation traces that ended in failed status."
 
   filter = <<-EOT
 resource.type="cloud_run_revision"
@@ -134,13 +134,13 @@ EOT
     labels {
       key         = "failed_stage"
       value_type  = "STRING"
-      description = "Failed stage from design trace summary"
+      description = "Failed stage from pack generation trace summary"
     }
 
     labels {
       key         = "error_code"
       value_type  = "STRING"
-      description = "Error code from design trace summary"
+      description = "Error code from pack generation trace summary"
     }
   }
 
@@ -152,14 +152,14 @@ EOT
 
 resource "google_logging_metric" "design_api_enqueue_http_5xx_total" {
   name        = "${local.resource_prefix}_design_api_enqueue_http_5xx_total"
-  description = "Count of HTTP 5xx responses from POST /designs on API service."
+  description = "Count of HTTP 5xx responses from POST /pack-generation-jobs on API service."
 
   filter = <<-EOT
 resource.type="cloud_run_revision"
 resource.labels.service_name="${google_cloud_run_v2_service.api.name}"
 logName="projects/${local.project_id}/logs/run.googleapis.com%2Frequests"
 httpRequest.requestMethod="POST"
-httpRequest.requestUrl=~".*/designs(\\?.*)?$"
+httpRequest.requestUrl=~".*/pack-generation-jobs(\\?.*)?$"
 httpRequest.status>=500
 EOT
 
@@ -172,17 +172,17 @@ EOT
 
 resource "google_monitoring_alert_policy" "design_failure_rate" {
   count        = var.monitoring_alerts_enabled ? 1 : 0
-  display_name = "[${upper(local.environment)}] Design failure rate > 10% (15m)"
+  display_name = "[${upper(local.environment)}] Pack generation failure rate > 10% (15m)"
   combiner     = "OR"
   enabled      = true
 
   documentation {
     mime_type = "text/markdown"
-    content   = "Design finished events show failure ratio above 10% over 15 minutes."
+    content   = "Pack generation finished events show failure ratio above 10% over 15 minutes."
   }
 
   conditions {
-    display_name = "design-failure-rate"
+    display_name = "pack-generation-failure-rate"
 
     condition_threshold {
       comparison      = "COMPARISON_GT"
@@ -218,17 +218,17 @@ resource "google_monitoring_alert_policy" "design_failure_rate" {
 
 resource "google_monitoring_alert_policy" "design_latency_p95" {
   count        = var.monitoring_alerts_enabled ? 1 : 0
-  display_name = "[${upper(local.environment)}] Design duration p95 > 300s (15m)"
+  display_name = "[${upper(local.environment)}] Pack generation duration p95 > 300s (15m)"
   combiner     = "OR"
   enabled      = true
 
   documentation {
     mime_type = "text/markdown"
-    content   = "Design duration p95 exceeded 300 seconds for at least 15 minutes."
+    content   = "Pack generation duration p95 exceeded 300 seconds for at least 15 minutes."
   }
 
   conditions {
-    display_name = "design-duration-p95"
+    display_name = "pack-generation-duration-p95"
 
     condition_threshold {
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.design_duration_ms.name}\" resource.type=\"cloud_run_revision\""
@@ -259,17 +259,17 @@ resource "google_monitoring_alert_policy" "design_latency_p95" {
 
 resource "google_monitoring_alert_policy" "design_stale_recovered" {
   count        = var.monitoring_alerts_enabled ? 1 : 0
-  display_name = "[${upper(local.environment)}] Stale running design recovered"
+  display_name = "[${upper(local.environment)}] Stale running pack generation job recovered"
   combiner     = "OR"
   enabled      = true
 
   documentation {
     mime_type = "text/markdown"
-    content   = "Detected stale running design jobs that were force-failed by stale reaper logic."
+    content   = "Detected stale running pack generation jobs that were force-failed by stale reaper logic."
   }
 
   conditions {
-    display_name = "design-stale-recovered"
+    display_name = "pack-generation-stale-recovered"
 
     condition_threshold {
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.design_stale_recovered_total.name}\" resource.type=\"cloud_run_revision\""
@@ -513,17 +513,17 @@ resource "google_monitoring_alert_policy" "worker_http_5xx_ratio" {
 }
 
 resource "google_monitoring_alert_policy" "design_failed_immediate_email" {
-  display_name = "[${upper(local.environment)}] Design failed (immediate)"
+  display_name = "[${upper(local.environment)}] Pack generation failed (immediate)"
   combiner     = "OR"
   enabled      = true
 
   documentation {
     mime_type = "text/markdown"
-    content   = "Triggered immediately when design trace ends with failed, or when API `POST /designs` returns HTTP 5xx."
+    content   = "Triggered immediately when pack generation trace ends with failed, or when API `POST /pack-generation-jobs` returns HTTP 5xx."
   }
 
   conditions {
-    display_name = "design-trace-failed-immediate"
+    display_name = "pack-generation-trace-failed-immediate"
 
     condition_threshold {
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.design_trace_failed_total.name}\" resource.type=\"cloud_run_revision\""
@@ -543,7 +543,7 @@ resource "google_monitoring_alert_policy" "design_failed_immediate_email" {
   }
 
   conditions {
-    display_name = "design-api-enqueue-http-5xx-immediate"
+    display_name = "pack-generation-api-enqueue-http-5xx-immediate"
 
     condition_threshold {
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.design_api_enqueue_http_5xx_total.name}\" resource.type=\"cloud_run_revision\""
@@ -571,7 +571,7 @@ resource "google_monitoring_alert_policy" "design_failed_immediate_email" {
 
 resource "google_monitoring_alert_policy" "design_stage_error_spike" {
   count        = var.monitoring_alerts_enabled ? 1 : 0
-  display_name = "[${upper(local.environment)}] Design stage/error_code failures spike"
+  display_name = "[${upper(local.environment)}] Pack generation stage/error_code failures spike"
   combiner     = "OR"
   enabled      = true
 
@@ -581,7 +581,7 @@ resource "google_monitoring_alert_policy" "design_stage_error_spike" {
   }
 
   conditions {
-    display_name = "design-stage-error-spike"
+    display_name = "pack-generation-stage-error-spike"
 
     condition_threshold {
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.design_stage_failed_total.name}\" resource.type=\"cloud_run_revision\""

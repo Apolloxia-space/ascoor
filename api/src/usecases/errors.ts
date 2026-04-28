@@ -5,28 +5,28 @@ export class NotFoundError extends Error {
   }
 }
 
-export class DesignValidationError extends Error {
+export class AssetPackValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DesignValidationError';
+    this.name = 'AssetPackValidationError';
   }
 }
 
-export class DesignQuotaExceededError extends DesignValidationError {
+export class AssetPackQuotaExceededError extends AssetPackValidationError {
   readonly code = 'credit_balance_insufficient';
 
-  constructor(message = 'Not enough credits remaining for this generation.') {
+  constructor(message = 'Not enough credits remaining for this pack generation.') {
     super(message);
-    this.name = 'DesignQuotaExceededError';
+    this.name = 'AssetPackQuotaExceededError';
   }
 }
 
-export class DesignConcurrencyLimitExceededError extends DesignValidationError {
-  readonly code = 'design_concurrency_limit_exceeded';
+export class AssetPackConcurrencyLimitExceededError extends AssetPackValidationError {
+  readonly code = 'pack_generation_concurrency_limit_exceeded';
 
-  constructor(message = 'Concurrent design limit reached for your plan.') {
+  constructor(message = 'Concurrent pack generation limit reached for your plan.') {
     super(message);
-    this.name = 'DesignConcurrencyLimitExceededError';
+    this.name = 'AssetPackConcurrencyLimitExceededError';
   }
 }
 

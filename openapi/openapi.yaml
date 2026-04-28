@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Ascoor API
   version: 0.1.0
-  description: API contract for the Ascoor 3D Design editor backend.
+  description: API contract for the Ascoor 3D AssetPack editor backend.
 servers:
   - url: http://localhost:3100
     description: Local development server
@@ -105,7 +105,7 @@ paths:
       operationId: bootstrapUser
       tags:
         - users
-      summary: Bootstrap the authenticated user and create the default project.
+      summary: Bootstrap the authenticated user and create the default workspace.
       responses:
         '204':
           description: User bootstrap completed
@@ -115,25 +115,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /design-jobs:
+  /pack-generation-jobs:
     post:
-      operationId: createDesignJob
+      operationId: createPackGenerationJob
       tags:
-        - design-jobs
-      summary: Queue a design generation job from a raw user prompt.
+        - pack-generation-jobs
+      summary: Queue an asset pack generation job from a raw user prompt.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDesignJobRequest'
+              $ref: '#/components/schemas/CreatePackGenerationJobRequest'
       responses:
         '202':
-          description: Design job queued
+          description: Pack generation job queued
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DesignJobResponse'
+                $ref: '#/components/schemas/PackGenerationJobResponse'
         '401':
           description: Unauthorized
           content:
@@ -153,7 +153,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Concurrent design limit reached
+          description: Concurrent pack generation limit reached
           content:
             application/json:
               schema:
@@ -164,25 +164,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /design-jobs/{designJobId}:
+  /pack-generation-jobs/{packGenerationJobId}:
     get:
-      operationId: getDesignJob
+      operationId: getPackGenerationJob
       tags:
-        - design-jobs
-      summary: Get design job status.
+        - pack-generation-jobs
+      summary: Get pack generation job status.
       parameters:
-        - name: designJobId
+        - name: packGenerationJobId
           in: path
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Design job status retrieved
+          description: Pack generation job status retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DesignJobResponse'
+                $ref: '#/components/schemas/PackGenerationJobResponse'
         '401':
           description: Unauthorized
           content:
@@ -196,30 +196,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
-          description: Design job failed
+          description: Pack generation job failed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /designs:
+  /asset-packs:
     post:
-      operationId: createDesign
+      operationId: createAssetPack
       tags:
-        - designs
-      summary: Create a new project design.
+        - assetPacks
+      summary: Create a new workspace asset pack.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDesignRequest'
+              $ref: '#/components/schemas/CreateAssetPackRequest'
       responses:
         '201':
-          description: Design created
+          description: AssetPack created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DesignResponse'
+                $ref: '#/components/schemas/AssetPackResponse'
         '401':
           description: Unauthorized
           content:
@@ -238,14 +238,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /designs/{designId}/assets/content:
+  /asset-packs/{assetPackId}/assets/content:
     get:
-      operationId: getDesignAssetContent
+      operationId: getAssetPackAssetContent
       tags:
-        - designs
-      summary: Get render asset content for a design.
+        - assetPacks
+      summary: Get render asset content for an asset pack.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
@@ -275,14 +275,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /designs/{designId}/edited-model:
+  /asset-packs/{assetPackId}/edited-model:
     get:
       operationId: getEditedModel
       tags:
-        - designs
-      summary: Get the saved edited GLB model for a design.
+        - assetPacks
+      summary: Get the saved edited GLB model for an asset pack.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
@@ -310,10 +310,10 @@ paths:
     put:
       operationId: saveEditedModel
       tags:
-        - designs
-      summary: Save the edited GLB model for a design.
+        - assetPacks
+      summary: Save the edited GLB model for an asset pack.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
@@ -343,10 +343,10 @@ paths:
     delete:
       operationId: clearEditedModel
       tags:
-        - designs
-      summary: Delete the saved edited GLB model for a design.
+        - assetPacks
+      summary: Delete the saved edited GLB model for an asset pack.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
@@ -366,14 +366,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /designs/{designId}/preview-results:
+  /asset-packs/{assetPackId}/preview-results:
     post:
-      operationId: reportDesignPreviewResult
+      operationId: reportAssetPackPreviewResult
       tags:
-        - designs
-      summary: Record the latest preview result for a generated design.
+        - assetPacks
+      summary: Record the latest preview result for a generated asset pack.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
@@ -383,7 +383,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReportDesignPreviewResultRequest'
+              $ref: '#/components/schemas/ReportAssetPackPreviewResultRequest'
       responses:
         '204':
           description: Preview result recorded
@@ -405,25 +405,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /designs/{designId}:
+  /asset-packs/{assetPackId}:
     get:
-      operationId: getDesign
+      operationId: getAssetPack
       tags:
-        - designs
-      summary: Get design details and the latest linked design job.
+        - assetPacks
+      summary: Get asset pack details and the latest linked pack generation job.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Design detail retrieved
+          description: AssetPack detail retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DesignDetailResponse'
+                $ref: '#/components/schemas/AssetPackDetailResponse'
         '401':
           description: Unauthorized
           content:
@@ -437,12 +437,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     patch:
-      operationId: updateDesign
+      operationId: updateAssetPack
       tags:
-        - designs
-      summary: Update design metadata.
+        - assetPacks
+      summary: Update asset pack metadata.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
@@ -452,14 +452,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateDesignRequest'
+              $ref: '#/components/schemas/UpdateAssetPackRequest'
       responses:
         '200':
-          description: Design updated
+          description: AssetPack updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DesignResponse'
+                $ref: '#/components/schemas/AssetPackResponse'
         '401':
           description: Unauthorized
           content:
@@ -473,19 +473,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
-      operationId: deleteDesign
+      operationId: deleteAssetPack
       tags:
-        - designs
-      summary: Delete a design.
+        - assetPacks
+      summary: Delete an asset pack.
       parameters:
-        - name: designId
+        - name: assetPackId
           in: path
           required: true
           schema:
             type: string
       responses:
         '204':
-          description: Design deleted
+          description: AssetPack deleted
         '401':
           description: Unauthorized
           content:
@@ -498,25 +498,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /projects:
+  /workspaces:
     post:
-      operationId: createProject
+      operationId: createWorkspace
       tags:
-        - projects
-      summary: Create a new project.
+        - workspaces
+      summary: Create a new workspace.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateProjectRequest'
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
       responses:
         '201':
-          description: Project created
+          description: Workspace created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectResponse'
+                $ref: '#/components/schemas/WorkspaceResponse'
         '401':
           description: Unauthorized
           content:
@@ -530,15 +530,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
-      operationId: listProjects
+      operationId: listWorkspaces
       tags:
-        - projects
-      summary: List projects for the authenticated user.
+        - workspaces
+      summary: List workspaces for the authenticated user.
       parameters:
         - name: limit
           in: query
           required: false
-          description: Maximum number of projects to return.
+          description: Maximum number of workspaces to return.
           schema:
             type: integer
             minimum: 1
@@ -552,18 +552,18 @@ paths:
         - name: q
           in: query
           required: false
-          description: Case-insensitive search text for project names.
+          description: Case-insensitive search text for workspace names.
           schema:
             type: string
             minLength: 1
             maxLength: 100
       responses:
         '200':
-          description: Projects retrieved
+          description: Workspaces retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsResponse'
+                $ref: '#/components/schemas/WorkspacesResponse'
         '400':
           description: Validation error
           content:
@@ -576,14 +576,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /projects/{projectId}:
+  /workspaces/{workspaceId}:
     patch:
-      operationId: updateProject
+      operationId: updateWorkspace
       tags:
-        - projects
-      summary: Update a project.
+        - workspaces
+      summary: Update a workspace.
       parameters:
-        - name: projectId
+        - name: workspaceId
           in: path
           required: true
           schema:
@@ -593,14 +593,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateProjectRequest'
+              $ref: '#/components/schemas/UpdateWorkspaceRequest'
       responses:
         '200':
-          description: Project updated
+          description: Workspace updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectResponse'
+                $ref: '#/components/schemas/WorkspaceResponse'
         '401':
           description: Unauthorized
           content:
@@ -620,19 +620,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
-      operationId: deleteProject
+      operationId: deleteWorkspace
       tags:
-        - projects
-      summary: Delete a project.
+        - workspaces
+      summary: Delete a workspace.
       parameters:
-        - name: projectId
+        - name: workspaceId
           in: path
           required: true
           schema:
             type: string
       responses:
         '204':
-          description: Project deleted
+          description: Workspace deleted
         '401':
           description: Unauthorized
           content:
@@ -645,14 +645,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /projects/{projectId}/design-jobs:
+  /workspaces/{workspaceId}/pack-generation-jobs:
     get:
-      operationId: listProjectDesignJobs
+      operationId: listWorkspacePackGenerationJobs
       tags:
-        - projects
-      summary: List design jobs for a project.
+        - workspaces
+      summary: List pack generation jobs for a workspace.
       parameters:
-        - name: projectId
+        - name: workspaceId
           in: path
           required: true
           schema:
@@ -660,7 +660,7 @@ paths:
         - name: status
           in: query
           required: false
-          description: Filter by one or more design job statuses.
+          description: Filter by one or more pack generation job statuses.
           schema:
             oneOf:
               - type: string
@@ -672,7 +672,7 @@ paths:
         - name: limit
           in: query
           required: false
-          description: Maximum number of design jobs to return.
+          description: Maximum number of pack generation jobs to return.
           schema:
             type: integer
             minimum: 1
@@ -685,11 +685,11 @@ paths:
             type: string
       responses:
         '200':
-          description: Design jobs retrieved
+          description: Pack generation jobs retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectDesignJobsResponse'
+                $ref: '#/components/schemas/WorkspacePackGenerationJobsResponse'
         '400':
           description: Validation error
           content:
@@ -703,30 +703,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Project not found
+          description: Workspace not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /projects/{projectId}/designs:
+  /workspaces/{workspaceId}/asset-packs:
     get:
-      operationId: listProjectDesigns
+      operationId: listWorkspaceAssetPacks
       tags:
-        - projects
-      summary: List designs for a project.
+        - workspaces
+      summary: List asset-packs for a workspace.
       parameters:
-        - name: projectId
+        - name: workspaceId
           in: path
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Designs retrieved
+          description: AssetPacks retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectDesignsResponse'
+                $ref: '#/components/schemas/WorkspaceAssetPacksResponse'
         '401':
           description: Unauthorized
           content:
@@ -734,19 +734,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Project not found
+          description: Workspace not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /projects/{projectId}/thumbnail/content:
+  /workspaces/{workspaceId}/thumbnail/content:
     get:
-      operationId: getProjectThumbnailContent
+      operationId: getWorkspaceThumbnailContent
       tags:
-        - projects
+        - workspaces
       summary: Get the saved workspace thumbnail image.
       parameters:
-        - name: projectId
+        - name: workspaceId
           in: path
           required: true
           schema:
@@ -772,12 +772,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     put:
-      operationId: updateProjectThumbnailContent
+      operationId: updateWorkspaceThumbnailContent
       tags:
-        - projects
+        - workspaces
       summary: Save or replace the workspace thumbnail image.
       parameters:
-        - name: projectId
+        - name: workspaceId
           in: path
           required: true
           schema:
@@ -1251,30 +1251,30 @@ components:
       properties:
         url:
           type: string
-    CreateDesignJobRequest:
+    CreatePackGenerationJobRequest:
       type: object
       required:
-        - projectId
+        - workspaceId
         - userPrompt
       properties:
-        projectId:
+        workspaceId:
           type: string
-          description: Project ID that will own the generated design.
+          description: Workspace ID that will own the generated asset pack.
         userPrompt:
           type: string
           minLength: 1
           maxLength: 3000
           description: Raw user input prompt before AI template compilation.
-    DesignJobResponse:
+    PackGenerationJobResponse:
       type: object
       required:
-        - designJobId
+        - packGenerationJobId
         - status
         - userPrompt
       properties:
-        designJobId:
+        packGenerationJobId:
           type: string
-          description: Design job ID.
+          description: Pack generation job ID.
         status:
           type: string
           enum: [queued, running, succeeded, failed]
@@ -1289,11 +1289,11 @@ components:
         title:
           type: string
           nullable: true
-          description: Suggested display name for the generated design.
-        designId:
+          description: Suggested display name for the generated asset pack.
+        assetPackId:
           type: string
           nullable: true
-          description: ID of the created design when code is generated.
+          description: ID of the created asset pack when code is generated.
         errorMessage:
           type: string
           nullable: true
@@ -1307,25 +1307,25 @@ components:
         updatedAt:
           type: string
           format: date-time
-    DesignDetailResponse:
+    AssetPackDetailResponse:
       type: object
       required:
-        - design
-        - latestDesignJob
+        - assetPack
+        - latestPackGenerationJob
       properties:
-        design:
-          $ref: '#/components/schemas/ProjectDesignSummary'
-        latestDesignJob:
+        assetPack:
+          $ref: '#/components/schemas/WorkspaceAssetPackSummary'
+        latestPackGenerationJob:
           type: object
           nullable: true
           required:
-            - designJobId
+            - packGenerationJobId
             - status
             - userPrompt
             - createdAt
             - updatedAt
           properties:
-            designJobId:
+            packGenerationJobId:
               type: string
             status:
               type: string
@@ -1344,7 +1344,7 @@ components:
             updatedAt:
               type: string
               format: date-time
-    CreateProjectRequest:
+    CreateWorkspaceRequest:
       type: object
       required:
         - name
@@ -1353,7 +1353,7 @@ components:
           type: string
           minLength: 1
           maxLength: 300
-    UpdateProjectRequest:
+    UpdateWorkspaceRequest:
       type: object
       required:
         - name
@@ -1362,10 +1362,10 @@ components:
           type: string
           minLength: 1
           maxLength: 300
-    ProjectResponse:
+    WorkspaceResponse:
       allOf:
-        - $ref: '#/components/schemas/ProjectResponseData'
-    ProjectResponseData:
+        - $ref: '#/components/schemas/WorkspaceResponseData'
+    WorkspaceResponseData:
       type: object
       required:
         - id
@@ -1387,7 +1387,7 @@ components:
         updatedAt:
           type: string
           format: date-time
-    ProjectsResponse:
+    WorkspacesResponse:
       type: object
       required:
         - items
@@ -1396,55 +1396,55 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectResponseData'
+            $ref: '#/components/schemas/WorkspaceResponseData'
         nextCursor:
           type: string
           nullable: true
-    ProjectDesignsResponse:
+    WorkspaceAssetPacksResponse:
       allOf:
-        - $ref: '#/components/schemas/ProjectDesignsResponseData'
-    ProjectDesignsResponseData:
+        - $ref: '#/components/schemas/WorkspaceAssetPacksResponseData'
+    WorkspaceAssetPacksResponseData:
       type: object
       required:
-        - projectId
-        - designs
+        - workspaceId
+        - assetPacks
       properties:
-        projectId:
+        workspaceId:
           type: string
-        designs:
+        assetPacks:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectDesignSummary'
-    ProjectDesignJobsResponse:
+            $ref: '#/components/schemas/WorkspaceAssetPackSummary'
+    WorkspacePackGenerationJobsResponse:
       type: object
       required:
-        - projectId
+        - workspaceId
         - items
         - nextCursor
       properties:
-        projectId:
+        workspaceId:
           type: string
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectDesignJobSummary'
+            $ref: '#/components/schemas/WorkspacePackGenerationJobSummary'
         nextCursor:
           type: string
           nullable: true
-    ProjectDesignJobSummary:
+    WorkspacePackGenerationJobSummary:
       type: object
       required:
-        - designJobId
-        - projectId
+        - packGenerationJobId
+        - workspaceId
         - status
         - userPrompt
         - promptPreview
         - createdAt
         - updatedAt
       properties:
-        designJobId:
+        packGenerationJobId:
           type: string
-        projectId:
+        workspaceId:
           type: string
         status:
           type: string
@@ -1458,7 +1458,7 @@ components:
         title:
           type: string
           nullable: true
-        designId:
+        assetPackId:
           type: string
           nullable: true
         errorMessage:
@@ -1475,11 +1475,11 @@ components:
         updatedAt:
           type: string
           format: date-time
-    ProjectDesignSummary:
+    WorkspaceAssetPackSummary:
       type: object
       required:
         - id
-        - projectId
+        - workspaceId
         - displayName
         - previewStatus
         - createdAt
@@ -1487,7 +1487,7 @@ components:
       properties:
         id:
           type: string
-        projectId:
+        workspaceId:
           type: string
         displayName:
           type: string
@@ -1513,30 +1513,30 @@ components:
         updatedAt:
           type: string
           format: date-time
-    CreateDesignRequest:
+    CreateAssetPackRequest:
       type: object
       required:
-        - projectId
+        - workspaceId
         - displayName
       properties:
-        projectId:
+        workspaceId:
           type: string
         displayName:
           type: string
           minLength: 1
           maxLength: 300
-    DesignResponse:
+    AssetPackResponse:
       type: object
       required:
         - id
-        - projectId
+        - workspaceId
         - displayName
         - previewStatus
         - updatedAt
       properties:
         id:
           type: string
-        projectId:
+        workspaceId:
           type: string
         displayName:
           type: string
@@ -1562,7 +1562,7 @@ components:
         updatedAt:
           type: string
           format: date-time
-    UpdateDesignRequest:
+    UpdateAssetPackRequest:
       type: object
       required:
         - displayName
@@ -1571,7 +1571,7 @@ components:
           type: string
           minLength: 1
           maxLength: 300
-    ReportDesignPreviewResultRequest:
+    ReportAssetPackPreviewResultRequest:
       type: object
       required:
         - status

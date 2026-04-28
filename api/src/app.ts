@@ -1,24 +1,24 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { randomUUID } from 'node:crypto';
-import type { DesignsUsecase } from './usecases/designs.usecase';
-import type { DesignJobsUsecase } from './usecases/design-jobs.usecase';
-import type { ProjectsUsecase } from './usecases/projects.usecase';
+import type { AssetPacksUsecase } from './usecases/assetPacks.usecase';
+import type { PackGenerationJobsUsecase } from './usecases/pack-generation-jobs.usecase';
+import type { WorkspacesUsecase } from './usecases/workspaces.usecase';
 import type { UsersUsecase } from './usecases/users.usecase';
 import type { BillingUsecase } from './usecases/billing.usecase';
 import type { AppEnv } from './entities/app-env';
 import { authMiddleware } from './middleware/auth.middleware';
-import { createDesignsRoutes } from './routes/api/designs.routes';
-import { createDesignJobsRoutes } from './routes/api/design-jobs.routes';
-import { createProjectsRoutes } from './routes/api/projects.routes';
+import { createAssetPacksRoutes } from './routes/api/assetPacks.routes';
+import { createPackGenerationJobsRoutes } from './routes/api/pack-generation-jobs.routes';
+import { createWorkspacesRoutes } from './routes/api/workspaces.routes';
 import { createUsersRoutes } from './routes/api/users.routes';
 import { createBillingRoutes } from './routes/api/billing.routes';
 import { logger } from './utils/logger';
 
 export interface AppDependencies {
-  designsUsecase: DesignsUsecase;
-  designJobsUsecase: DesignJobsUsecase;
-  projectsUsecase: ProjectsUsecase;
+  assetPacksUsecase: AssetPacksUsecase;
+  packGenerationJobsUsecase: PackGenerationJobsUsecase;
+  workspacesUsecase: WorkspacesUsecase;
   usersUsecase: UsersUsecase;
   billingUsecase: BillingUsecase;
 }
@@ -36,7 +36,7 @@ export function createApp(dependencies: AppDependencies) {
       allowHeaders: [
         'Content-Type',
         'Authorization',
-        'X-Design-Id',
+        'X-Pack-Generation-Job-Id',
         'X-Trace-Id',
         'X-Origin-Request-Id',
       ],
@@ -44,14 +44,13 @@ export function createApp(dependencies: AppDependencies) {
     }),
   );
 
-  // request context / requestId
   app.use('*', async (c, next) => {
     const requestId = randomUUID();
-    const designId = c.req.header('x-design-id')?.trim() || null;
+    const packGenerationJobId = c.req.header('x-pack-generation-job-id')?.trim() || null;
     const incomingTraceId = c.req.header('x-trace-id')?.trim() || null;
-    const traceId = incomingTraceId ?? designId ?? requestId;
+    const traceId = incomingTraceId ?? packGenerationJobId ?? requestId;
     c.set('requestId', requestId);
-    c.set('designId', designId);
+    c.set('packGenerationJobId', packGenerationJobId);
     c.set('traceId', traceId);
     c.header('X-Request-Id', requestId);
     c.header('X-Trace-Id', traceId);
@@ -60,9 +59,9 @@ export function createApp(dependencies: AppDependencies) {
 
   app.use('*', async (c, next) => {
     c.set('usecases', {
-      designs: dependencies.designsUsecase,
-      designJobs: dependencies.designJobsUsecase,
-      projects: dependencies.projectsUsecase,
+      assetPacks: dependencies.assetPacksUsecase,
+      packGenerationJobs: dependencies.packGenerationJobsUsecase,
+      workspaces: dependencies.workspacesUsecase,
       users: dependencies.usersUsecase,
       billing: dependencies.billingUsecase,
     });
@@ -87,9 +86,9 @@ export function createApp(dependencies: AppDependencies) {
 
   app.get('/', (c) => c.json({ message: 'ascoor API placeholder' }));
   app.get('/health', (c) => c.json({ status: 'ok' }));
-  app.route('/designs', createDesignsRoutes());
-  app.route('/design-jobs', createDesignJobsRoutes());
-  app.route('/projects', createProjectsRoutes());
+  app.route('/asset-packs', createAssetPacksRoutes());
+  app.route('/pack-generation-jobs', createPackGenerationJobsRoutes());
+  app.route('/workspaces', createWorkspacesRoutes());
   app.route('/users', createUsersRoutes());
   app.route('/billing', createBillingRoutes());
   return app;

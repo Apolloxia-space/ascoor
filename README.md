@@ -1,11 +1,11 @@
 # Ascoor
 
-Web-based 3D Design Studio.
+Web-based 3D Asset Pack Studio.
 
 ## Repo at a glance
-- `web/` – Next.js front-end 3D design studio
+- `web/` – Next.js front-end 3D asset pack studio
 - `api/` – Hono + Prisma backend
-- `ai-agents/` – TypeScript AI agent + server-side three.js design runtime
+- `ai-agents/` – TypeScript AI agent + server-side three.js asset pack runtime
 - `docs/` – Architecture notes
 - `infrastructure/` – Terraform for GCP / Cloud Run
 - `docker-compose.yml` – Local stack (Postgres + API + Web)
@@ -28,14 +28,14 @@ npm run dev --prefix api   # http://localhost:3100
 npm install --prefix web
 npm run dev --prefix web   # http://localhost:3000
 
-# AI agent (three.js code design)
+# AI agent (three.js code generation)
 npm install --prefix ai-agents
 npm run dev --prefix ai-agents   # http://localhost:8080
 ```
 
-## AI agent (three.js code design)
-The `ai-agents/` service is implemented in TypeScript (Hono + Zod) and exposes design/prompt endpoints.
-Design uses the official OpenAI Node SDK (`openai`) with the Responses API as the primary model call, then applies deterministic fixes.
+## AI agent (three.js code generation)
+The `ai-agents/` service is implemented in TypeScript (Hono + Zod) and exposes asset pack and prompt endpoints.
+Asset Pack uses the official OpenAI Node SDK (`openai`) with the Responses API as the primary model call, then applies deterministic fixes.
 
 All generated modeling code should be TypeScript/JavaScript with three.js.
 The Web app is responsible for rendering preview assets.
@@ -50,11 +50,11 @@ npm run dev --prefix ai-agents   # http://localhost:8080
 Key environment variables:
 - `AI_AGENT_PRIMARY_MODEL` (default: `gpt-5.4-mini`)
 - `AI_AGENT_PRIMARY_MODEL_TEMPERATURE` (default: `0.2`)
-- `AI_AGENT_SECONDARY_MODEL` (default: `gpt-4o-mini`, used for title design)
+- `AI_AGENT_SECONDARY_MODEL` (default: `gpt-4o-mini`, used for title generation)
 - `AI_AGENT_SECONDARY_MODEL_TEMPERATURE` (default: `0.2`)
 - `OPENAI_API_KEY` (required)
 
-## Contract-first code design
+## Contract-first code generation
 1. Update the shared OpenAPI contract in `openapi/openapi.yaml`.
 2. Regenerate the backend's Orval-powered Hono router and validators:
    ```bash

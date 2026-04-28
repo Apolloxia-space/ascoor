@@ -8,26 +8,26 @@ import { NewPackForm } from './components/new-pack-form';
 import { paths } from '@/shared/constants/paths';
 import { useStudioStore } from './stores/use-studio-store';
 import { StudioHeader } from './components/studio-header';
-import { ProjectListDialog } from './components/dialogs/project-list-dialog';
+import { WorkspaceListDialog } from './components/dialogs/workspace-list-dialog';
 import { Button } from '@/shared/components/ui/button';
 import { buildStudioPath } from './lib/paths';
 
 export function NewPackPage() {
   const router = useRouter();
   const { status } = useAuthStore();
-  const projectMenuOpen = useStudioStore((state) => state.projectMenuOpen);
-  const setProjectMenuOpen = useStudioStore((state) => state.setProjectMenuOpen);
-  const setProject = useStudioStore((state) => state.setProject);
-  const clearProject = useStudioStore((state) => state.clearProject);
-  const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
+  const workspaceMenuOpen = useStudioStore((state) => state.workspaceMenuOpen);
+  const setWorkspaceMenuOpen = useStudioStore((state) => state.setWorkspaceMenuOpen);
+  const setWorkspace = useStudioStore((state) => state.setWorkspace);
+  const clearWorkspace = useStudioStore((state) => state.clearWorkspace);
+  const [workspaceListDialogOpen, setWorkspaceListDialogOpen] = useState(false);
 
-  const handleSelectProject = (id: string, name: string) => {
-    setProject(id, name);
+  const handleSelectWorkspace = (id: string, name: string) => {
+    setWorkspace(id, name);
     router.push(buildStudioPath(id));
   };
 
-  const handleCloseProject = () => {
-    clearProject();
+  const handleCloseWorkspace = () => {
+    clearWorkspace();
     router.push(paths.studio);
   };
 
@@ -37,20 +37,20 @@ export function NewPackPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <ProjectListDialog
-        open={projectListDialogOpen}
-        onOpenChange={setProjectListDialogOpen}
-        onSelectProject={handleSelectProject}
-        onDeleteCurrentProject={handleCloseProject}
+      <WorkspaceListDialog
+        open={workspaceListDialogOpen}
+        onOpenChange={setWorkspaceListDialogOpen}
+        onSelectWorkspace={handleSelectWorkspace}
+        onDeleteCurrentWorkspace={handleCloseWorkspace}
       />
       <StudioHeader
-        projectMenuOpen={projectMenuOpen}
-        onProjectMenuChange={setProjectMenuOpen}
-        onSelectProject={handleSelectProject}
-        onCloseProject={handleCloseProject}
-        onOpenProjectManager={() => setProjectListDialogOpen(true)}
+        workspaceMenuOpen={workspaceMenuOpen}
+        onWorkspaceMenuChange={setWorkspaceMenuOpen}
+        onSelectWorkspace={handleSelectWorkspace}
+        onCloseWorkspace={handleCloseWorkspace}
+        onOpenWorkspaceManager={() => setWorkspaceListDialogOpen(true)}
         showBrand
-        projectMenuRightSlot={
+        workspaceMenuRightSlot={
           <Button asChild type="button" variant="ghost" size="icon">
             <a href={paths.studio} aria-label="Studio home">
               <Home className="size-5" />

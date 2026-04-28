@@ -5,13 +5,13 @@ import { NotFoundError } from '../../usecases/errors';
 export function createInternalRoutes() {
   const router = new Hono<AppEnv>();
 
-  router.post('/design-jobs/:designJobId/run', async (c) => {
-    const designJobId = c.req.param('designJobId');
-    const usecase = c.get('usecases').designJobs;
+  router.post('/pack-generation-jobs/:packGenerationJobId/run', async (c) => {
+    const packGenerationJobId = c.req.param('packGenerationJobId');
+    const usecase = c.get('usecases').packGenerationJobs;
     try {
       await usecase.execute({
         type: 'process',
-        designJobId,
+        packGenerationJobId,
         traceContext: {
           requestId: c.get('requestId'),
           traceId: c.get('traceId'),
@@ -26,8 +26,8 @@ export function createInternalRoutes() {
     }
   });
 
-  router.post('/design-jobs/reap-stale', async (c) => {
-    const usecase = c.get('usecases').designJobs;
+  router.post('/pack-generation-jobs/reap-stale', async (c) => {
+    const usecase = c.get('usecases').packGenerationJobs;
     const rawLimit = c.req.query('limit');
     const parsedLimit = rawLimit ? Number.parseInt(rawLimit, 10) : undefined;
     const limit = Number.isFinite(parsedLimit) && (parsedLimit ?? 0) > 0 ? parsedLimit : undefined;

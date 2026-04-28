@@ -12,7 +12,7 @@ export type AssetPackPlan = {
 };
 
 type AiPackPlanTraceContext = {
-  designId?: string;
+  packGenerationJobId?: string;
   traceId?: string;
   requestId?: string;
 };

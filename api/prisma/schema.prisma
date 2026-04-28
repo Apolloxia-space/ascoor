@@ -14,14 +14,14 @@ enum PreviewStatus {
   failed
 }
 
-enum DesignStatus {
+enum PackGenerationStatus {
   queued
   running
   succeeded
   failed
 }
 
-enum DesignPartStatus {
+enum AssetPartStatus {
   pending
   generating
   completed
@@ -77,8 +77,8 @@ model User {
   id          String        @id @default(uuid())
   email       String        @unique
   displayName String?
-  projects    Project[]
-  designJobs DesignJob[]
+  workspaces  Workspace[]
+  packGenerationJobs PackGenerationJob[]
   subscriptions Subscription[]
   creditLedgerEntries CreditLedger[]
   cancellationFeedbacks SubscriptionCancellationFeedback[]
@@ -86,13 +86,13 @@ model User {
   updatedAt   DateTime      @updatedAt
 }
 
-model Project {
+model Workspace {
   id                String          @id @default(uuid())
   ownerId           String
   name              String
   thumbnailAssetUri String?
-  designs           Design[]
-  designJobs        DesignJob[]
+  assetPacks        AssetPack[]
+  packGenerationJobs PackGenerationJob[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -101,58 +101,57 @@ model Project {
   @@index([ownerId])
 }
 
-model Design {
+model AssetPack {
   id                  String      @id @default(uuid())
-  projectId           String
+  workspaceId         String
   displayName         String
   assetUriTs          String?
   editedAssetUriGlb   String?
   packPlan            Json?
-  stageLayout         Json?
   previewStatus       PreviewStatus @default(unverified)
   previewError        String?
   editedAssetUpdatedAt DateTime?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
-  project    Project     @relation(fields: [projectId], references: [id])
-  designJobs DesignJob[]
-  parts      DesignPart[]
+  workspace Workspace     @relation(fields: [workspaceId], references: [id])
+  packGenerationJobs PackGenerationJob[]
+  parts      AssetPart[]
 
-  @@index([projectId])
+  @@index([workspaceId])
 }
 
-model DesignPart {
+model AssetPart {
   id           String           @id @default(uuid())
-  designId     String
+  assetPackId  String
   slug         String
   displayName  String
   description  String?
   prompt       String
-  status       DesignPartStatus @default(pending)
+  status       AssetPartStatus @default(pending)
   assetUriTs   String?
   errorMessage String?
   sortOrder    Int              @default(0)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+  assetPack AssetPack @relation(fields: [assetPackId], references: [id], onDelete: Cascade)
 
-  @@unique([designId, slug])
-  @@index([designId])
+  @@unique([assetPackId, slug])
+  @@index([assetPackId])
   @@index([status])
 }
 
-model DesignJob {
+model PackGenerationJob {
   id               String           @id @default(uuid())
-  projectId        String
+  workspaceId      String
   userId           String
   userPrompt       String
   compiledPrompt   String?
-  status           DesignStatus @default(queued)
+  status           PackGenerationStatus @default(queued)
   message          String?
   title            String?
-  designId         String?
+  assetPackId      String?
   errorMessage     String?
   errorStage       String?
   errorCode        String?
@@ -161,14 +160,14 @@ model DesignJob {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  project Project      @relation(fields: [projectId], references: [id])
+  workspace Workspace      @relation(fields: [workspaceId], references: [id])
   user    User         @relation(fields: [userId], references: [id])
-  design Design? @relation(fields: [designId], references: [id])
+  assetPack AssetPack? @relation(fields: [assetPackId], references: [id])
 
-  @@index([projectId])
+  @@index([workspaceId])
   @@index([userId])
   @@index([status])
-  @@index([designId])
+  @@index([assetPackId])
   @@index([errorStage])
   @@index([errorCode])
 }
@@ -240,7 +239,7 @@ model PlanCreditAllowance {
   id                      String   @id @default(uuid())
   planKey                 PlanKey  @unique
   monthlyCredits          Int
-  concurrentDesignLimit   Int
+  concurrentPackGenerationLimit Int
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }
@@ -252,7 +251,7 @@ model CreditLedger {
   reason          CreditLedgerReason
   periodStart     DateTime?
   periodEnd       DateTime?
-  relatedDesignId String?
+  relatedAssetPackId String?
   relatedPartId   String?
   idempotencyKey  String             @unique
   createdAt       DateTime           @default(now())
@@ -261,7 +260,7 @@ model CreditLedger {
 
   @@index([userId, createdAt])
   @@index([userId, periodStart])
-  @@index([relatedDesignId])
+  @@index([relatedAssetPackId])
   @@index([relatedPartId])
 }
 

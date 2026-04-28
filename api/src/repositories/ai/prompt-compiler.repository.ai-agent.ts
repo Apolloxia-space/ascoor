@@ -30,7 +30,7 @@ export class AiAgentPromptCompilerRepository implements PromptCompilerRepository
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(input.trace?.designId ? { 'x-design-id': input.trace.designId } : {}),
+          ...(input.trace?.packGenerationJobId ? { 'x-pack-generation-job-id': input.trace.packGenerationJobId } : {}),
           ...(input.trace?.traceId ? { 'x-trace-id': input.trace.traceId } : {}),
           ...(input.trace?.requestId ? { 'x-origin-request-id': input.trace.requestId } : {}),
           ...(authHeader ? { authorization: authHeader } : {}),
@@ -38,7 +38,7 @@ export class AiAgentPromptCompilerRepository implements PromptCompilerRepository
         body: JSON.stringify({
           userPrompt: input.userPrompt,
           userId: input.userId,
-          designId: input.trace?.designId,
+          packGenerationJobId: input.trace?.packGenerationJobId,
           traceId: input.trace?.traceId,
           requestId: input.trace?.requestId,
         }),

@@ -5,25 +5,25 @@ import { viewModes } from '@/mock/studio';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import type { RightPanelMode, ViewMode } from '../types';
 
-export type PendingDesignStatus = 'queued' | 'running' | 'succeeded' | 'failed';
-export type PendingDesignPartStatus = 'pending' | 'generating' | 'completed' | 'failed';
+export type PendingPackGenerationStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+export type PendingAssetPartStatus = 'pending' | 'generating' | 'completed' | 'failed';
 
-export type PendingDesignPart = {
+export type PendingAssetPart = {
   slug: string;
   displayName: string;
-  status: PendingDesignPartStatus;
+  status: PendingAssetPartStatus;
   errorMessage?: string | null;
 };
 
-export type PendingDesign = {
-  designId: string;
-  projectId: string;
-  assetDesignId?: string | null;
+export type PendingAssetPack = {
+  packGenerationJobId: string;
+  workspaceId: string;
+  assetPackId?: string | null;
   traceId?: string | null;
   promptPreview: string;
   userPrompt?: string;
-  status: PendingDesignStatus;
-  parts?: Array<PendingDesignPart>;
+  status: PendingPackGenerationStatus;
+  parts?: Array<PendingAssetPart>;
   createdAt: string;
   updatedAt: string;
   errorMessage?: string | null;
@@ -31,11 +31,11 @@ export type PendingDesign = {
 };
 
 type StudioState = {
-  projectId: string | null;
-  projectName: string;
-  projects: Array<{ id: string; name: string }>;
-  pendingDesigns: Array<PendingDesign>;
-  projectMenuOpen: boolean;
+  workspaceId: string | null;
+  workspaceName: string;
+  workspaces: Array<{ id: string; name: string }>;
+  pendingPackGenerations: Array<PendingAssetPack>;
+  workspaceMenuOpen: boolean;
   chatPanelOpen: boolean;
   rightPanelMode: RightPanelMode;
   errorConsoleOpen: boolean;
@@ -43,24 +43,24 @@ type StudioState = {
   currentView: ViewMode;
   viewModeOpen: boolean;
   codeModalOpen: boolean;
-  setProjectMenuOpen: (open: boolean) => void;
-  setProject: (id: string, name: string) => void;
-  setProjects: (projects: Array<{ id: string; name: string }>) => void;
-  clearProject: () => void;
-  addProject: (project: { id: string; name: string }) => void;
-  addPendingDesign: (design: {
-    designId: string;
-    projectId: string;
+  setWorkspaceMenuOpen: (open: boolean) => void;
+  setWorkspace: (id: string, name: string) => void;
+  setWorkspaces: (workspaces: Array<{ id: string; name: string }>) => void;
+  clearWorkspace: () => void;
+  addWorkspace: (workspace: { id: string; name: string }) => void;
+  addPendingAssetPack: (assetPack: {
+    packGenerationJobId: string;
+    workspaceId: string;
     traceId?: string | null;
     promptPreview?: string;
     userPrompt?: string;
   }) => void;
-  updatePendingDesign: (
-    designId: string,
-    patch: Partial<Omit<PendingDesign, 'designId' | 'projectId' | 'createdAt'>>,
+  updatePendingAssetPack: (
+    packGenerationJobId: string,
+    patch: Partial<Omit<PendingAssetPack, 'packGenerationJobId' | 'workspaceId' | 'createdAt'>>,
   ) => void;
-  pruneExpiredPendingDesigns: () => void;
-  removePendingDesign: (designId: string) => void;
+  pruneExpiredPendingAssetPacks: () => void;
+  removePendingAssetPack: (packGenerationJobId: string) => void;
   setChatPanelOpen: (open: boolean) => void;
   setRightPanelMode: (mode: RightPanelMode) => void;
   setErrorConsoleOpen: (open: boolean) => void;
@@ -69,13 +69,13 @@ type StudioState = {
   setViewModeOpen: (open: boolean) => void;
   setCodeModalOpen: (open: boolean) => void;
   toggleChatPanel: () => void;
-  toggleProjectMenu: () => void;
+  toggleWorkspaceMenu: () => void;
   toggleViewMode: () => void;
   toggleCodeModal: () => void;
 };
 
-type StudioPersistState = Pick<StudioState, 'projectId' | 'projectName' | 'pendingDesigns'>;
-const PENDING_DESIGN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+type StudioPersistState = Pick<StudioState, 'workspaceId' | 'workspaceName' | 'pendingPackGenerations'>;
+const PENDING_PACK_GENERATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const normalizePromptPreview = (value?: string) => {
   const normalized = (value ?? '').replace(/\s+/g, ' ').trim();
@@ -83,27 +83,27 @@ const normalizePromptPreview = (value?: string) => {
   return normalized.length > 80 ? `${normalized.slice(0, 80)}...` : normalized;
 };
 
-const getPendingDesignTimestamp = (entry: PendingDesign) => {
+const getPendingAssetPackTimestamp = (entry: PendingAssetPack) => {
   const updatedAt = Date.parse(entry.updatedAt);
   if (Number.isFinite(updatedAt)) return updatedAt;
   const createdAt = Date.parse(entry.createdAt);
   return Number.isFinite(createdAt) ? createdAt : 0;
 };
 
-const isFreshPendingDesign = (entry: PendingDesign, now: number) => {
-  const timestamp = getPendingDesignTimestamp(entry);
+const isFreshPendingAssetPack = (entry: PendingAssetPack, now: number) => {
+  const timestamp = getPendingAssetPackTimestamp(entry);
   if (timestamp <= 0) return false;
-  return now - timestamp <= PENDING_DESIGN_TTL_MS;
+  return now - timestamp <= PENDING_PACK_GENERATION_TTL_MS;
 };
 
-const pruneStalePendingDesigns = (entries: Array<PendingDesign>) => {
+const pruneStalePendingAssetPacks = (entries: Array<PendingAssetPack>) => {
   const now = Date.now();
-  return entries.filter((entry) => isFreshPendingDesign(entry, now));
+  return entries.filter((entry) => isFreshPendingAssetPack(entry, now));
 };
 
-const toPersistedPendingDesigns = (entries: Array<PendingDesign>) => {
+const toPersistedPendingAssetPacks = (entries: Array<PendingAssetPack>) => {
   const now = Date.now();
-  return entries.filter((entry) => isFreshPendingDesign(entry, now));
+  return entries.filter((entry) => isFreshPendingAssetPack(entry, now));
 };
 
 const studioStorage = createJSONStorage<StudioPersistState>(() => ({
@@ -124,11 +124,11 @@ const studioStorage = createJSONStorage<StudioPersistState>(() => ({
 export const useStudioStore = create<StudioState>()(
   persist<StudioState, [], [], StudioPersistState>(
     (set) => ({
-      projectId: null,
-      projectName: '',
-      projects: [],
-      pendingDesigns: [],
-      projectMenuOpen: false,
+      workspaceId: null,
+      workspaceName: '',
+      workspaces: [],
+      pendingPackGenerations: [],
+      workspaceMenuOpen: false,
       chatPanelOpen: true,
       rightPanelMode: 'create',
       errorConsoleOpen: false,
@@ -136,37 +136,39 @@ export const useStudioStore = create<StudioState>()(
       currentView: viewModes[0],
       viewModeOpen: false,
       codeModalOpen: false,
-      setProjectMenuOpen: (open) => set({ projectMenuOpen: open }),
-      setProject: (id, name) =>
+      setWorkspaceMenuOpen: (open) => set({ workspaceMenuOpen: open }),
+      setWorkspace: (id, name) =>
         set((state) => ({
-          projectId: id,
-          projectName: name,
-          projects: state.projects.some((p) => p.id === id)
-            ? state.projects
-            : [...state.projects, { id, name }],
+          workspaceId: id,
+          workspaceName: name,
+          workspaces: state.workspaces.some((p) => p.id === id)
+            ? state.workspaces
+            : [...state.workspaces, { id, name }],
         })),
-      setProjects: (projects) => set({ projects }),
-      clearProject: () => set({ projectId: null, projectName: '' }),
-      addProject: (project) =>
+      setWorkspaces: (workspaces) => set({ workspaces }),
+      clearWorkspace: () => set({ workspaceId: null, workspaceName: '' }),
+      addWorkspace: (workspace) =>
         set((state) => ({
-          projects: state.projects.some((p) => p.id === project.id)
-            ? state.projects
-            : [...state.projects, project],
+          workspaces: state.workspaces.some((p) => p.id === workspace.id)
+            ? state.workspaces
+            : [...state.workspaces, workspace],
         })),
-      addPendingDesign: (design) =>
+      addPendingAssetPack: (assetPack) =>
         set((state) => {
           const now = new Date().toISOString();
-          const existing = state.pendingDesigns.find((item) => item.designId === design.designId);
-          const next: PendingDesign = existing
+          const existing = state.pendingPackGenerations.find(
+            (item) => item.packGenerationJobId === assetPack.packGenerationJobId,
+          );
+          const next: PendingAssetPack = existing
             ? {
                 ...existing,
-                projectId: design.projectId,
-                assetDesignId: existing.assetDesignId ?? null,
-                traceId: design.traceId ?? existing.traceId ?? null,
+                workspaceId: assetPack.workspaceId,
+                assetPackId: existing.assetPackId ?? null,
+                traceId: assetPack.traceId ?? existing.traceId ?? null,
                 promptPreview: normalizePromptPreview(
-                  design.promptPreview ?? existing.promptPreview,
+                  assetPack.promptPreview ?? existing.promptPreview,
                 ),
-                userPrompt: design.userPrompt ?? existing.userPrompt,
+                userPrompt: assetPack.userPrompt ?? existing.userPrompt,
                 status:
                   existing.status === 'failed' || existing.status === 'succeeded'
                     ? 'queued'
@@ -176,12 +178,12 @@ export const useStudioStore = create<StudioState>()(
                 errorCode: null,
               }
             : {
-                designId: design.designId,
-                projectId: design.projectId,
-                assetDesignId: null,
-                traceId: design.traceId ?? null,
-                promptPreview: normalizePromptPreview(design.promptPreview),
-                userPrompt: design.userPrompt,
+                packGenerationJobId: assetPack.packGenerationJobId,
+                workspaceId: assetPack.workspaceId,
+                assetPackId: null,
+                traceId: assetPack.traceId ?? null,
+                promptPreview: normalizePromptPreview(assetPack.promptPreview),
+                userPrompt: assetPack.userPrompt,
                 status: 'queued',
                 parts: [],
                 createdAt: now,
@@ -189,19 +191,21 @@ export const useStudioStore = create<StudioState>()(
                 errorMessage: null,
                 errorCode: null,
               };
-          const pendingDesigns = pruneStalePendingDesigns([
+          const pendingPackGenerations = pruneStalePendingAssetPacks([
             next,
-            ...state.pendingDesigns.filter((item) => item.designId !== design.designId),
+            ...state.pendingPackGenerations.filter(
+              (item) => item.packGenerationJobId !== assetPack.packGenerationJobId,
+            ),
           ]);
           return {
-            pendingDesigns,
+            pendingPackGenerations,
           };
         }),
-      updatePendingDesign: (designId, patch) =>
+      updatePendingAssetPack: (packGenerationJobId, patch) =>
         set((state) => ({
-          pendingDesigns: pruneStalePendingDesigns(
-            state.pendingDesigns.map((item) => {
-              if (item.designId !== designId) return item;
+          pendingPackGenerations: pruneStalePendingAssetPacks(
+            state.pendingPackGenerations.map((item) => {
+              if (item.packGenerationJobId !== packGenerationJobId) return item;
               return {
                 ...item,
                 ...patch,
@@ -213,13 +217,15 @@ export const useStudioStore = create<StudioState>()(
             }),
           ),
         })),
-      pruneExpiredPendingDesigns: () =>
+      pruneExpiredPendingAssetPacks: () =>
         set((state) => ({
-          pendingDesigns: pruneStalePendingDesigns(state.pendingDesigns),
+          pendingPackGenerations: pruneStalePendingAssetPacks(state.pendingPackGenerations),
         })),
-      removePendingDesign: (designId) =>
+      removePendingAssetPack: (packGenerationJobId) =>
         set((state) => ({
-          pendingDesigns: state.pendingDesigns.filter((item) => item.designId !== designId),
+          pendingPackGenerations: state.pendingPackGenerations.filter(
+            (item) => item.packGenerationJobId !== packGenerationJobId,
+          ),
         })),
       setChatPanelOpen: (open) => set({ chatPanelOpen: open }),
       setRightPanelMode: (mode) => set({ rightPanelMode: mode }),
@@ -229,7 +235,7 @@ export const useStudioStore = create<StudioState>()(
       setViewModeOpen: (open) => set({ viewModeOpen: open }),
       setCodeModalOpen: (open) => set({ codeModalOpen: open }),
       toggleChatPanel: () => set((state) => ({ chatPanelOpen: !state.chatPanelOpen })),
-      toggleProjectMenu: () => set((state) => ({ projectMenuOpen: !state.projectMenuOpen })),
+      toggleWorkspaceMenu: () => set((state) => ({ workspaceMenuOpen: !state.workspaceMenuOpen })),
       toggleViewMode: () => set((state) => ({ viewModeOpen: !state.viewModeOpen })),
       toggleCodeModal: () => set((state) => ({ codeModalOpen: !state.codeModalOpen })),
     }),
@@ -237,9 +243,9 @@ export const useStudioStore = create<StudioState>()(
       name: 'studio-store',
       storage: studioStorage,
       partialize: (state) => ({
-        projectId: state.projectId,
-        projectName: state.projectName,
-        pendingDesigns: toPersistedPendingDesigns(state.pendingDesigns),
+        workspaceId: state.workspaceId,
+        workspaceName: state.workspaceName,
+        pendingPackGenerations: toPersistedPendingAssetPacks(state.pendingPackGenerations),
       }),
     },
   ),

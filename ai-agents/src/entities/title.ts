@@ -1,16 +1,16 @@
 import { z } from 'zod';
 
-// Domain entity for title design request/response
-export const designTitleInSchema = z.object({
+// Domain entity for asset pack title request/response
+export const assetPackTitleInSchema = z.object({
   prompt: z.string().min(1),
   userId: z.string().nullish(),
-  designId: z.string().nullish(),
+  packGenerationJobId: z.string().nullish(),
   traceId: z.string().nullish(),
   requestId: z.string().nullish(),
 });
 
-export type DesignTitleIn = z.infer<typeof designTitleInSchema>;
+export type AssetPackTitleIn = z.infer<typeof assetPackTitleInSchema>;
 
-export type DesignTitleOut = {
+export type AssetPackTitleOut = {
   title: string;
 };

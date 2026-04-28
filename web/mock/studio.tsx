@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { BoxSelect, Eye, Orbit, RefreshCw, SquareMenu } from 'lucide-react';
 
-export type Project = { name: string; path: string };
+export type WorkspaceMock = { name: string; path: string };
 
 export type ChatMessage = {
   id: string;
@@ -17,7 +17,7 @@ export type CodeLine = {
   isError?: boolean;
 };
 
-export const recentProjects: Array<Project> = [
+export const recentWorkspaces: Array<WorkspaceMock> = [
   { name: 'Mechanical Arm Base', path: '~/Documents/STUDIO_AI/Mechanical-Arm-Base' },
   { name: 'Drone Assembly', path: '~/Documents/STUDIO_AI/drone-assembly' },
   { name: 'Electronics Enclosure', path: '~/Downloads/electronics-enclosure-v2' },

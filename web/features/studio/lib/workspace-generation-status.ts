@@ -1,43 +1,43 @@
-import type { PendingDesign } from '../stores/use-studio-store';
+import type { PendingAssetPack } from '../stores/use-studio-store';
 
 export type WorkspaceGenerationStatus = {
-  kind: PendingDesign['status'];
+  kind: PendingAssetPack['status'];
   label: string;
   promptPreview: string;
   errorMessage?: string | null;
-  parts: NonNullable<PendingDesign['parts']>;
+  parts: NonNullable<PendingAssetPack['parts']>;
   partSummary?: string | null;
   detailTitle: string;
 };
 
-const STATUS_LABELS: Record<PendingDesign['status'], string> = {
+const STATUS_LABELS: Record<PendingAssetPack['status'], string> = {
   queued: 'Queued',
   running: 'Generating',
   succeeded: 'Completed',
   failed: 'Failed',
 };
 
-const PART_STATUS_LABELS: Record<NonNullable<PendingDesign['parts']>[number]['status'], string> = {
+const PART_STATUS_LABELS: Record<NonNullable<PendingAssetPack['parts']>[number]['status'], string> = {
   pending: 'pending',
   generating: 'generating',
   completed: 'completed',
   failed: 'failed',
 };
 
-const getPendingDesignTimestamp = (entry: PendingDesign) => {
+const getPendingAssetPackTimestamp = (entry: PendingAssetPack) => {
   const updatedAt = Date.parse(entry.updatedAt);
   if (Number.isFinite(updatedAt)) return updatedAt;
   const createdAt = Date.parse(entry.createdAt);
   return Number.isFinite(createdAt) ? createdAt : 0;
 };
 
-export const getWorkspaceGenerationStatuses = (pendingDesigns: Array<PendingDesign>) => {
-  const latestByProject: Record<string, WorkspaceGenerationStatus> = {};
-  const latestTimestampByProject: Record<string, number> = {};
+export const getWorkspaceGenerationStatuses = (pendingPackGenerations: Array<PendingAssetPack>) => {
+  const latestByWorkspace: Record<string, WorkspaceGenerationStatus> = {};
+  const latestTimestampByWorkspace: Record<string, number> = {};
 
-  for (const entry of pendingDesigns) {
-    const timestamp = getPendingDesignTimestamp(entry);
-    const currentTimestamp = latestTimestampByProject[entry.projectId] ?? -1;
+  for (const entry of pendingPackGenerations) {
+    const timestamp = getPendingAssetPackTimestamp(entry);
+    const currentTimestamp = latestTimestampByWorkspace[entry.workspaceId] ?? -1;
     if (timestamp < currentTimestamp) continue;
 
     const parts = entry.parts ?? [];
@@ -61,8 +61,8 @@ export const getWorkspaceGenerationStatuses = (pendingDesigns: Array<PendingDesi
       .filter(Boolean)
       .join('\n');
 
-    latestTimestampByProject[entry.projectId] = timestamp;
-    latestByProject[entry.projectId] = {
+    latestTimestampByWorkspace[entry.workspaceId] = timestamp;
+    latestByWorkspace[entry.workspaceId] = {
       kind: entry.status,
       label,
       promptPreview: entry.promptPreview,
@@ -73,5 +73,5 @@ export const getWorkspaceGenerationStatuses = (pendingDesigns: Array<PendingDesi
     };
   }
 
-  return latestByProject;
+  return latestByWorkspace;
 };

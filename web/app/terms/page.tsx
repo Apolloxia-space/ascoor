@@ -51,11 +51,11 @@ const sections = [
     ],
   },
   {
-    title: '6. 3D Design/AI Outputs & Responsibility',
+    title: '6. 3D Asset Pack/AI Outputs & Responsibility',
     body: [
-      'The Service generates 3D design-related outputs based on your inputs. You are responsible for reviewing outputs for accuracy, safety, and suitability before use.',
-      'Output design may fail or be incomplete, and the Service does not guarantee successful design or suitability for any particular purpose.',
-      'Prompts, 3D design instructions, attachments, and generated outputs may be used to operate, maintain, and improve AI-related features (including quality improvement, safety measures, evaluation, and model training) as described in the Privacy Policy.',
+      'The Service generates 3D asset pack-related outputs based on your inputs. You are responsible for reviewing outputs for accuracy, safety, and suitability before use.',
+      'Output asset packs may fail or be incomplete, and the Service does not guarantee successful generation or suitability for any particular purpose.',
+      'Prompts, 3D asset pack instructions, attachments, and generated outputs may be used to operate, maintain, and improve AI-related features (including quality improvement, safety measures, evaluation, and model training) as described in the Privacy Policy.',
       'Ascoor does not provide professional engineering or safety certifications.',
     ],
   },
@@ -64,7 +64,7 @@ const sections = [
     body: [
       'All content posted to the Service must comply with Japanese copyright law.',
       'The operator does not claim intellectual property rights over materials you provide. Uploaded materials remain yours to the extent you hold such rights.',
-      'By submitting content (including prompts, 3D design instructions, attachments, and outputs), you grant the operator and its service providers a non-exclusive, worldwide, royalty-free license to host, store, reproduce, adapt, process, and use that content solely to provide, secure, maintain, and improve the Service, including AI/ML development and operation.',
+      'By submitting content (including prompts, 3D asset pack instructions, attachments, and outputs), you grant the operator and its service providers a non-exclusive, worldwide, royalty-free license to host, store, reproduce, adapt, process, and use that content solely to provide, secure, maintain, and improve the Service, including AI/ML development and operation.',
       'The operator does not pre-screen content but reserves the right (without obligation) to refuse or remove content at its discretion.',
       'The look and feel of the Service is © Akira Nishida. All rights reserved. No portion of the HTML, CSS, JavaScript, or visual design may be copied, reproduced, or reused without written permission.',
     ],
@@ -80,7 +80,7 @@ const sections = [
     title: '9. Third-Party Services',
     body: [
       'Payments are processed by Stripe. Your use of payment services is subject to Stripe’s terms and policies.',
-      'The Service may use third-party AI and cloud providers to process prompts and design outputs. Use of those components may be subject to the relevant third-party terms and privacy policies.',
+      'The Service may use third-party AI and cloud providers to process prompts and asset pack outputs. Use of those components may be subject to the relevant third-party terms and privacy policies.',
     ],
   },
   {

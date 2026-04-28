@@ -7,43 +7,43 @@ import { useStudioStore } from '../stores/use-studio-store';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signOutUser } from '@/features/auth/use-auth-init';
 import { getWorkspaceGenerationStatuses } from '../lib/workspace-generation-status';
-import { useListProjects } from '@/shared/api/generated/client';
+import { useListWorkspaces } from '@/shared/api/generated/client';
 
 type StudioHeaderProps = {
-  projectMenuOpen: boolean;
-  onProjectMenuChange: (open: boolean) => void;
-  onSelectProject: (id: string, name: string) => void;
-  onCloseProject: () => void;
-  onOpenProjectManager?: () => void;
-  projectsLoading?: boolean;
-  projectsRefreshing?: boolean;
-  projectMenuRightSlot?: ReactNode;
+  workspaceMenuOpen: boolean;
+  onWorkspaceMenuChange: (open: boolean) => void;
+  onSelectWorkspace: (id: string, name: string) => void;
+  onCloseWorkspace: () => void;
+  onOpenWorkspaceManager?: () => void;
+  workspacesLoading?: boolean;
+  workspacesRefreshing?: boolean;
+  workspaceMenuRightSlot?: ReactNode;
   userMenuLeftSlot?: ReactNode;
-  hideProjectMenuOnMobile?: boolean;
-  projectNameOverride?: string | null;
+  hideWorkspaceMenuOnMobile?: boolean;
+  workspaceNameOverride?: string | null;
   showBrand?: boolean;
-  showProjectMenu?: boolean;
+  showWorkspaceMenu?: boolean;
 };
 
 export function StudioHeader({
-  projectMenuOpen,
-  onProjectMenuChange,
-  onSelectProject,
-  onCloseProject,
-  onOpenProjectManager,
-  projectsLoading,
-  projectsRefreshing,
-  projectMenuRightSlot,
+  workspaceMenuOpen,
+  onWorkspaceMenuChange,
+  onSelectWorkspace,
+  onCloseWorkspace,
+  onOpenWorkspaceManager,
+  workspacesLoading,
+  workspacesRefreshing,
+  workspaceMenuRightSlot,
   userMenuLeftSlot,
-  hideProjectMenuOnMobile,
-  projectNameOverride,
+  hideWorkspaceMenuOnMobile,
+  workspaceNameOverride,
   showBrand = false,
-  showProjectMenu = true,
+  showWorkspaceMenu = true,
 }: StudioHeaderProps) {
-  const { projectId, projectName, projects, pendingDesigns, setProjects, setProject, clearProject } =
+  const { workspaceId, workspaceName, workspaces, pendingPackGenerations, setWorkspaces, setWorkspace, clearWorkspace } =
     useStudioStore();
   const { user, status } = useAuthStore();
-  const projectsQuery = useListProjects(
+  const workspacesQuery = useListWorkspaces(
     { limit: 20 },
     {
       query: {
@@ -52,76 +52,76 @@ export function StudioHeader({
       },
     },
   );
-  const projectItems = projectsQuery.data?.status === 200 ? projectsQuery.data.data.items : [];
-  const projectGenerationStatuses = useMemo(
-    () => getWorkspaceGenerationStatuses(pendingDesigns),
-    [pendingDesigns],
+  const workspaceItems = workspacesQuery.data?.status === 200 ? workspacesQuery.data.data.items : [];
+  const workspaceGenerationStatuses = useMemo(
+    () => getWorkspaceGenerationStatuses(pendingPackGenerations),
+    [pendingPackGenerations],
   );
-  const resolvedProjectsLoading =
-    projectsLoading ?? (status === 'authenticated' && projectsQuery.isPending);
-  const resolvedProjectsRefreshing =
-    projectsRefreshing ??
-    (status === 'authenticated' && projectsQuery.isFetching && !projectsQuery.isPending);
+  const resolvedWorkspacesLoading =
+    workspacesLoading ?? (status === 'authenticated' && workspacesQuery.isPending);
+  const resolvedWorkspacesRefreshing =
+    workspacesRefreshing ??
+    (status === 'authenticated' && workspacesQuery.isFetching && !workspacesQuery.isPending);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    if (!projectsQuery.isSuccess) return;
+    if (!workspacesQuery.isSuccess) return;
 
-    const nextProjects = projectItems.map((project) => ({ id: project.id, name: project.name }));
-    const sameProjects =
-      nextProjects.length === projects.length &&
-      nextProjects.every(
-        (project, index) =>
-          projects[index]?.id === project.id && projects[index]?.name === project.name,
+    const nextWorkspaces = workspaceItems.map((workspace) => ({ id: workspace.id, name: workspace.name }));
+    const sameWorkspaces =
+      nextWorkspaces.length === workspaces.length &&
+      nextWorkspaces.every(
+        (workspace, index) =>
+          workspaces[index]?.id === workspace.id && workspaces[index]?.name === workspace.name,
       );
 
-    if (!sameProjects) {
-      setProjects(nextProjects);
+    if (!sameWorkspaces) {
+      setWorkspaces(nextWorkspaces);
     }
 
-    if (projectItems.length === 0) {
-      if (projectId || projectName) {
-        clearProject();
+    if (workspaceItems.length === 0) {
+      if (workspaceId || workspaceName) {
+        clearWorkspace();
       }
       return;
     }
 
-    if (!projectId) return;
+    if (!workspaceId) return;
 
-    const current = projectItems.find((project) => project.id === projectId) ?? null;
-    if (current && projectName !== current.name) {
-      setProject(current.id, current.name);
+    const current = workspaceItems.find((workspace) => workspace.id === workspaceId) ?? null;
+    if (current && workspaceName !== current.name) {
+      setWorkspace(current.id, current.name);
     }
   }, [
     status,
-    projectsQuery.isSuccess,
-    projectItems,
-    projects,
-    projectId,
-    projectName,
-    setProjects,
-    setProject,
-    clearProject,
+    workspacesQuery.isSuccess,
+    workspaceItems,
+    workspaces,
+    workspaceId,
+    workspaceName,
+    setWorkspaces,
+    setWorkspace,
+    clearWorkspace,
   ]);
 
   return (
     <AppHeader
-      projectMenuOpen={projectMenuOpen}
-      onProjectMenuChange={onProjectMenuChange}
-      projectName={projectNameOverride ?? projectName}
-      projectId={projectId}
-      projects={projects}
-      projectGenerationStatuses={projectGenerationStatuses}
-      onSelectProject={onSelectProject}
-      onCloseProject={onCloseProject}
-      onOpenProjectManager={onOpenProjectManager}
-      projectsLoading={resolvedProjectsLoading}
-      projectsRefreshing={resolvedProjectsRefreshing}
-      hideProjectMenuOnMobile={hideProjectMenuOnMobile}
+      workspaceMenuOpen={workspaceMenuOpen}
+      onWorkspaceMenuChange={onWorkspaceMenuChange}
+      workspaceName={workspaceNameOverride ?? workspaceName}
+      workspaceId={workspaceId}
+      workspaces={workspaces}
+      workspaceGenerationStatuses={workspaceGenerationStatuses}
+      onSelectWorkspace={onSelectWorkspace}
+      onCloseWorkspace={onCloseWorkspace}
+      onOpenWorkspaceManager={onOpenWorkspaceManager}
+      workspacesLoading={resolvedWorkspacesLoading}
+      workspacesRefreshing={resolvedWorkspacesRefreshing}
+      hideWorkspaceMenuOnMobile={hideWorkspaceMenuOnMobile}
       showBrand={showBrand}
       brandHref={paths.studio}
-      showProjectMenu={showProjectMenu}
-      projectMenuRightSlot={projectMenuRightSlot}
+      showWorkspaceMenu={showWorkspaceMenu}
+      workspaceMenuRightSlot={workspaceMenuRightSlot}
       userMenuLeftSlot={userMenuLeftSlot}
       user={user}
       authStatus={status}

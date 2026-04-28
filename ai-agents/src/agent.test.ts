@@ -2,22 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildThreeJsCompiledPrompt,
-  threeJsDesignSystemInstruction,
+  threeJsAssetPackSystemInstruction,
 } from './repositories/threejs-guidelines';
 
-test('threeJsDesignSystemInstruction keeps minimal runtime constraints plus naming', () => {
-  assert.match(threeJsDesignSystemInstruction, /Return executable JavaScript only/);
-  assert.match(threeJsDesignSystemInstruction, /THREE core API only/);
-  assert.match(threeJsDesignSystemInstruction, /Use `THREE` globals and do not include import statements/);
-  assert.match(threeJsDesignSystemInstruction, /Do not include markdown fences or explanations/);
-  assert.match(threeJsDesignSystemInstruction, /Assign the final model to `result`/);
+test('threeJsAssetPackSystemInstruction keeps minimal runtime constraints plus naming', () => {
+  assert.match(threeJsAssetPackSystemInstruction, /Return executable JavaScript only/);
+  assert.match(threeJsAssetPackSystemInstruction, /THREE core API only/);
+  assert.match(threeJsAssetPackSystemInstruction, /Use `THREE` globals and do not include import statements/);
+  assert.match(threeJsAssetPackSystemInstruction, /Do not include markdown fences or explanations/);
+  assert.match(threeJsAssetPackSystemInstruction, /Assign the final model to `result`/);
   assert.match(
-    threeJsDesignSystemInstruction,
+    threeJsAssetPackSystemInstruction,
     /Give every major `Group` or `Mesh` a short descriptive `name` based on its role/,
   );
-  assert.doesNotMatch(threeJsDesignSystemInstruction, /Ascoor, a 3D design studio/);
-  assert.doesNotMatch(threeJsDesignSystemInstruction, /structure tree and transform controls/);
-  assert.doesNotMatch(threeJsDesignSystemInstruction, /X=front\/back, Y=left\/right, Z=up\/down/);
+  assert.doesNotMatch(threeJsAssetPackSystemInstruction, /Ascoor, a 3D asset pack studio/);
+  assert.doesNotMatch(threeJsAssetPackSystemInstruction, /structure tree and transform controls/);
+  assert.doesNotMatch(threeJsAssetPackSystemInstruction, /X=front\/back, Y=left\/right, Z=up\/down/);
 });
 
 test('buildThreeJsCompiledPrompt renders the minimal user request template', () => {

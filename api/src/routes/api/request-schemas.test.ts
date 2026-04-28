@@ -4,28 +4,28 @@ import test from 'node:test';
 import { ZodError } from 'zod';
 
 import {
-  createDesignBodySchema,
-  createDesignJobBodySchema,
-  reportDesignPreviewResultBodySchema,
+  createAssetPackBodySchema,
+  createPackGenerationJobBodySchema,
+  reportAssetPackPreviewResultBodySchema,
 } from './request-schemas';
 
-test('createDesignJobBodySchema trims prompt input', () => {
-  const parsed = createDesignJobBodySchema.parse({
-    projectId: 'proj-1',
+test('createPackGenerationJobBodySchema trims prompt input', () => {
+  const parsed = createPackGenerationJobBodySchema.parse({
+    workspaceId: 'proj-1',
     userPrompt: '  create a bracket  ',
   });
 
   assert.deepEqual(parsed, {
-    projectId: 'proj-1',
+    workspaceId: 'proj-1',
     userPrompt: 'create a bracket',
   });
 });
 
-test('createDesignJobBodySchema rejects unexpected properties', () => {
+test('createPackGenerationJobBodySchema rejects unexpected properties', () => {
   assert.throws(
     () =>
-      createDesignJobBodySchema.parse({
-        projectId: 'proj-1',
+      createPackGenerationJobBodySchema.parse({
+        workspaceId: 'proj-1',
         userPrompt: 'create a bracket',
         ignored: true,
       }),
@@ -35,11 +35,11 @@ test('createDesignJobBodySchema rejects unexpected properties', () => {
   );
 });
 
-test('createDesignBodySchema rejects whitespace-only display names', () => {
+test('createAssetPackBodySchema rejects whitespace-only display names', () => {
   assert.throws(
     () =>
-      createDesignBodySchema.parse({
-        projectId: 'proj-1',
+      createAssetPackBodySchema.parse({
+        workspaceId: 'proj-1',
         displayName: '   ',
       }),
     (error: unknown) =>
@@ -48,8 +48,8 @@ test('createDesignBodySchema rejects whitespace-only display names', () => {
   );
 });
 
-test('reportDesignPreviewResultBodySchema trims the error message', () => {
-  const parsed = reportDesignPreviewResultBodySchema.parse({
+test('reportAssetPackPreviewResultBodySchema trims the error message', () => {
+  const parsed = reportAssetPackPreviewResultBodySchema.parse({
     status: 'failed',
     errorMessage: '  Model failed to render.  ',
   });
@@ -60,8 +60,8 @@ test('reportDesignPreviewResultBodySchema trims the error message', () => {
   });
 });
 
-test('reportDesignPreviewResultBodySchema accepts success without error message', () => {
-  const parsed = reportDesignPreviewResultBodySchema.parse({
+test('reportAssetPackPreviewResultBodySchema accepts success without error message', () => {
+  const parsed = reportAssetPackPreviewResultBodySchema.parse({
     status: 'succeeded',
   });
 

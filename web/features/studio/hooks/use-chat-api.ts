@@ -1,21 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
-  createDesignJob as requestCreateDesignJob,
-  getListProjectDesignsQueryKey,
+  createPackGenerationJob as requestCreatePackGenerationJob,
+  getListWorkspaceAssetPacksQueryKey,
 } from '@/shared/api/generated/client';
-import type { CreateDesignJobRequest, DesignJobResponse } from '@/shared/api/generated/schemas';
+import type { CreatePackGenerationJobRequest, PackGenerationJobResponse } from '@/shared/api/generated/schemas';
 
-export function useChatConversationApi(projectId: string | null) {
+export function useChatConversationApi(workspaceId: string | null) {
   const queryClient = useQueryClient();
-  const createDesign = useMutation<
-    DesignJobResponse,
+  const createAssetPack = useMutation<
+    PackGenerationJobResponse,
     Error,
-    { data: CreateDesignJobRequest; traceId: string }
+    { data: CreatePackGenerationJobRequest; traceId: string }
   >({
-    mutationKey: ['createDesignJob'],
+    mutationKey: ['createPackGenerationJob'],
     mutationFn: async (input) => {
-      const response = await requestCreateDesignJob(input.data, {
+      const response = await requestCreatePackGenerationJob(input.data, {
         headers: { 'X-Trace-Id': input.traceId },
       });
       if (response.status !== 202) {
@@ -25,14 +25,14 @@ export function useChatConversationApi(projectId: string | null) {
     },
   });
 
-  const invalidateProjectDesigns = (currentProjectId?: string | null) => {
-    const targetProjectId = currentProjectId ?? projectId;
-    if (!targetProjectId) return;
-    queryClient.invalidateQueries({ queryKey: getListProjectDesignsQueryKey(targetProjectId) });
+  const invalidateWorkspaceAssetPacks = (currentWorkspaceId?: string | null) => {
+    const targetWorkspaceId = currentWorkspaceId ?? workspaceId;
+    if (!targetWorkspaceId) return;
+    queryClient.invalidateQueries({ queryKey: getListWorkspaceAssetPacksQueryKey(targetWorkspaceId) });
   };
 
   return {
-    createDesign,
-    invalidateProjectDesigns,
+    createAssetPack,
+    invalidateWorkspaceAssetPacks,
   };
 }

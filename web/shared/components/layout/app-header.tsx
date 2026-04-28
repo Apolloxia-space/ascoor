@@ -25,7 +25,7 @@ import {
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { cn } from '@shared/lib/utils';
 
-type ProjectGenerationStatus = {
+type WorkspaceGenerationStatus = {
   kind: 'queued' | 'running' | 'succeeded' | 'failed';
   label: string;
   promptPreview?: string | null;
@@ -39,22 +39,22 @@ const formatWorkspaceListName = (name: string) => {
 
 type AppHeaderProps = {
   className?: string;
-  projectMenuOpen: boolean;
-  onProjectMenuChange: (open: boolean) => void;
-  projectName?: string | null;
-  projectId?: string | null;
-  projects: Array<{ id: string; name: string }>;
-  projectGenerationStatuses?: Record<string, ProjectGenerationStatus>;
-  onSelectProject: (id: string, name: string) => void;
-  onCloseProject: () => void;
-  onOpenProjectManager?: () => void;
-  projectsLoading?: boolean;
-  projectsRefreshing?: boolean;
-  showProjectMenu?: boolean;
-  hideProjectMenuOnMobile?: boolean;
+  workspaceMenuOpen: boolean;
+  onWorkspaceMenuChange: (open: boolean) => void;
+  workspaceName?: string | null;
+  workspaceId?: string | null;
+  workspaces: Array<{ id: string; name: string }>;
+  workspaceGenerationStatuses?: Record<string, WorkspaceGenerationStatus>;
+  onSelectWorkspace: (id: string, name: string) => void;
+  onCloseWorkspace: () => void;
+  onOpenWorkspaceManager?: () => void;
+  workspacesLoading?: boolean;
+  workspacesRefreshing?: boolean;
+  showWorkspaceMenu?: boolean;
+  hideWorkspaceMenuOnMobile?: boolean;
   showBrand?: boolean;
   brandHref?: string;
-  projectMenuRightSlot?: ReactNode;
+  workspaceMenuRightSlot?: ReactNode;
   userMenuLeftSlot?: ReactNode;
   user: { displayName?: string | null; email?: string | null } | null;
   authStatus?: string;
@@ -65,22 +65,22 @@ type AppHeaderProps = {
 
 export function AppHeader({
   className,
-  projectMenuOpen,
-  onProjectMenuChange,
-  projectName,
-  projectId,
-  projects,
-  projectGenerationStatuses = {},
-  onSelectProject,
-  onCloseProject,
-  onOpenProjectManager,
-  projectsLoading = false,
-  projectsRefreshing = false,
-  showProjectMenu = true,
-  hideProjectMenuOnMobile = false,
+  workspaceMenuOpen,
+  onWorkspaceMenuChange,
+  workspaceName,
+  workspaceId,
+  workspaces,
+  workspaceGenerationStatuses = {},
+  onSelectWorkspace,
+  onCloseWorkspace,
+  onOpenWorkspaceManager,
+  workspacesLoading = false,
+  workspacesRefreshing = false,
+  showWorkspaceMenu = true,
+  hideWorkspaceMenuOnMobile = false,
   showBrand = true,
   brandHref,
-  projectMenuRightSlot,
+  workspaceMenuRightSlot,
   userMenuLeftSlot,
   user,
   authStatus,
@@ -88,18 +88,18 @@ export function AppHeader({
   onSignOut,
   showSignIn = true,
 }: AppHeaderProps) {
-  const canCloseProject = Boolean(projectId);
+  const canCloseWorkspace = Boolean(workspaceId);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const canShowSignIn = !user && showSignIn && onSignIn;
-  const recentProjects = projects.slice(0, 10);
-  const showProjectSkeleton = projectsLoading && recentProjects.length === 0;
-  const projectLabel = showProjectSkeleton
-    ? projectId
+  const recentWorkspaces = workspaces.slice(0, 10);
+  const showWorkspaceSkeleton = workspacesLoading && recentWorkspaces.length === 0;
+  const workspaceLabel = showWorkspaceSkeleton
+    ? workspaceId
       ? 'Loading workspace...'
       : 'Loading workspaces...'
-    : projectName || 'No workspace selected';
+    : workspaceName || 'No workspace selected';
 
-  const renderGenerationStatus = (status?: ProjectGenerationStatus) => {
+  const renderGenerationStatus = (status?: WorkspaceGenerationStatus) => {
     if (!status) return null;
     const isFailed = status.kind === 'failed';
     const isGenerating = status.kind === 'queued' || status.kind === 'running';
@@ -142,17 +142,17 @@ export function AppHeader({
             )}
           </div>
         ) : null}
-        {showProjectMenu && (
-          <div className={cn(hideProjectMenuOnMobile && 'hidden md:block')}>
-            <DropdownMenu open={projectMenuOpen} onOpenChange={onProjectMenuChange}>
+        {showWorkspaceMenu && (
+          <div className={cn(hideWorkspaceMenuOnMobile && 'hidden md:block')}>
+            <DropdownMenu open={workspaceMenuOpen} onOpenChange={onWorkspaceMenuChange}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="max-w-[200px] gap-2 md:max-w-none">
                   <FolderOpen className="size-4 text-muted-foreground" />
-                  <span className="truncate font-medium">{projectLabel}</span>
+                  <span className="truncate font-medium">{workspaceLabel}</span>
                   <ChevronDown
                     className={cn(
                       'size-4 text-muted-foreground transition-transform',
-                      projectMenuOpen && 'rotate-180',
+                      workspaceMenuOpen && 'rotate-180',
                     )}
                   />
                 </Button>
@@ -160,10 +160,10 @@ export function AppHeader({
               <DropdownMenuContent>
                 <DropdownMenuItem
                   onSelect={() => {
-                    onCloseProject();
-                    onProjectMenuChange(false);
+                    onCloseWorkspace();
+                    onWorkspaceMenuChange(false);
                   }}
-                  disabled={!canCloseProject}
+                  disabled={!canCloseWorkspace}
                 >
                   <XCircle className="size-4" />
                   Close workspace
@@ -172,14 +172,14 @@ export function AppHeader({
                 <div className="max-h-60 overflow-y-auto py-1 pr-1">
                   <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium tracking-wide text-muted-foreground">
                     <span>Recent workspace</span>
-                    {projectsRefreshing && !showProjectSkeleton ? (
+                    {workspacesRefreshing && !showWorkspaceSkeleton ? (
                       <Loader2
                         className="size-3.5 animate-spin"
                         aria-label="Refreshing recent workspaces"
                       />
                     ) : null}
                   </div>
-                  {showProjectSkeleton ? (
+                  {showWorkspaceSkeleton ? (
                     <div className="space-y-2 px-2 py-1">
                       {[0, 1, 2].map((index) => (
                         <div key={index} className="flex items-center gap-2 rounded-sm px-2 py-2">
@@ -188,35 +188,35 @@ export function AppHeader({
                         </div>
                       ))}
                     </div>
-                  ) : recentProjects.length === 0 ? (
+                  ) : recentWorkspaces.length === 0 ? (
                     <p className="px-2 py-2 text-sm text-muted-foreground">No workspaces</p>
                   ) : (
-                    recentProjects.map((project) => (
+                    recentWorkspaces.map((workspace) => (
                       <DropdownMenuItem
-                        key={project.id}
+                        key={workspace.id}
                         onSelect={() => {
-                          onSelectProject(project.id, project.name);
-                          onProjectMenuChange(false);
+                          onSelectWorkspace(workspace.id, workspace.name);
+                          onWorkspaceMenuChange(false);
                         }}
                       >
-                        <span className="min-w-0 flex-1 truncate" title={project.name}>
-                          {formatWorkspaceListName(project.name)}
+                        <span className="min-w-0 flex-1 truncate" title={workspace.name}>
+                          {formatWorkspaceListName(workspace.name)}
                         </span>
-                        {renderGenerationStatus(projectGenerationStatuses[project.id])}
-                        {projectId === project.id && (
+                        {renderGenerationStatus(workspaceGenerationStatuses[workspace.id])}
+                        {workspaceId === workspace.id && (
                           <span className="text-xs text-primary">Current</span>
                         )}
                       </DropdownMenuItem>
                     ))
                   )}
                 </div>
-                {onOpenProjectManager && (
+                {onOpenWorkspaceManager && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onSelect={() => {
-                        onOpenProjectManager();
-                        onProjectMenuChange(false);
+                        onOpenWorkspaceManager();
+                        onWorkspaceMenuChange(false);
                       }}
                     >
                       <FolderOpen className="size-4" />
@@ -228,7 +228,7 @@ export function AppHeader({
             </DropdownMenu>
           </div>
         )}
-        {projectMenuRightSlot}
+        {workspaceMenuRightSlot}
       </div>
       <div className="hidden items-center gap-6 md:flex" />
       <div className="flex items-center gap-2">

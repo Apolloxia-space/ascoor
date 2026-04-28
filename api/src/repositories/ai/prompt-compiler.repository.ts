@@ -1,5 +1,5 @@
 type PromptCompileTraceContext = {
-  designId?: string;
+  packGenerationJobId?: string;
   traceId?: string;
   requestId?: string;
 };

@@ -19,7 +19,7 @@ type PlanSeed = {
 type PlanLimitSeed = {
   planKey: 'free' | 'hobby' | 'pro';
   monthlyCredits: number;
-  concurrentDesignLimit: number;
+  concurrentPackGenerationLimit: number;
 };
 
 const PLAN_KEYS = new Set(['free', 'hobby', 'pro']);
@@ -97,12 +97,12 @@ function assertPlanLimitSeed(value: unknown, index: number): asserts value is Pl
     );
   }
   if (
-    typeof planLimit.concurrentDesignLimit !== 'number' ||
-    !Number.isFinite(planLimit.concurrentDesignLimit) ||
-    planLimit.concurrentDesignLimit <= 0
+    typeof planLimit.concurrentPackGenerationLimit !== 'number' ||
+    !Number.isFinite(planLimit.concurrentPackGenerationLimit) ||
+    planLimit.concurrentPackGenerationLimit <= 0
   ) {
     throw new Error(
-      `Invalid plan limit seed at index ${index}: concurrentDesignLimit must be a positive number.`,
+      `Invalid plan limit seed at index ${index}: concurrentPackGenerationLimit must be a positive number.`,
     );
   }
 }
@@ -173,12 +173,12 @@ async function main(): Promise<void> {
         where: { planKey: planLimit.planKey },
         update: {
           monthlyCredits: planLimit.monthlyCredits,
-          concurrentDesignLimit: planLimit.concurrentDesignLimit,
+          concurrentPackGenerationLimit: planLimit.concurrentPackGenerationLimit,
         },
         create: {
           planKey: planLimit.planKey,
           monthlyCredits: planLimit.monthlyCredits,
-          concurrentDesignLimit: planLimit.concurrentDesignLimit,
+          concurrentPackGenerationLimit: planLimit.concurrentPackGenerationLimit,
         },
       }),
     ),

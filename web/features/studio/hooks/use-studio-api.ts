@@ -2,73 +2,73 @@ import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
-  getListProjectDesignsQueryKey,
-  useCreateDesign,
-  useCreateProject,
-  useDeleteProject,
-  useUpdateProject,
+  getListWorkspaceAssetPacksQueryKey,
+  useCreateAssetPack,
+  useCreateWorkspace,
+  useDeleteWorkspace,
+  useUpdateWorkspace,
 } from '@/shared/api/generated/client';
-import type { DesignResponse, ProjectResponseData } from '@/shared/api/generated/schemas';
+import type { AssetPackResponse, WorkspaceResponseData } from '@/shared/api/generated/schemas';
 
 export function useStudioApi() {
   const queryClient = useQueryClient();
 
-  const { mutateAsync: createProjectAsync } = useCreateProject();
-  const { mutateAsync: createDesignAsync } = useCreateDesign();
-  const { mutateAsync: updateProjectAsync } = useUpdateProject();
-  const { mutateAsync: deleteProjectAsync } = useDeleteProject();
+  const { mutateAsync: createWorkspaceAsync } = useCreateWorkspace();
+  const { mutateAsync: createAssetPackAsync } = useCreateAssetPack();
+  const { mutateAsync: updateWorkspaceAsync } = useUpdateWorkspace();
+  const { mutateAsync: deleteWorkspaceAsync } = useDeleteWorkspace();
 
-  const createProject = useCallback(async (name: string): Promise<ProjectResponseData> => {
-    const response = await createProjectAsync({ data: { name } });
+  const createWorkspace = useCallback(async (name: string): Promise<WorkspaceResponseData> => {
+    const response = await createWorkspaceAsync({ data: { name } });
     if (response.status !== 201) {
       throw new Error('Unexpected response status');
     }
     return response.data;
-  }, [createProjectAsync]);
+  }, [createWorkspaceAsync]);
 
-  const createDesign = useCallback(
-    async (input: { projectId: string; displayName: string }): Promise<DesignResponse> => {
-      const response = await createDesignAsync({ data: input });
+  const createAssetPack = useCallback(
+    async (input: { workspaceId: string; displayName: string }): Promise<AssetPackResponse> => {
+      const response = await createAssetPackAsync({ data: input });
       if (response.status !== 201) {
         throw new Error('Unexpected response status');
       }
       return response.data;
     },
-    [createDesignAsync],
+    [createAssetPackAsync],
   );
 
-  const updateProject = useCallback(async (projectId: string, name: string): Promise<ProjectResponseData> => {
-    const response = await updateProjectAsync({
-      projectId,
+  const updateWorkspace = useCallback(async (workspaceId: string, name: string): Promise<WorkspaceResponseData> => {
+    const response = await updateWorkspaceAsync({
+      workspaceId,
       data: { name },
     });
     if (response.status !== 200) {
       throw new Error('Unexpected response status');
     }
     return response.data;
-  }, [updateProjectAsync]);
+  }, [updateWorkspaceAsync]);
 
-  const deleteProject = useCallback(async (projectId: string): Promise<void> => {
-    const response = await deleteProjectAsync({ projectId });
+  const deleteWorkspace = useCallback(async (workspaceId: string): Promise<void> => {
+    const response = await deleteWorkspaceAsync({ workspaceId });
     if (response.status !== 204) {
       throw new Error('Unexpected response status');
     }
-  }, [deleteProjectAsync]);
+  }, [deleteWorkspaceAsync]);
 
-  const invalidateProjects = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['/projects'] });
+  const invalidateWorkspaces = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['/workspaces'] });
   }, [queryClient]);
 
-  const invalidateProjectDesigns = useCallback((projectId: string) => {
-    queryClient.invalidateQueries({ queryKey: getListProjectDesignsQueryKey(projectId) });
+  const invalidateWorkspaceAssetPacks = useCallback((workspaceId: string) => {
+    queryClient.invalidateQueries({ queryKey: getListWorkspaceAssetPacksQueryKey(workspaceId) });
   }, [queryClient]);
 
   return {
-    createProject,
-    createDesign,
-    updateProject,
-    deleteProject,
-    invalidateProjects,
-    invalidateProjectDesigns,
+    createWorkspace,
+    createAssetPack,
+    updateWorkspace,
+    deleteWorkspace,
+    invalidateWorkspaces,
+    invalidateWorkspaceAssetPacks,
   };
 }

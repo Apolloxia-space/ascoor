@@ -43,11 +43,11 @@ import {
   type PackType,
 } from '../lib/new-pack-config';
 import { buildStudioPath } from '../lib/paths';
-import { DESIGN_FAILED_MESSAGE, DESIGN_FAILED_TITLE } from '../messages';
+import { PACK_GENERATION_FAILED_MESSAGE, PACK_GENERATION_FAILED_TITLE } from '../messages';
 import { useStudioStore } from '../stores/use-studio-store';
 import { buildTraceId, type ApiError } from '@/shared/api/fetcher';
 import {
-  getListProjectDesignJobsQueryKey,
+  getListWorkspacePackGenerationJobsQueryKey,
   useGetBillingStatus,
   useGetBillingUsage,
 } from '@/shared/api/generated/client';
@@ -159,14 +159,14 @@ export function NewPackForm({
   const [packTypeSearchInput, setPackTypeSearchInput] = useState('');
   const [activePackTypeGroup, setActivePackTypeGroup] = useState('');
   const [upgradeDialogMode, setUpgradeDialogMode] = useState<'limit' | 'concurrency' | null>(null);
-  const [designErrorDialogOpen, setDesignErrorDialogOpen] = useState(false);
-  const addProject = useStudioStore((state) => state.addProject);
-  const addPendingDesign = useStudioStore((state) => state.addPendingDesign);
-  const setProject = useStudioStore((state) => state.setProject);
+  const [assetPackErrorDialogOpen, setAssetPackErrorDialogOpen] = useState(false);
+  const addWorkspace = useStudioStore((state) => state.addWorkspace);
+  const addPendingAssetPack = useStudioStore((state) => state.addPendingAssetPack);
+  const setWorkspace = useStudioStore((state) => state.setWorkspace);
   const setRightPanelMode = useStudioStore((state) => state.setRightPanelMode);
   const setChatPanelOpen = useStudioStore((state) => state.setChatPanelOpen);
-  const { createProject, invalidateProjects } = useStudioApi();
-  const { createDesign, invalidateProjectDesigns } = useChatConversationApi(null);
+  const { createWorkspace, invalidateWorkspaces } = useStudioApi();
+  const { createAssetPack, invalidateWorkspaceAssetPacks } = useChatConversationApi(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const isBusy = isSending || isGenerating;
@@ -217,7 +217,7 @@ export function NewPackForm({
       setIsSending(false);
       setIsGenerating(false);
       setUpgradeDialogMode(null);
-      setDesignErrorDialogOpen(false);
+      setAssetPackErrorDialogOpen(false);
       isSendingRef.current = false;
     }
   }, [active]);
@@ -414,7 +414,7 @@ export function NewPackForm({
       style: selectedStyle,
       assetCount: selectedAssetCount,
     });
-    setDesignErrorDialogOpen(false);
+    setAssetPackErrorDialogOpen(false);
     setUpgradeDialogMode(null);
 
     if (monthlyLimitReached) {
@@ -427,30 +427,30 @@ export function NewPackForm({
     try {
       setIsGenerating(true);
       const workspaceName = buildWorkspaceName(promptPreview);
-      const project = await createProject(workspaceName);
-      addProject({ id: project.id, name: project.name });
-      setProject(project.id, project.name);
-      invalidateProjects();
-      router.replace(buildStudioPath(project.id));
+      const workspace = await createWorkspace(workspaceName);
+      addWorkspace({ id: workspace.id, name: workspace.name });
+      setWorkspace(workspace.id, workspace.name);
+      invalidateWorkspaces();
+      router.replace(buildStudioPath(workspace.id));
 
       const traceId = buildTraceId();
-      const gen = await createDesign.mutateAsync({
+      const gen = await createAssetPack.mutateAsync({
         data: {
-          projectId: project.id,
+          workspaceId: workspace.id,
           userPrompt,
         },
         traceId,
       });
-      addPendingDesign({
-        designId: gen.designJobId,
-        projectId: project.id,
+      addPendingAssetPack({
+        packGenerationJobId: gen.packGenerationJobId,
+        workspaceId: workspace.id,
         traceId,
         promptPreview,
         userPrompt,
       });
-      invalidateProjectDesigns(project.id);
+      invalidateWorkspaceAssetPacks(workspace.id);
       queryClient.invalidateQueries({
-        queryKey: getListProjectDesignJobsQueryKey(project.id, { limit: 50 }),
+        queryKey: getListWorkspacePackGenerationJobsQueryKey(workspace.id, { limit: 50 }),
       });
       setRightPanelMode('create');
       setChatPanelOpen(true);
@@ -472,14 +472,14 @@ export function NewPackForm({
         (typeof errorMessage === 'string' &&
           errorMessage.includes('Not enough credits'));
       const isConcurrencyLimitError =
-        apiError?.status === 409 || errorCode === 'design_concurrency_limit_exceeded';
+        apiError?.status === 409 || errorCode === 'pack_generation_concurrency_limit_exceeded';
 
       if (isConcurrencyLimitError) {
         setUpgradeDialogMode('concurrency');
       } else if (isLimitError) {
         setUpgradeDialogMode('limit');
       } else {
-        setDesignErrorDialogOpen(true);
+        setAssetPackErrorDialogOpen(true);
       }
     } finally {
       setIsGenerating(false);
@@ -773,7 +773,7 @@ export function NewPackForm({
             <div className={cn('flex items-center justify-end', isPageLayout && 'px-1')}>
               <Button
                 className="rounded-lg"
-                disabled={isBusy || createDesign.isPending}
+                disabled={isBusy || createAssetPack.isPending}
                 onClick={handleSend}
               >
                 {isBusy ? (
@@ -1131,14 +1131,14 @@ export function NewPackForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={designErrorDialogOpen} onOpenChange={setDesignErrorDialogOpen}>
+      <Dialog open={assetPackErrorDialogOpen} onOpenChange={setAssetPackErrorDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{DESIGN_FAILED_TITLE}</DialogTitle>
-            <DialogDescription>{DESIGN_FAILED_MESSAGE}</DialogDescription>
+            <DialogTitle>{PACK_GENERATION_FAILED_TITLE}</DialogTitle>
+            <DialogDescription>{PACK_GENERATION_FAILED_MESSAGE}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setDesignErrorDialogOpen(false)}>Close</Button>
+            <Button onClick={() => setAssetPackErrorDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

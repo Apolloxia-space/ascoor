@@ -1,6 +1,6 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { GeneratedDesignInfo } from '../../entities/designs';
+import type { GeneratedAssetPackInfo } from '../../entities/assetPacks';
 import type { UploadedObjectInfo } from '../../entities/storage';
 import type { IGcsRepository } from '../interfaces';
 
@@ -24,7 +24,7 @@ export class LocalStorageRepository implements IGcsRepository {
     userId?: string;
     filename?: string;
     ext?: string;
-  }): Promise<GeneratedDesignInfo> {
+  }): Promise<GeneratedAssetPackInfo> {
     const objectPath = this.resolveObjectPath(params);
     await this.writeObject(objectPath, Buffer.from(params.content, 'utf8'));
 

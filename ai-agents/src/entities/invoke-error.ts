@@ -6,7 +6,7 @@ export type InvokeErrorOut = {
     stage?: string;
     requestId?: string;
     traceId?: string;
-    designId?: string;
+    packGenerationJobId?: string;
     details?: Record<string, unknown>;
   };
 };

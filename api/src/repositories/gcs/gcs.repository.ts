@@ -1,6 +1,6 @@
 import { Storage } from '@google-cloud/storage';
 import type { IGcsRepository } from '../interfaces';
-import type { GeneratedDesignInfo } from '../../entities/designs';
+import type { GeneratedAssetPackInfo } from '../../entities/assetPacks';
 import type { UploadedObjectInfo } from '../../entities/storage';
 
 export interface GcsRepositoryOptions {
@@ -22,7 +22,7 @@ export class GcsRepository implements IGcsRepository {
     userId?: string;
     filename?: string;
     ext?: string;
-  }): Promise<GeneratedDesignInfo> {
+  }): Promise<GeneratedAssetPackInfo> {
     const { objectPath, userId, filename, ext, content, contentType, metadata } = params;
     const resolvedPath =
       objectPath ??

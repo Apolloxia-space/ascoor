@@ -1,11 +1,11 @@
-resource "google_cloud_scheduler_job" "design_stale_reaper" {
-  name      = "${local.resource_prefix}-design-stale-reaper"
+resource "google_cloud_scheduler_job" "pack_generation_stale_reaper" {
+  name      = "${local.resource_prefix}-pack-generation-stale-reaper"
   region    = local.region
   schedule  = "5 * * * *"
   time_zone = "Etc/UTC"
 
   http_target {
-    uri         = "${google_cloud_run_v2_service.worker.uri}/internal/design-jobs/reap-stale?limit=100"
+    uri         = "${google_cloud_run_v2_service.worker.uri}/internal/pack-generation-jobs/reap-stale?limit=100"
     http_method = "POST"
 
     oidc_token {

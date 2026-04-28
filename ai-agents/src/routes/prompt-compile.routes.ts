@@ -13,7 +13,7 @@ export function registerPromptCompileRoutes(app: AppRouter, usecase: IPromptComp
       const compiled = await usecase.run(parsed.data, {
         requestId: c.get('requestId'),
         traceId: c.get('traceId'),
-        designId: c.get('designId'),
+        packGenerationJobId: c.get('packGenerationJobId'),
       });
 
       if (!compiled.trim()) {
@@ -24,7 +24,7 @@ export function registerPromptCompileRoutes(app: AppRouter, usecase: IPromptComp
           stage: 'prompt_compile',
           requestId: c.get('requestId'),
           traceId: c.get('traceId'),
-          designId: c.get('designId') || undefined,
+          packGenerationJobId: c.get('packGenerationJobId') || undefined,
         });
       }
 
@@ -39,7 +39,7 @@ export function registerPromptCompileRoutes(app: AppRouter, usecase: IPromptComp
         stage: 'prompt_compile',
         requestId: c.get('requestId'),
         traceId: c.get('traceId'),
-        designId: c.get('designId') || undefined,
+        packGenerationJobId: c.get('packGenerationJobId') || undefined,
       });
     }
   });

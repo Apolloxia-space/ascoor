@@ -13,7 +13,7 @@ export class PromptCompileUsecase implements IPromptCompileUsecase {
     const trace = resolveTraceContext({
       requestId: input.requestId ?? traceContext?.requestId,
       traceId: input.traceId ?? traceContext?.traceId,
-      designId: input.designId ?? traceContext?.designId,
+      packGenerationJobId: input.packGenerationJobId ?? traceContext?.packGenerationJobId,
     });
 
     const prompt = input.userPrompt.trim();

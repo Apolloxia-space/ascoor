@@ -81,27 +81,27 @@ export class UserRepositoryPostgres implements UserRepository {
   }): Promise<ExternalCleanupTask> {
     return this.prisma.$transaction(async (tx) => {
       const { userId } = params;
-      const projectIds = await tx.project.findMany({
+      const workspaceIds = await tx.workspace.findMany({
         where: { ownerId: userId },
         select: { id: true },
       });
-      const projectIdList = projectIds.map((project) => project.id);
+      const workspaceIdList = workspaceIds.map((workspace) => workspace.id);
 
-      if (projectIdList.length > 0) {
-        await tx.designJob.deleteMany({
-          where: { projectId: { in: projectIdList } },
+      if (workspaceIdList.length > 0) {
+        await tx.packGenerationJob.deleteMany({
+          where: { workspaceId: { in: workspaceIdList } },
         });
 
-        await tx.design.deleteMany({
-          where: { projectId: { in: projectIdList } },
+        await tx.assetPack.deleteMany({
+          where: { workspaceId: { in: workspaceIdList } },
         });
 
-        await tx.project.deleteMany({
-          where: { id: { in: projectIdList } },
+        await tx.workspace.deleteMany({
+          where: { id: { in: workspaceIdList } },
         });
       }
 
-      await tx.designJob.deleteMany({
+      await tx.packGenerationJob.deleteMany({
         where: { userId },
       });
 

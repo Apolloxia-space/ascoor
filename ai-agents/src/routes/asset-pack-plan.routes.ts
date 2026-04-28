@@ -14,7 +14,7 @@ export function registerAssetPackPlanRoutes(
     const result = await usecase.run(parsed.data, {
       requestId: c.get('requestId'),
       traceId: c.get('traceId'),
-      designId: c.get('designId'),
+      packGenerationJobId: c.get('packGenerationJobId'),
     });
 
     return c.json(result, 200);

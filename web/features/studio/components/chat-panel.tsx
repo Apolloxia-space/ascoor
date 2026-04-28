@@ -6,16 +6,16 @@ import { AlertTriangle, Check, Clock, Download, FileText, Loader2 } from 'lucide
 
 import { Button } from '@shared/components/ui/button';
 import {
-  getDesign,
-  getGetDesignQueryKey,
-  getListProjectDesignJobsQueryKey,
-  useListProjectDesignJobs,
+  getAssetPack,
+  getGetAssetPackQueryKey,
+  getListWorkspacePackGenerationJobsQueryKey,
+  useListWorkspacePackGenerationJobs,
 } from '@/shared/api/generated/client';
 import {
   useStudioStore,
-  type PendingDesign,
-  type PendingDesignPart,
-  type PendingDesignPartStatus,
+  type PendingAssetPack,
+  type PendingAssetPart,
+  type PendingAssetPartStatus,
 } from '../stores/use-studio-store';
 import { StudioSidePanel } from './studio-side-panel';
 import type { PartNode } from '../lib/model-parts';
@@ -82,14 +82,14 @@ type CreatePanelContentProps = {
   onPreviewPart?: (id: string) => void;
 };
 
-const partStatusLabel: Record<PendingDesignPartStatus, string> = {
+const partStatusLabel: Record<PendingAssetPartStatus, string> = {
   pending: 'Pending',
   generating: 'Generating',
   completed: 'Completed',
   failed: 'Failed',
 };
 
-const getPartStatusIcon = (status: PendingDesignPartStatus) => {
+const getPartStatusIcon = (status: PendingAssetPartStatus) => {
   switch (status) {
     case 'completed':
       return <Check className="size-3.5" />;
@@ -102,7 +102,7 @@ const getPartStatusIcon = (status: PendingDesignPartStatus) => {
   }
 };
 
-const getPartStatusClassName = (status: PendingDesignPartStatus) => {
+const getPartStatusClassName = (status: PendingAssetPartStatus) => {
   switch (status) {
     case 'completed':
       return 'text-emerald-300';
@@ -115,15 +115,15 @@ const getPartStatusClassName = (status: PendingDesignPartStatus) => {
   }
 };
 
-const getDesignTimestamp = (entry: PendingDesign) => {
+const getAssetPackTimestamp = (entry: PendingAssetPack) => {
   const createdAt = Date.parse(entry.createdAt);
   if (Number.isFinite(createdAt)) return createdAt;
   const updatedAt = Date.parse(entry.updatedAt);
   return Number.isFinite(updatedAt) ? updatedAt : 0;
 };
 
-type DesignDetailWithParts = {
-  design?: {
+type AssetPackDetailWithParts = {
+  assetPack?: {
     parts?: Array<{
       slug?: string | null;
       displayName?: string | null;
@@ -133,20 +133,20 @@ type DesignDetailWithParts = {
   } | null;
 };
 
-const PART_STATUSES = new Set<PendingDesignPartStatus>([
+const PART_STATUSES = new Set<PendingAssetPartStatus>([
   'pending',
   'generating',
   'completed',
   'failed',
 ]);
 
-const normalizePartStatus = (value: string | null | undefined): PendingDesignPartStatus =>
-  PART_STATUSES.has(value as PendingDesignPartStatus)
-    ? (value as PendingDesignPartStatus)
+const normalizePartStatus = (value: string | null | undefined): PendingAssetPartStatus =>
+  PART_STATUSES.has(value as PendingAssetPartStatus)
+    ? (value as PendingAssetPartStatus)
     : 'pending';
 
-const normalizeDesignParts = (payload: unknown): Array<PendingDesignPart> => {
-  const parts = (payload as DesignDetailWithParts | null)?.design?.parts;
+const normalizeAssetParts = (payload: unknown): Array<PendingAssetPart> => {
+  const parts = (payload as AssetPackDetailWithParts | null)?.assetPack?.parts;
   if (!Array.isArray(parts)) return [];
   return parts
     .map((part, index) => {
@@ -168,7 +168,7 @@ const normalizePartKey = (value: string) =>
     .trim()
     .toLowerCase();
 
-const findLoadedPart = (part: PendingDesignPart, loadedParts: Array<PartNode>) => {
+const findLoadedPart = (part: PendingAssetPart, loadedParts: Array<PartNode>) => {
   const slugKey = normalizePartKey(part.slug);
   const displayKey = normalizePartKey(part.displayName);
   return (
@@ -181,19 +181,19 @@ const findLoadedPart = (part: PendingDesignPart, loadedParts: Array<PartNode>) =
 };
 
 function GenerationLog({
-  pendingDesigns,
+  pendingPackGenerations,
   loadedParts,
   activePartId,
   onDownloadZip,
   onPreviewPart,
 }: {
-  pendingDesigns: Array<PendingDesign>;
+  pendingPackGenerations: Array<PendingAssetPack>;
   loadedParts: Array<PartNode>;
   activePartId?: string | null;
   onDownloadZip?: () => void;
   onPreviewPart?: (id: string) => void;
 }) {
-  if (pendingDesigns.length === 0) {
+  if (pendingPackGenerations.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
         <p>No generation activity yet.</p>
@@ -204,26 +204,26 @@ function GenerationLog({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="space-y-4">
-        {[...pendingDesigns].reverse().map((pendingDesign) => {
+        {[...pendingPackGenerations].reverse().map((pendingPackGeneration) => {
           const structuredPrompt = parseStructuredPackPrompt(
-            pendingDesign.userPrompt ?? pendingDesign.promptPreview,
+            pendingPackGeneration.userPrompt ?? pendingPackGeneration.promptPreview,
           );
-          const parts = pendingDesign.parts ?? [];
+          const parts = pendingPackGeneration.parts ?? [];
           const completedCount = parts.filter((part) => part.status === 'completed').length;
           const failedCount = parts.filter((part) => part.status === 'failed').length;
-          const isFailed = pendingDesign.status === 'failed';
-          const isSucceeded = pendingDesign.status === 'succeeded';
+          const isFailed = pendingPackGeneration.status === 'failed';
+          const isSucceeded = pendingPackGeneration.status === 'succeeded';
           const summaryText =
             parts.length > 0
               ? `${completedCount}/${parts.length} parts completed${failedCount > 0 ? `, ${failedCount} failed` : ''}.`
               : isFailed
-                ? (pendingDesign.errorMessage ??
-                  (pendingDesign.assetDesignId
+                ? (pendingPackGeneration.errorMessage ??
+                  (pendingPackGeneration.assetPackId
                     ? 'No part status was available.'
                     : 'Failed before pack planning.'))
                 : isSucceeded
                   ? 'Ready to preview.'
-                  : pendingDesign.assetDesignId
+                  : pendingPackGeneration.assetPackId
                     ? 'Preparing parts...'
                     : 'Planning the pack...';
           const statusTone = isFailed
@@ -238,7 +238,7 @@ function GenerationLog({
               : 'Creating asset pack';
 
           return (
-            <section className="space-y-3" key={pendingDesign.designId}>
+            <section className="space-y-3" key={pendingPackGeneration.packGenerationJobId}>
               <div className={cn('rounded-lg border px-3 py-3 shadow-sm', statusTone)}>
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   {isFailed ? (
@@ -366,25 +366,25 @@ function GenerationLog({
                         <p>{structuredPrompt.additionalDirection}</p>
                       </div>
                     ) : null}
-                    {pendingDesign.userPrompt ? (
+                    {pendingPackGeneration.userPrompt ? (
                       <details className="rounded-md border border-border/70 bg-background px-2 py-2">
                         <summary className="cursor-pointer list-none text-xs text-muted-foreground">
                           Show prompt
                         </summary>
                         <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground">
-                          {pendingDesign.userPrompt}
+                          {pendingPackGeneration.userPrompt}
                         </pre>
                       </details>
                     ) : null}
                   </div>
                 </details>
-              ) : pendingDesign.userPrompt || pendingDesign.promptPreview ? (
+              ) : pendingPackGeneration.userPrompt || pendingPackGeneration.promptPreview ? (
                 <details className="rounded-lg border border-border/70 bg-card/60 px-3 py-3">
                   <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
                     Prompt
                   </summary>
                   <pre className="mt-3 whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground">
-                    {pendingDesign.userPrompt ?? pendingDesign.promptPreview}
+                    {pendingPackGeneration.userPrompt ?? pendingPackGeneration.promptPreview}
                   </pre>
                 </details>
               ) : null}
@@ -397,43 +397,43 @@ function GenerationLog({
 }
 
 const useGenerationLogItems = (open: boolean) => {
-  const pendingDesigns = useStudioStore((state) => state.pendingDesigns);
-  const projectId = useStudioStore((state) => state.projectId);
-  const projectDesignJobsQuery = useListProjectDesignJobs(
-    projectId ?? '',
+  const pendingPackGenerations = useStudioStore((state) => state.pendingPackGenerations);
+  const workspaceId = useStudioStore((state) => state.workspaceId);
+  const workspacePackGenerationJobsQuery = useListWorkspacePackGenerationJobs(
+    workspaceId ?? '',
     { limit: 50 },
     {
       query: {
-        enabled: open && Boolean(projectId),
-        queryKey: projectId ? getListProjectDesignJobsQueryKey(projectId, { limit: 50 }) : [],
-        refetchInterval: open && projectId ? 15_000 : false,
+        enabled: open && Boolean(workspaceId),
+        queryKey: workspaceId ? getListWorkspacePackGenerationJobsQueryKey(workspaceId, { limit: 50 }) : [],
+        refetchInterval: open && workspaceId ? 15_000 : false,
         refetchOnWindowFocus: true,
         retry: false,
       },
     },
   );
-  const serverDesignJobs =
-    projectDesignJobsQuery.data?.status === 200 ? projectDesignJobsQuery.data.data.items : [];
-  const localProjectDesigns = useMemo(
+  const serverPackGenerationJobs =
+    workspacePackGenerationJobsQuery.data?.status === 200 ? workspacePackGenerationJobsQuery.data.data.items : [];
+  const localWorkspaceAssetPacks = useMemo(
     () =>
-      projectId ? pendingDesigns.filter((entry) => entry.projectId === projectId) : pendingDesigns,
-    [pendingDesigns, projectId],
+      workspaceId ? pendingPackGenerations.filter((entry) => entry.workspaceId === workspaceId) : pendingPackGenerations,
+    [pendingPackGenerations, workspaceId],
   );
-  const assetDesignIds = useMemo(() => {
+  const assetPackIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const job of serverDesignJobs) {
-      if (job.designId) ids.add(job.designId);
+    for (const job of serverPackGenerationJobs) {
+      if (job.assetPackId) ids.add(job.assetPackId);
     }
-    for (const entry of localProjectDesigns) {
-      if (entry.assetDesignId) ids.add(entry.assetDesignId);
+    for (const entry of localWorkspaceAssetPacks) {
+      if (entry.assetPackId) ids.add(entry.assetPackId);
     }
     return [...ids];
-  }, [localProjectDesigns, serverDesignJobs]);
-  const designDetailQueries = useQueries({
-    queries: assetDesignIds.map((designId) => ({
-      queryKey: [...getGetDesignQueryKey(designId), 'chat-log-parts'],
+  }, [localWorkspaceAssetPacks, serverPackGenerationJobs]);
+  const assetPackDetailQueries = useQueries({
+    queries: assetPackIds.map((assetPackId) => ({
+      queryKey: [...getGetAssetPackQueryKey(assetPackId), 'chat-log-parts'],
       queryFn: async (context: { signal: AbortSignal }) => {
-        const response = await getDesign(designId, { signal: context.signal });
+        const response = await getAssetPack(assetPackId, { signal: context.signal });
         if (response.status !== 200) {
           throw new Error('Unexpected response status');
         }
@@ -445,30 +445,32 @@ const useGenerationLogItems = (open: boolean) => {
       retry: false,
     })),
   });
-  const partsByDesignId = useMemo(() => {
-    const byDesignId = new Map<string, Array<PendingDesignPart>>();
-    for (const [index, designId] of assetDesignIds.entries()) {
-      const data = designDetailQueries[index]?.data;
+  const partsByAssetPackId = useMemo(() => {
+    const byAssetPackId = new Map<string, Array<PendingAssetPart>>();
+    for (const [index, assetPackId] of assetPackIds.entries()) {
+      const data = assetPackDetailQueries[index]?.data;
       if (!data) continue;
-      byDesignId.set(designId, normalizeDesignParts(data));
+      byAssetPackId.set(assetPackId, normalizeAssetParts(data));
     }
-    return byDesignId;
-  }, [assetDesignIds, designDetailQueries]);
+    return byAssetPackId;
+  }, [assetPackIds, assetPackDetailQueries]);
   const generationLogItems = useMemo(() => {
-    const localByJobId = new Map(localProjectDesigns.map((entry) => [entry.designId, entry]));
-    const serverEntries: Array<PendingDesign> = serverDesignJobs.map((job) => {
-      const local = localByJobId.get(job.designJobId);
-      const assetDesignId = job.designId ?? local?.assetDesignId ?? null;
+    const localByJobId = new Map(
+      localWorkspaceAssetPacks.map((entry) => [entry.packGenerationJobId, entry]),
+    );
+    const serverEntries: Array<PendingAssetPack> = serverPackGenerationJobs.map((job) => {
+      const local = localByJobId.get(job.packGenerationJobId);
+      const assetPackId = job.assetPackId ?? local?.assetPackId ?? null;
       return {
-        designId: job.designJobId,
-        projectId: job.projectId,
-        assetDesignId,
+        packGenerationJobId: job.packGenerationJobId,
+        workspaceId: job.workspaceId,
+        assetPackId,
         traceId: local?.traceId ?? null,
         promptPreview: job.promptPreview,
         userPrompt: job.userPrompt ?? local?.userPrompt ?? job.promptPreview,
         status: job.status,
-        parts: assetDesignId
-          ? (partsByDesignId.get(assetDesignId) ?? local?.parts ?? [])
+        parts: assetPackId
+          ? (partsByAssetPackId.get(assetPackId) ?? local?.parts ?? [])
           : (local?.parts ?? []),
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
@@ -477,14 +479,14 @@ const useGenerationLogItems = (open: boolean) => {
       };
     });
 
-    const serverJobIds = new Set(serverEntries.map((entry) => entry.designId));
-    const localOnlyEntries = localProjectDesigns.filter(
-      (entry) => !serverJobIds.has(entry.designId),
+    const serverJobIds = new Set(serverEntries.map((entry) => entry.packGenerationJobId));
+    const localOnlyEntries = localWorkspaceAssetPacks.filter(
+      (entry) => !serverJobIds.has(entry.packGenerationJobId),
     );
     return [...serverEntries, ...localOnlyEntries].sort(
-      (a, b) => getDesignTimestamp(a) - getDesignTimestamp(b),
+      (a, b) => getAssetPackTimestamp(a) - getAssetPackTimestamp(b),
     );
-  }, [localProjectDesigns, partsByDesignId, serverDesignJobs]);
+  }, [localWorkspaceAssetPacks, partsByAssetPackId, serverPackGenerationJobs]);
 
   return generationLogItems;
 };
@@ -504,7 +506,7 @@ export function CreatePanelContent({
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <GenerationLog
-        pendingDesigns={generationLogItems}
+        pendingPackGenerations={generationLogItems}
         loadedParts={parts}
         activePartId={activePartId}
         onDownloadZip={hasSelectedPack ? onDownloadZip : undefined}

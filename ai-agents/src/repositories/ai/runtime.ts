@@ -7,20 +7,20 @@ import { logEvent } from '../../logger';
 export type TraceContext = {
   requestId?: string | null;
   traceId?: string | null;
-  designId?: string | null;
+  packGenerationJobId?: string | null;
 };
 
 export type ResolvedTraceContext = {
   requestId: string;
   traceId: string;
-  designId: string | null;
+  packGenerationJobId: string | null;
 };
 
 export function resolveTraceContext(input: TraceContext = {}): ResolvedTraceContext {
   const requestId = input.requestId?.trim() || randomUUID();
-  const designId = input.designId?.trim() || null;
-  const traceId = input.traceId?.trim() || designId || requestId;
-  return { requestId, traceId, designId };
+  const packGenerationJobId = input.packGenerationJobId?.trim() || null;
+  const traceId = input.traceId?.trim() || packGenerationJobId || requestId;
+  return { requestId, traceId, packGenerationJobId };
 }
 
 export abstract class BaseAiRuntimeRepository {
@@ -48,7 +48,7 @@ export abstract class BaseAiRuntimeRepository {
     logEvent('ai_agent.llm.request', {
       request_id: params.trace.requestId,
       trace_id: params.trace.traceId,
-      design_id: params.trace.designId,
+      pack_generation_job_id: params.trace.packGenerationJobId,
       stage: params.stage,
       provider,
       model,
@@ -65,7 +65,7 @@ export abstract class BaseAiRuntimeRepository {
     logEvent('ai_agent.llm.response', {
       request_id: params.trace.requestId,
       trace_id: params.trace.traceId,
-      design_id: params.trace.designId,
+      pack_generation_job_id: params.trace.packGenerationJobId,
       stage: params.stage,
       provider,
       model,

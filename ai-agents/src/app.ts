@@ -3,7 +3,7 @@ import { createDependencies, type AgentDependencies } from './dependencies';
 import { logException } from './logger';
 import { registerAssetPackPlanRoutes } from './routes/asset-pack-plan.routes';
 import { registerRequestContextMiddleware } from './routes/context.middleware';
-import { registerDesignRoutes } from './routes/design.routes';
+import { registerAssetPackRoutes } from './routes/asset-pack.routes';
 import { registerPromptCompileRoutes } from './routes/prompt-compile.routes';
 import { registerTitleRoutes } from './routes/title.routes';
 import type { AppBindings } from './routes/types';
@@ -18,7 +18,7 @@ export function createApp(dependencies: AppDependencies = createDependencies()):
 
   app.get('/healthz', (c) => c.json({ ok: true }));
   registerAssetPackPlanRoutes(app, dependencies.assetPackPlanUsecase);
-  registerDesignRoutes(app, dependencies.designUsecase);
+  registerAssetPackRoutes(app, dependencies.assetPackUsecase);
   registerTitleRoutes(app, dependencies.titleUsecase);
   registerPromptCompileRoutes(app, dependencies.promptCompileUsecase);
 
@@ -33,7 +33,7 @@ export function createApp(dependencies: AppDependencies = createDependencies()):
     logException('ai_agent.unhandled_error', error, {
       request_id: c.get('requestId'),
       trace_id: c.get('traceId'),
-      design_id: c.get('designId'),
+      pack_generation_job_id: c.get('packGenerationJobId'),
       method: c.req.method,
       path: c.req.path,
     });
@@ -45,7 +45,7 @@ export function createApp(dependencies: AppDependencies = createDependencies()):
           message: 'Internal server error.',
           requestId: c.get('requestId'),
           traceId: c.get('traceId'),
-          designId: c.get('designId') || undefined,
+          packGenerationJobId: c.get('packGenerationJobId') || undefined,
         },
       },
       500,

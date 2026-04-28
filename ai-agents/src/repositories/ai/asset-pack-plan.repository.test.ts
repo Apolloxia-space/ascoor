@@ -48,25 +48,3 @@ test('AssetPackPlanRepository normalizes parts without stage layout', async () =
   assert.equal(plan.parts.length, 3);
   assert.equal(plan.parts[0]?.slug, 'rusty_gas_pump');
 });
-
-test('AssetPackPlanRepository ignores legacy stage layout', async () => {
-  const repository = new AssetPackPlanRepository(
-    buildMockOpenAiClient(
-      buildPlanJson(`,
-  "stageLayout": [
-    {"partSlug": "rusty_gas_pump", "position": [0, 0, 0], "rotation": [0, Math.PI / 4, 0], "scale": [1, 1, 1]},
-    {"partSlug": "broken_car", "position": [2, 0, 0], "rotation": [0, -Math.PI / 2, 0], "scale": [1, 1, 1]},
-    {"partSlug": "tire_stack", "position": [4, 0, 0], "rotation": [0, Math.PI, 0], "scale": [1, 1, 1]}
-  ]`),
-    ),
-  );
-
-  const plan = await repository.plan({
-    prompt: 'plan a pack',
-    trace: resolveTraceContext({ requestId: 'req-1' }),
-  });
-
-  assert.equal(plan.parts.length, 3);
-  assert.equal('stageLayout' in plan, false);
-  assert.match(plan.parts[0]?.prompt ?? '', /Math\.PI in JSON metadata/);
-});

@@ -16,7 +16,7 @@ export function useStudioPersist() {
     lastUserId.current = userId;
 
     void Promise.resolve(useStudioStore.persist.rehydrate()).then(() => {
-      useStudioStore.getState().pruneExpiredPendingDesigns();
+      useStudioStore.getState().pruneExpiredPendingAssetPacks();
     });
   }, [status, userId]);
 }

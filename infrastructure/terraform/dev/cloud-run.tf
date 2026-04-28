@@ -64,32 +64,32 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name  = "DESIGN_TASKS_PROJECT_ID"
+        name  = "PACK_GENERATION_TASKS_GCP_PROJECT_ID"
         value = local.project_id
       }
 
       env {
-        name  = "DESIGN_TASKS_LOCATION"
+        name  = "PACK_GENERATION_TASKS_LOCATION"
         value = local.region
       }
 
       env {
-        name  = "DESIGN_TASKS_QUEUE"
-        value = google_cloud_tasks_queue.design_jobs.name
+        name  = "PACK_GENERATION_TASKS_QUEUE"
+        value = google_cloud_tasks_queue.pack_generation_jobs.name
       }
 
       env {
-        name  = "DESIGN_TASKS_TARGET_BASE_URL"
+        name  = "PACK_GENERATION_TASKS_TARGET_BASE_URL"
         value = google_cloud_run_v2_service.worker.uri
       }
 
       env {
-        name  = "DESIGN_TASKS_OIDC_SERVICE_ACCOUNT"
+        name  = "PACK_GENERATION_TASKS_OIDC_SERVICE_ACCOUNT"
         value = google_service_account.cloud_run_api.email
       }
 
       env {
-        name  = "DESIGN_TASKS_OIDC_AUDIENCE"
+        name  = "PACK_GENERATION_TASKS_OIDC_AUDIENCE"
         value = google_cloud_run_v2_service.worker.uri
       }
 
