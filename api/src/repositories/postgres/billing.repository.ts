@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  CreditLedger,
+  CreditLedgerReason,
   Plan,
-  PlanDesignLimit,
+  PlanCreditAllowance,
   PlanKey,
   Prisma,
   PrismaClient,
@@ -17,7 +19,33 @@ export interface BillingRepository {
   findPlanByKey(planKey: PlanKey): Promise<Plan | null>;
   findDefaultPlan(): Promise<Plan | null>;
   listActivePlans(): Promise<Array<Plan>>;
-  findPlanDesignLimit(planKey: PlanKey): Promise<PlanDesignLimit | null>;
+  findPlanCreditAllowance(planKey: PlanKey): Promise<PlanCreditAllowance | null>;
+  sumCreditAmountByUserInPeriod(params: {
+    userId: string;
+    periodStart: Date;
+    periodEnd: Date;
+    reason?: CreditLedgerReason;
+  }): Promise<number>;
+  createCreditLedgerEntryIfFirst(params: {
+    userId: string;
+    amount: number;
+    reason: CreditLedgerReason;
+    idempotencyKey: string;
+    periodStart?: Date | null;
+    periodEnd?: Date | null;
+    relatedDesignId?: string | null;
+    relatedPartId?: string | null;
+  }): Promise<boolean>;
+  consumeCreditsIfAvailable(params: {
+    userId: string;
+    amount: number;
+    reason: CreditLedgerReason;
+    idempotencyKey: string;
+    periodStart: Date;
+    periodEnd: Date;
+    relatedDesignId?: string | null;
+    relatedPartId?: string | null;
+  }): Promise<boolean>;
   findSubscriptionByUserId(userId: string): Promise<Subscription | null>;
   upsertSubscriptionByUserId(params: {
     userId: string;
@@ -95,8 +123,118 @@ export class BillingRepositoryPostgres implements BillingRepository {
     return this.prisma.plan.findMany({ where: { isActive: true } });
   }
 
-  findPlanDesignLimit(planKey: PlanKey): Promise<PlanDesignLimit | null> {
-    return this.prisma.planDesignLimit.findUnique({ where: { planKey } });
+  findPlanCreditAllowance(planKey: PlanKey): Promise<PlanCreditAllowance | null> {
+    return this.prisma.planCreditAllowance.findUnique({ where: { planKey } });
+  }
+
+  async sumCreditAmountByUserInPeriod(params: {
+    userId: string;
+    periodStart: Date;
+    periodEnd: Date;
+    reason?: CreditLedgerReason;
+  }): Promise<number> {
+    const result = await this.prisma.creditLedger.aggregate({
+      where: {
+        userId: params.userId,
+        reason: params.reason,
+        createdAt: {
+          gte: params.periodStart,
+          lt: params.periodEnd,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+    return result._sum.amount ?? 0;
+  }
+
+  async createCreditLedgerEntryIfFirst(params: {
+    userId: string;
+    amount: number;
+    reason: CreditLedgerReason;
+    idempotencyKey: string;
+    periodStart?: Date | null;
+    periodEnd?: Date | null;
+    relatedDesignId?: string | null;
+    relatedPartId?: string | null;
+  }): Promise<boolean> {
+    const data: CreditLedger = {
+      id: randomUUID(),
+      userId: params.userId,
+      amount: params.amount,
+      reason: params.reason,
+      periodStart: params.periodStart ?? null,
+      periodEnd: params.periodEnd ?? null,
+      relatedDesignId: params.relatedDesignId ?? null,
+      relatedPartId: params.relatedPartId ?? null,
+      idempotencyKey: params.idempotencyKey,
+      createdAt: new Date(),
+    };
+    const inserted = await this.prisma.creditLedger.createMany({
+      data: [data],
+      skipDuplicates: true,
+    });
+    return inserted.count > 0;
+  }
+
+  async consumeCreditsIfAvailable(params: {
+    userId: string;
+    amount: number;
+    reason: CreditLedgerReason;
+    idempotencyKey: string;
+    periodStart: Date;
+    periodEnd: Date;
+    relatedDesignId?: string | null;
+    relatedPartId?: string | null;
+  }): Promise<boolean> {
+    if (!Number.isInteger(params.amount) || params.amount <= 0) {
+      throw new Error('credit_consume_amount_must_be_positive');
+    }
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.creditLedger.findUnique({
+          where: { idempotencyKey: params.idempotencyKey },
+        });
+        if (existing) {
+          return true;
+        }
+
+        const result = await tx.creditLedger.aggregate({
+          where: {
+            userId: params.userId,
+            createdAt: {
+              gte: params.periodStart,
+              lt: params.periodEnd,
+            },
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+        const balance = result._sum.amount ?? 0;
+        if (balance < params.amount) {
+          return false;
+        }
+
+        await tx.creditLedger.create({
+          data: {
+            id: randomUUID(),
+            userId: params.userId,
+            amount: -params.amount,
+            reason: params.reason,
+            periodStart: params.periodStart,
+            periodEnd: params.periodEnd,
+            relatedDesignId: params.relatedDesignId ?? null,
+            relatedPartId: params.relatedPartId ?? null,
+            idempotencyKey: params.idempotencyKey,
+          },
+        });
+        return true;
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   findSubscriptionByUserId(userId: string): Promise<Subscription | null> {

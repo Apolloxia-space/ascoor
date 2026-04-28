@@ -9,8 +9,9 @@ export type BillingStatus = {
 };
 
 export type BillingUsage = {
-  used: number;
-  limit: number;
+  balance: number;
+  monthlyCredits: number;
+  usedCredits: number;
   periodStart: Date;
   periodEnd: Date;
 };

@@ -47,7 +47,6 @@ export function buildDependencies() {
   const billingUsecase = new BillingUsecase(
     billingRepository,
     stripeRepository,
-    designJobRepository,
     webAppConfig.baseUrl,
   );
   const storageConfig = loadStorageConfig();
@@ -71,6 +70,7 @@ export function buildDependencies() {
     projectRepository,
     gcsRepository,
     designJobRepository,
+    billingRepository,
     promptCompilerRepository,
   });
   const designTaskConfig = loadDesignTaskConfig();

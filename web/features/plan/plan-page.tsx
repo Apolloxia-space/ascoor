@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -46,33 +46,28 @@ type PlanCard = {
   highlight?: boolean;
   badge?: string;
   features: Array<string>;
-  icon: typeof Sparkles;
   freePlan?: boolean;
   planKey?: 'hobby' | 'pro';
 };
 
 const planGroup: { subtitle: string; plans: Array<PlanCard>; footnote?: string } = {
-  subtitle: 'Choose a monthly allowance for prototype game asset generation.',
-  footnote: 'Free includes a small monthly generation allowance. Paid plans renew monthly.',
+  subtitle: 'Create cohesive asset packs for a smoother game workflow.',
+  footnote: 'Credits reset monthly. Paid plans renew monthly.',
   plans: [
     {
       ...planDefinitions.free,
       cta: 'Current free plan',
-      icon: Sparkles,
       freePlan: true,
     },
     {
       ...planDefinitions.hobby,
       cta: 'Upgrade to Hobby',
       highlight: true,
-      badge: 'Best start',
-      icon: Sparkles,
       planKey: 'hobby',
     },
     {
       ...planDefinitions.pro,
       cta: 'Upgrade to Pro',
-      icon: Sparkles,
       planKey: 'pro',
     },
   ],
@@ -178,7 +173,7 @@ export function PlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[color:var(--background-base)] text-foreground">
+    <div className="min-h-screen bg-[#f7fbf7] text-[#233226]">
       <AlertDialog
         open={checkoutDialogMode !== null}
         onOpenChange={(open) => {
@@ -222,30 +217,26 @@ export function PlanPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-[-220px] top-[-200px] h-[420px] w-[420px] rounded-full bg-[color:var(--accent-purple)]/30 blur-[160px]" />
-        <div className="pointer-events-none absolute right-[-120px] top-[120px] h-[360px] w-[360px] rounded-full bg-[color:var(--brand-500-60)]/40 blur-[140px]" />
-
+      <div>
         <header className="mx-auto w-full max-w-6xl px-6 pt-8">
           <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Back">
             <ArrowLeft className="size-5" />
           </Button>
 
           <div className="mt-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#5c6f61]">
               Pricing
             </p>
-            <h1 className="mt-3 text-2xl font-semibold text-white md:text-3xl">
-              Prototype game asset pricing
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
+              Full asset packs built around one theme in minutes.
             </h1>
-            <p className="mt-2 text-sm text-white/60 md:text-base">{planGroup.subtitle}</p>
+            <p className="mt-4 text-sm text-[#5c6f61] md:text-base">{planGroup.subtitle}</p>
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl px-6 pb-16 pt-10">
           <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
             {planGroup.plans.map((plan) => {
-              const Icon = plan.icon;
               const isCurrentPlan = plan.name === planDefinitions.pro.name && isCurrentProPlan;
               const ctaLabel = checkoutMutation.isPending
                 ? 'Redirecting...'
@@ -261,37 +252,31 @@ export function PlanPage() {
                 <article
                   key={plan.name}
                   className={cn(
-                    'relative flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6 text-white/90 shadow-[0_20px_60px_-40px_rgba(0,0,0,0.7)] backdrop-blur',
+                    'relative flex h-full flex-col rounded-lg border bg-white p-6',
                     plan.highlight &&
-                      'border-[color:var(--brand-500)]/60 bg-gradient-to-b from-white/10 via-white/5 to-transparent shadow-[0_0_0_1px_rgba(218,154,157,0.45),0_35px_80px_-50px_rgba(218,154,157,0.75)]',
+                      'border-[#b7d8bd] shadow-[0_16px_36px_rgba(35,50,38,0.06)]',
+                    !plan.highlight && 'border-[#dce8dc]',
                   )}
                 >
                   {(isCurrentPlan || plan.badge) && (
-                    <span className="absolute right-5 top-5 rounded-full bg-[color:var(--brand-500)]/20 px-3 py-1 text-[11px] font-semibold text-[color:var(--brand-500)]">
+                    <span className="absolute right-5 top-5 rounded-full bg-[#f6dde1] px-3 py-1 text-[11px] font-semibold text-[#9f5964]">
                       {isCurrentPlan ? 'Current Plan' : plan.badge}
                     </span>
                   )}
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-11 items-center justify-center rounded-2xl border border-white/15 bg-white/5">
-                        <Icon className="size-5 text-white/80" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">{plan.name}</h2>
-                        <p className="text-xs text-white/50">{plan.description}</p>
-                      </div>
-                    </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#233226]">{plan.name}</h2>
+                    <p className="mt-1 text-xs text-[#5c6f61]">{plan.description}</p>
                   </div>
 
                   <div className="mt-8 space-y-1">
                     <div className="flex items-end gap-2">
-                      <span className="text-3xl font-semibold text-white">{plan.price}</span>
+                      <span className="text-3xl font-semibold text-[#233226]">{plan.price}</span>
                       {plan.billing && (
-                        <span className="text-sm text-white/60">{plan.billing}</span>
+                        <span className="text-sm text-[#5c6f61]">{plan.billing}</span>
                       )}
                     </div>
-                    {plan.priceNote && <p className="text-xs text-white/45">{plan.priceNote}</p>}
+                    {plan.priceNote && <p className="text-xs text-[#5c6f61]">{plan.priceNote}</p>}
                   </div>
 
                   <Button
@@ -302,23 +287,22 @@ export function PlanPage() {
                       void handleUpgrade(plan.planKey);
                     }}
                     className={cn(
-                      'mt-6 h-11 rounded-full text-sm font-semibold',
+                      'mt-6 h-11 rounded-md text-sm font-semibold',
                       plan.highlight
-                        ? 'bg-white text-[#1f2328] hover:bg-white/90'
-                        : 'bg-white/10 text-white hover:bg-white/15',
+                        ? 'bg-[#e7a8b0] text-[#233226] hover:bg-[#de959f]'
+                        : 'border border-[#dce8dc] bg-white text-[#233226] hover:bg-[#f3f7f3]',
                     )}
                   >
                     {isCurrentPlan ? 'Manage subscription' : ctaLabel}
                   </Button>
 
                   <PlanInclusions
-                    className="mt-8 border-t border-white/10 pt-6"
-                    title="What's included"
-                    titleClassName="text-xs font-semibold uppercase tracking-[0.24em] text-white/40"
-                    listClassName="mt-4 space-y-3 text-sm text-white/70"
+                    className="mt-8 border-t border-[#dce8dc] pt-6"
+                    titleClassName="text-xs font-semibold uppercase tracking-[0.24em] text-[#5c6f61]"
+                    listClassName="mt-4 space-y-3 text-sm text-[#5c6f61]"
                     itemClassName="flex items-start gap-3"
-                    iconClassName="mt-0.5 text-[color:var(--brand-500)]"
-                    noteClassName="mt-4 text-xs text-white/45"
+                    iconClassName="mt-0.5 text-[#2f7a4b]"
+                    noteClassName="mt-4 text-xs text-[#5c6f61]"
                     features={plan.features}
                     limitResetNote={plan.limitResetNote}
                   />
@@ -328,10 +312,10 @@ export function PlanPage() {
           </div>
 
           {planGroup.footnote && (
-            <div className="mt-8 space-y-3 text-center text-xs text-white/40">
+            <div className="mt-8 space-y-3 text-center text-xs text-[#5c6f61]">
               <p>{planGroup.footnote}</p>
               <a
-                className="text-white/70 underline-offset-4 hover:underline"
+                className="text-[#233226] underline-offset-4 hover:underline"
                 href={paths.commerceDisclosure}
               >
                 Commercial Disclosure

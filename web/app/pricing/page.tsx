@@ -58,42 +58,42 @@ const pricingPlans: Array<PricingPlan> = [
 
 export default function PricingLandingPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-[#f7fbf7] text-[#233226]">
       <LandingHeader />
-      <section className="mx-auto w-full max-w-6xl px-4 py-16 md:py-24">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Pricing</p>
-          <h1 className="mt-3 text-3xl font-semibold md:text-5xl">Prototype game asset pricing</h1>
-          <p className="mt-4 text-sm text-muted-foreground md:text-base">
-            Start with a few free generations, then upgrade when you need more low-poly game asset
-            drafts, private projects, and commercial use.
+      <section className="mx-auto w-full max-w-5xl px-4 py-16 md:py-24">
+        <div className="mx-auto max-w-2xl text-center">
+          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">
+            Full asset packs built around one theme in minutes.
+          </h1>
+          <p className="mt-4 text-sm text-[#5c6f61] md:text-base">
+            Create cohesive asset packs for a smoother game workflow.
           </p>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-12 grid gap-4 md:grid-cols-3">
           {pricingPlans.map((plan) => (
             <article
               key={plan.name}
-              className={`relative flex h-full flex-col rounded-3xl border border-border/60 bg-card/80 p-6 ${
-                plan.highlight ? 'shadow-[var(--shadow-card-active)]' : ''
+              className={`flex h-full flex-col rounded-lg border bg-white p-6 ${
+                plan.highlight ? 'border-[#b7d8bd] shadow-[0_16px_36px_rgba(35,50,38,0.06)]' : 'border-[#dce8dc]'
               }`}
             >
-              <h2 className="text-xl font-semibold">{plan.name}</h2>
+              <h2 className="text-xl font-semibold text-[#233226]">{plan.name}</h2>
               <div className="mt-3 flex items-end gap-2">
-                <div className="text-3xl font-semibold">{plan.price}</div>
+                <div className="text-3xl font-semibold text-[#233226]">{plan.price}</div>
                 {plan.billing && (
-                  <span className="text-sm text-muted-foreground">{plan.billing}</span>
+                  <span className="text-sm text-[#5c6f61]">{plan.billing}</span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{plan.priceNote}</p>
+              <p className="mt-1 text-xs text-[#5c6f61]">{plan.priceNote}</p>
               {plan.description ? (
-                <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+                <p className="mt-2 text-sm text-[#5c6f61]">{plan.description}</p>
               ) : null}
               <PlanInclusions
                 className="mt-6"
-                listClassName="space-y-3 text-sm text-muted-foreground"
-                itemClassName="flex items-center gap-2 text-foreground"
-                noteClassName="mt-4 text-xs text-muted-foreground"
+                listClassName="space-y-3 text-sm text-[#5c6f61]"
+                itemClassName="flex items-center gap-2 text-[#233226]"
+                noteClassName="mt-4 text-xs text-[#5c6f61]"
                 features={plan.features}
                 limitResetNote={plan.limitResetNote}
               />
@@ -101,10 +101,10 @@ export default function PricingLandingPage() {
                 <PlanCTAButton
                   label={plan.cta}
                   authedPath={paths.plan}
-                  className={`w-full rounded-full px-4 py-2 text-sm font-semibold ${
+                  className={`w-full rounded-md px-4 py-2 text-sm font-semibold ${
                     plan.highlight
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border border-border/60 text-foreground hover:bg-muted/60'
+                      ? 'bg-[#e7a8b0] text-[#233226] hover:bg-[#de959f]'
+                      : 'border border-[#dce8dc] bg-white text-[#233226] hover:bg-[#f3f7f3]'
                   }`}
                 />
               </div>
@@ -112,9 +112,8 @@ export default function PricingLandingPage() {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          Free includes a small monthly generation allowance. Paid plans renew monthly. Taxes may
-          apply.
+        <p className="mt-8 text-center text-xs text-[#5c6f61]">
+          Credits reset monthly. Paid plans renew monthly. Taxes may apply.
         </p>
       </section>
       <LandingFooter />

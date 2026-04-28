@@ -2803,7 +2803,7 @@ export function useGetBillingStatus<TData = Awaited<ReturnType<typeof getBilling
 
 
 /**
- * @summary Get usage and limits for the authenticated user.
+ * @summary Get credit usage for the authenticated user.
  */
 export type getBillingUsageResponse200 = {
   data: BillingUsageResponse
@@ -2901,7 +2901,7 @@ export function useGetBillingUsage<TData = Awaited<ReturnType<typeof getBillingU
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get usage and limits for the authenticated user.
+ * @summary Get credit usage for the authenticated user.
  */
 
 export function useGetBillingUsage<TData = Awaited<ReturnType<typeof getBillingUsage>>, TError = ErrorResponse>(

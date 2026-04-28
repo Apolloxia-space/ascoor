@@ -27,23 +27,6 @@ export class DesignJobRepositoryPostgres {
     });
   }
 
-  countSucceededByUserInPeriod(params: {
-    userId: string;
-    periodStart: Date;
-    periodEnd: Date;
-  }): Promise<number> {
-    return this.prisma.designJob.count({
-      where: {
-        userId: params.userId,
-        status: 'succeeded',
-        finishedAt: {
-          gte: params.periodStart,
-          lt: params.periodEnd,
-        },
-      },
-    });
-  }
-
   countActiveByUser(userId: string): Promise<number> {
     return this.prisma.designJob.count({
       where: {

@@ -62,6 +62,15 @@ type MarkFailedIfRunningStaleParams = {
 
 type PlanKey = 'free' | 'hobby' | 'pro';
 
+function billingCreditMethods(balance = 100, granted = 100) {
+  return {
+    sumCreditAmountByUserInPeriod: async (params: { reason?: string }) =>
+      params.reason === 'monthly_grant' ? granted : balance,
+    createCreditLedgerEntryIfFirst: async () => true,
+    consumeCreditsIfAvailable: async () => true,
+  };
+}
+
 function inferErrorCodeForTest(
   usecase: DesignJobsUsecase,
   error: unknown,
@@ -174,7 +183,12 @@ test('process succeeds and marks design as succeeded', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async () => ({
+        planKey: 'pro',
+        monthlyCredits: 100,
+        concurrentDesignLimit: 3,
+      }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -275,7 +289,12 @@ test('process marks failed when AI returns no executable code', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async () => ({
+        planKey: 'pro',
+        monthlyCredits: 100,
+        concurrentDesignLimit: 3,
+      }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -396,7 +415,12 @@ test('process succeeds without runtime execution and links generated design', as
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async () => ({
+        planKey: 'pro',
+        monthlyCredits: 100,
+        concurrentDesignLimit: 3,
+      }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -518,7 +542,12 @@ test('process does not recover stale design when claimed by another worker', asy
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }),
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async () => ({
+        planKey: 'pro',
+        monthlyCredits: 100,
+        concurrentDesignLimit: 3,
+      }),
     } as unknown as BillingRepository,
     undefined,
   );
@@ -599,7 +628,6 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => 0,
       countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
@@ -617,9 +645,10 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
-      findPlanDesignLimit: async (planKey: PlanKey) => ({
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async (planKey: PlanKey) => ({
         planKey,
-        monthlyDesignLimit: 100,
+        monthlyCredits: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -648,7 +677,7 @@ test('enqueue marks failed when task queue enqueue throws', async () => {
   assert.match(markFailedCalls[0]?.errorMessage ?? '', /Failed to enqueue design task/);
 });
 
-test('enqueue throws quota exceeded error when monthly generated design limit is reached', async () => {
+test('enqueue throws quota exceeded error when credit balance is insufficient', async () => {
   const usecase = new DesignJobsUsecase(
     {
       design: async () => ({ title: 'n/a', message: 'n/a', code: 'n/a' }),
@@ -709,7 +738,6 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => 100,
       countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
@@ -726,9 +754,10 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
-      findPlanDesignLimit: async () => ({
+      ...billingCreditMethods(0, 100),
+      findPlanCreditAllowance: async () => ({
         planKey: 'pro',
-        monthlyDesignLimit: 100,
+        monthlyCredits: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -747,15 +776,14 @@ test('enqueue throws quota exceeded error when monthly generated design limit is
       }),
     (error: unknown) => {
       assert(error instanceof DesignQuotaExceededError);
-      assert.equal(error.code, 'design_limit_exceeded');
+      assert.equal(error.code, 'credit_balance_insufficient');
       return true;
     },
   );
 });
 
-test('enqueue resolves only the Pro plan limit', async () => {
+test('enqueue resolves only the Pro credit allowance', async () => {
   const planLookups: Array<PlanKey> = [];
-  let countCalls = 0;
   let createCalls = 0;
 
   const usecase = new DesignJobsUsecase(
@@ -818,10 +846,6 @@ test('enqueue resolves only the Pro plan limit', async () => {
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => {
-        countCalls += 1;
-        return 4;
-      },
       countActiveByUser: async () => 2,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
@@ -842,9 +866,10 @@ test('enqueue resolves only the Pro plan limit', async () => {
     {
       findSubscriptionByUserId: async () => ({ status: 'active', planId: 'plan-pro' }) as never,
       findPlanById: async () => ({ key: 'pro' }) as never,
-      findPlanDesignLimit: async (planKey: PlanKey) => {
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async (planKey: PlanKey) => {
         planLookups.push(planKey);
-        return { planKey, monthlyDesignLimit: 100, concurrentDesignLimit: 3 };
+        return { planKey, monthlyCredits: 100, concurrentDesignLimit: 3 };
       },
     } as unknown as BillingRepository,
     {
@@ -863,7 +888,6 @@ test('enqueue resolves only the Pro plan limit', async () => {
   });
 
   assert.deepEqual(planLookups, ['pro']);
-  assert.equal(countCalls, 1);
   assert.equal(createCalls, 1);
 });
 
@@ -928,7 +952,6 @@ test('enqueue throws concurrency exceeded error when active design workflows rea
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => 0,
       countActiveByUser: async () => 3,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
@@ -945,9 +968,10 @@ test('enqueue throws concurrency exceeded error when active design workflows rea
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
-      findPlanDesignLimit: async () => ({
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async () => ({
         planKey: 'pro',
-        monthlyDesignLimit: 100,
+        monthlyCredits: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -1059,9 +1083,10 @@ test('reap stale also recovers queued designs', async () => {
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async (planKey: PlanKey) => ({
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async (planKey: PlanKey) => ({
         planKey,
-        monthlyDesignLimit: 100,
+        monthlyCredits: 100,
       }),
     } as unknown as BillingRepository,
     undefined,
@@ -1078,8 +1103,7 @@ test('reap stale also recovers queued designs', async () => {
   assert.equal(queuedRecoverCalls[0]?.id, 'gen-queued-1');
 });
 
-test('enqueue creates a design when monthly generated design count is below limit', async () => {
-  let countCalls = 0;
+test('enqueue creates a design when credits are available', async () => {
   let createCalls = 0;
 
   const usecase = new DesignJobsUsecase(
@@ -1146,10 +1170,6 @@ test('enqueue creates a design when monthly generated design count is below limi
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => {
-        countCalls += 1;
-        return 0;
-      },
       countActiveByUser: async () => 0,
       create: async () => {
         createCalls += 1;
@@ -1169,9 +1189,10 @@ test('enqueue creates a design when monthly generated design count is below limi
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => ({ status: 'active' }) as never,
-      findPlanDesignLimit: async (planKey: PlanKey) => ({
+      ...billingCreditMethods(),
+      findPlanCreditAllowance: async (planKey: PlanKey) => ({
         planKey,
-        monthlyDesignLimit: 100,
+        monthlyCredits: 100,
         concurrentDesignLimit: 3,
       }),
     } as unknown as BillingRepository,
@@ -1190,7 +1211,6 @@ test('enqueue creates a design when monthly generated design count is below limi
     },
   });
 
-  assert.equal(countCalls, 1);
   assert.equal(createCalls, 1);
 });
 
@@ -1258,7 +1278,6 @@ test('enqueue uses the free plan when no paid subscription exists', async () => 
       deleteByPrefix: async () => {},
     } as unknown as IGcsRepository,
     {
-      countSucceededByUserInPeriod: async () => 0,
       countActiveByUser: async () => 0,
       markRunning: async () => true,
       get: async () => createJob({ status: 'running' }),
@@ -1278,11 +1297,12 @@ test('enqueue uses the free plan when no paid subscription exists', async () => 
     } as unknown as DesignJobRepositoryPostgres,
     {
       findSubscriptionByUserId: async () => null,
-      findPlanDesignLimit: async (planKey: PlanKey) => {
+      ...billingCreditMethods(5, 5),
+      findPlanCreditAllowance: async (planKey: PlanKey) => {
         planLookups.push(planKey);
         return {
           planKey,
-          monthlyDesignLimit: 5,
+          monthlyCredits: 5,
           concurrentDesignLimit: 1,
         };
       },

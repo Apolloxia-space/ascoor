@@ -13,9 +13,9 @@ export class DesignValidationError extends Error {
 }
 
 export class DesignQuotaExceededError extends DesignValidationError {
-  readonly code = 'design_limit_exceeded';
+  readonly code = 'credit_balance_insufficient';
 
-  constructor(message = 'Monthly generated design limit reached for your plan.') {
+  constructor(message = 'Not enough credits remaining for this generation.') {
     super(message);
     this.name = 'DesignQuotaExceededError';
   }
@@ -27,15 +27,6 @@ export class DesignConcurrencyLimitExceededError extends DesignValidationError {
   constructor(message = 'Concurrent design limit reached for your plan.') {
     super(message);
     this.name = 'DesignConcurrencyLimitExceededError';
-  }
-}
-
-export class ProSubscriptionRequiredError extends DesignValidationError {
-  readonly code = 'pro_subscription_required';
-
-  constructor(message = 'An active Pro subscription is required to create designs.') {
-    super(message);
-    this.name = 'ProSubscriptionRequiredError';
   }
 }
 

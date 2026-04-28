@@ -58,6 +58,13 @@ enum CancellationReason {
   other
 }
 
+enum CreditLedgerReason {
+  monthly_grant
+  asset_generation
+  refund
+  admin_adjustment
+}
+
 enum ExternalCleanupTaskStatus {
   pending
   processing
@@ -73,6 +80,7 @@ model User {
   projects    Project[]
   designJobs DesignJob[]
   subscriptions Subscription[]
+  creditLedgerEntries CreditLedger[]
   cancellationFeedbacks SubscriptionCancellationFeedback[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -228,13 +236,33 @@ model SubscriptionCancellationFeedback {
   @@index([planId])
 }
 
-model PlanDesignLimit {
+model PlanCreditAllowance {
   id                      String   @id @default(uuid())
   planKey                 PlanKey  @unique
-  monthlyDesignLimit      Int
+  monthlyCredits          Int
   concurrentDesignLimit   Int
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
+}
+
+model CreditLedger {
+  id              String             @id @default(uuid())
+  userId          String
+  amount          Int
+  reason          CreditLedgerReason
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  relatedDesignId String?
+  relatedPartId   String?
+  idempotencyKey  String             @unique
+  createdAt       DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, periodStart])
+  @@index([relatedDesignId])
+  @@index([relatedPartId])
 }
 
 model StripeEvent {

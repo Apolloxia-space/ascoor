@@ -4,6 +4,7 @@ import type { PromptCompilerRepository } from '../../repositories/ai/prompt-comp
 import type { IGcsRepository, IDesignRepository } from '../../repositories/interfaces';
 import type { ProjectRepository } from '../../repositories/postgres/project.repository';
 import type { DesignJobRepositoryPostgres } from '../../repositories/postgres/design-job.repository';
+import type { BillingRepository } from '../../repositories/postgres/billing.repository';
 import { NotFoundError } from '../../usecases/errors';
 import {
   CompilePromptStep,
@@ -34,6 +35,7 @@ type DesignPipelineDeps = {
   projectRepository: ProjectRepository;
   gcsRepository: IGcsRepository;
   designJobRepository: DesignJobRepositoryPostgres;
+  billingRepository?: BillingRepository;
   promptCompilerRepository?: PromptCompilerRepository;
 };
 
@@ -57,6 +59,7 @@ export class DesignPipelineService {
       deps.aiRepository,
       deps.designRepository,
       deps.gcsRepository,
+      deps.billingRepository,
     );
     this.persistTypeScriptAssetStep = new PersistTypeScriptAssetStep(
       deps.designRepository,

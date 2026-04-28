@@ -7,8 +7,9 @@
  */
 
 export interface BillingUsage {
-  used: number;
-  limit: number;
+  balance: number;
+  monthlyCredits: number;
+  usedCredits: number;
   periodStart: string;
   periodEnd: string;
 }

@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { BillingRepository } from '../repositories/postgres/billing.repository';
-import type { DesignJobRepositoryPostgres } from '../repositories/postgres/design-job.repository';
 import type {
   StripeRepository,
   StripeWebhookEvent,
@@ -17,16 +16,7 @@ function createUsecase(params: {
     constructWebhookEvent: async () => params.stripeEvent,
   } as unknown as StripeRepository;
 
-  const designJobRepository = {
-    countSucceededByUserInPeriod: async () => 0,
-  } as unknown as DesignJobRepositoryPostgres;
-
-  return new BillingUsecase(
-    params.billingRepository,
-    stripeRepository,
-    designJobRepository,
-    'https://ascoor.app',
-  );
+  return new BillingUsecase(params.billingRepository, stripeRepository, 'https://ascoor.app');
 }
 
 test('handleWebhook atomically upserts subscription for subscription events', async () => {
@@ -173,8 +163,10 @@ test('handleWebhook records non-subscription events idempotently', async () => {
   assert.deepEqual(recordCalls, [{ stripeEventId: 'evt_invoice_1', type: 'invoice.paid' }]);
 });
 
-test('getUsage counts succeeded generated designs in the current UTC month', async () => {
-  const countCalls: Array<{ userId: string; periodStart: Date; periodEnd: Date }> = [];
+test('getUsage returns credit balance in the current UTC month', async () => {
+  const sumCalls: Array<{ userId: string; periodStart: Date; periodEnd: Date; reason?: string }> =
+    [];
+  const grantCalls: Array<{ amount: number; idempotencyKey: string }> = [];
   const realDate = Date;
 
   globalThis.Date = class extends Date {
@@ -195,39 +187,50 @@ test('getUsage counts succeeded generated designs in the current UTC month', asy
       {
         findSubscriptionByUserId: async () => ({ status: 'active', planId: 'plan-pro' }) as never,
         findPlanById: async () => ({ key: 'pro' }) as never,
-        findPlanDesignLimit: async () => ({ planKey: 'pro', monthlyDesignLimit: 100 }) as never,
-      } as unknown as BillingRepository,
-      {} as unknown as StripeRepository,
-      {
-        countSucceededByUserInPeriod: async (params: {
+        findPlanCreditAllowance: async () =>
+          ({ planKey: 'pro', monthlyCredits: 100 }) as never,
+        sumCreditAmountByUserInPeriod: async (params: {
           userId: string;
           periodStart: Date;
           periodEnd: Date;
+          reason?: string;
         }) => {
-          countCalls.push(params);
-          return 3;
+          sumCalls.push(params);
+          return params.reason === 'monthly_grant' ? 0 : 97;
         },
-      } as unknown as DesignJobRepositoryPostgres,
+        createCreditLedgerEntryIfFirst: async (params: {
+          amount: number;
+          idempotencyKey: string;
+        }) => {
+          grantCalls.push(params);
+          return true;
+        },
+      } as unknown as BillingRepository,
+      {} as unknown as StripeRepository,
       'https://ascoor.app',
     );
 
     const usage = await usecase.getUsage('user-1');
 
-    assert.equal(usage.used, 3);
-    assert.equal(usage.limit, 100);
+    assert.equal(usage.balance, 97);
+    assert.equal(usage.monthlyCredits, 100);
+    assert.equal(usage.usedCredits, 3);
     assert.equal(usage.periodStart.toISOString(), '2026-03-01T00:00:00.000Z');
     assert.equal(usage.periodEnd.toISOString(), '2026-04-01T00:00:00.000Z');
-    assert.equal(countCalls.length, 1);
-    assert.equal(countCalls[0]?.userId, 'user-1');
-    assert.equal(countCalls[0]?.periodStart.toISOString(), '2026-03-01T00:00:00.000Z');
-    assert.equal(countCalls[0]?.periodEnd.toISOString(), '2026-04-01T00:00:00.000Z');
+    assert.equal(sumCalls.length, 2);
+    assert.equal(sumCalls[0]?.reason, 'monthly_grant');
+    assert.equal(sumCalls[1]?.userId, 'user-1');
+    assert.equal(sumCalls[1]?.periodStart.toISOString(), '2026-03-01T00:00:00.000Z');
+    assert.equal(sumCalls[1]?.periodEnd.toISOString(), '2026-04-01T00:00:00.000Z');
+    assert.equal(grantCalls[0]?.amount, 100);
   } finally {
     globalThis.Date = realDate;
   }
 });
 
-test('getUsage returns free plan usage when no paid subscription exists', async () => {
-  const countCalls: Array<{ userId: string; periodStart: Date; periodEnd: Date }> = [];
+test('getUsage returns free plan credits when no paid subscription exists', async () => {
+  const sumCalls: Array<{ userId: string; periodStart: Date; periodEnd: Date; reason?: string }> =
+    [];
   const realDate = Date;
 
   globalThis.Date = class extends Date {
@@ -247,29 +250,31 @@ test('getUsage returns free plan usage when no paid subscription exists', async 
     const usecase = new BillingUsecase(
       {
         findSubscriptionByUserId: async () => null,
-        findPlanDesignLimit: async () => ({ planKey: 'free', monthlyDesignLimit: 5 }) as never,
-      } as unknown as BillingRepository,
-      {} as unknown as StripeRepository,
-      {
-        countSucceededByUserInPeriod: async (params: {
+        findPlanCreditAllowance: async () =>
+          ({ planKey: 'free', monthlyCredits: 5 }) as never,
+        sumCreditAmountByUserInPeriod: async (params: {
           userId: string;
           periodStart: Date;
           periodEnd: Date;
+          reason?: string;
         }) => {
-          countCalls.push(params);
-          return 3;
+          sumCalls.push(params);
+          return params.reason === 'monthly_grant' ? 5 : 2;
         },
-      } as unknown as DesignJobRepositoryPostgres,
+        createCreditLedgerEntryIfFirst: async () => true,
+      } as unknown as BillingRepository,
+      {} as unknown as StripeRepository,
       'https://ascoor.app',
     );
 
     const usage = await usecase.getUsage('user-1');
 
-    assert.equal(usage.used, 3);
-    assert.equal(usage.limit, 5);
+    assert.equal(usage.balance, 2);
+    assert.equal(usage.monthlyCredits, 5);
+    assert.equal(usage.usedCredits, 3);
     assert.equal(usage.periodStart.toISOString(), '2026-03-01T00:00:00.000Z');
     assert.equal(usage.periodEnd.toISOString(), '2026-04-01T00:00:00.000Z');
-    assert.equal(countCalls.length, 1);
+    assert.equal(sumCalls.length, 2);
   } finally {
     globalThis.Date = realDate;
   }
@@ -300,9 +305,6 @@ test('createCheckoutSession uses traceId to derive idempotency key', async () =>
         return { url: 'https://checkout.stripe.test/session' };
       },
     } as unknown as StripeRepository,
-    {
-      countSucceededByUserInPeriod: async () => 0,
-    } as unknown as DesignJobRepositoryPostgres,
     'https://ascoor.app',
   );
 
@@ -361,9 +363,6 @@ test('cancelSubscriptionAtPeriodEnd always schedules period-end cancellation', a
         cancelCalls.push(params);
       },
     } as unknown as StripeRepository,
-    {
-      countSucceededByUserInPeriod: async () => 0,
-    } as unknown as DesignJobRepositoryPostgres,
     'https://ascoor.app',
   );
 
@@ -409,9 +408,6 @@ test('cancelSubscriptionImmediately performs immediate Stripe cancellation', asy
         immediateCancelCalls.push(params);
       },
     } as unknown as StripeRepository,
-    {
-      countSucceededByUserInPeriod: async () => 0,
-    } as unknown as DesignJobRepositoryPostgres,
     'https://ascoor.app',
   );
 
@@ -462,9 +458,6 @@ test('resumeSubscriptionCancellation removes period-end cancel schedule', async 
         cancelCalls.push(params);
       },
     } as unknown as StripeRepository,
-    {
-      countSucceededByUserInPeriod: async () => 0,
-    } as unknown as DesignJobRepositoryPostgres,
     'https://ascoor.app',
   );
 

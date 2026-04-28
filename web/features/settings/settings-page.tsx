@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -312,10 +312,6 @@ export function SettingsPage() {
     }
   };
 
-  const handleBack = () => {
-    router.push(paths.studio);
-  };
-
   const handleCancelDialogChange = (open: boolean) => {
     setCancelDialogOpen(open);
     if (!open) {
@@ -377,13 +373,13 @@ export function SettingsPage() {
 
   const usageData = usageQuery.data?.status === 200 ? usageQuery.data.data : null;
   const usageItems =
-    usageData && usageData.limit > 0
+    usageData && usageData.monthlyCredits > 0
       ? [
           {
-            id: 'designs',
-            label: 'Designs',
-            used: usageData.used,
-            limit: usageData.limit,
+            id: 'credits',
+            label: 'Credits used',
+            used: usageData.usedCredits,
+            limit: usageData.monthlyCredits,
           },
         ]
       : [];
@@ -395,8 +391,9 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[color:var(--background-base)] text-[color:var(--text-primary)]">
       <AppHeader
+        className="border-[color:var(--border-subtle)] bg-[color:var(--background-base)]"
         projectMenuOpen={projectMenuOpen}
         onProjectMenuChange={setProjectMenuOpen}
         projectName={projectName}
@@ -405,6 +402,13 @@ export function SettingsPage() {
         onSelectProject={setProject}
         onCloseProject={clearProject}
         showProjectMenu={false}
+        projectMenuRightSlot={
+          <Button asChild type="button" variant="ghost" size="icon">
+            <a href={paths.studio} aria-label="Studio home">
+              <Home className="size-5" />
+            </a>
+          </Button>
+        }
         user={user}
         authStatus={authStatus}
         showSignIn={false}
@@ -413,10 +417,7 @@ export function SettingsPage() {
 
       <main className="min-h-[calc(100vh-72px)] px-6 py-8">
         <div className="mx-auto w-full max-w-6xl">
-          <div className="mb-6 flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Back">
-              <ArrowLeft className="size-5" />
-            </Button>
+          <div className="mb-6">
             <h1 className="text-2xl font-semibold">Settings</h1>
           </div>
           <Tabs
@@ -430,7 +431,7 @@ export function SettingsPage() {
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="flex h-10 !w-auto flex-none justify-start gap-2 rounded-md border-0 px-3 py-2 text-muted-foreground hover:bg-accent/40 hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none lg:!w-full"
+                  className="flex h-10 !w-auto flex-none justify-start gap-2 rounded-md border-0 px-3 py-2 font-medium !text-[color:var(--text-primary)] opacity-100 hover:bg-[color:var(--background-highlight)] hover:!text-[color:var(--text-primary)] data-[state=active]:bg-[color:var(--background-highlight)] data-[state=active]:!text-[color:var(--text-primary)] data-[state=active]:shadow-none lg:!w-full"
                 >
                   {label}
                 </TabsTrigger>
@@ -459,7 +460,7 @@ export function SettingsPage() {
                           disabled={isSaving}
                           maxLength={DEFAULT_FORM_MAX_CHARS}
                         />
-                        <p className="text-right text-xs text-muted-foreground">
+                        <p className="text-right text-xs text-[color:var(--text-secondary)]">
                           {username.length}/{DEFAULT_FORM_MAX_CHARS}
                         </p>
                       </div>
@@ -489,7 +490,7 @@ export function SettingsPage() {
                       variant="outline"
                       onClick={handleSave}
                       disabled={isSaving || !normalizedUsername}
-                      className="!bg-[color:var(--background-inverse)] !text-[color:var(--text-inverse)] hover:!bg-[color:var(--background-inverse)]/90"
+                      className="border-[color:var(--border-subtle)] bg-[color:var(--brand-500)] text-[color:var(--text-primary)] hover:bg-[color:var(--brand-600)]"
                     >
                       {isSaving ? 'Saving...' : 'Save'}
                     </Button>
@@ -560,16 +561,18 @@ export function SettingsPage() {
                         ) : (
                           <>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium text-foreground">{planSummary}</p>
+                              <p className="text-sm font-medium text-[color:var(--text-primary)]">{planSummary}</p>
                               {billingStatus?.cancelAtPeriodEnd && (
-                                <Badge variant="secondary">Cancellation scheduled</Badge>
+                                <Badge variant="secondary" className="text-[color:var(--text-primary)]">
+                                  Cancellation scheduled
+                                </Badge>
                               )}
                             </div>
                             {periodLabelText && (
-                              <p className="text-sm text-muted-foreground">{periodLabelText}</p>
+                              <p className="text-sm text-[color:var(--text-secondary)]">{periodLabelText}</p>
                             )}
                             {hasActiveSubscription && !activePlan && (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-[color:var(--text-secondary)]">
                                 Your subscription is active, but the plan details are not mapped
                                 yet.
                               </p>
@@ -594,7 +597,7 @@ export function SettingsPage() {
                         <Skeleton className="h-4 w-40 max-w-full" />
                       ) : (
                         usageResetDate && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-[color:var(--text-secondary)]">
                             Usage resets on {usageResetDate}.
                           </p>
                         )
@@ -608,8 +611,8 @@ export function SettingsPage() {
                           <Skeleton className="h-2.5 w-full" />
                         </div>
                       ) : usageItems.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          Choose a plan to unlock more asset generation.
+                        <p className="text-sm text-[color:var(--text-secondary)]">
+                          Choose a plan to unlock more credits.
                         </p>
                       ) : (
                         usageItems.map((item) => {
@@ -626,7 +629,7 @@ export function SettingsPage() {
                               </div>
                               <Progress
                                 value={percentage}
-                                className="h-2.5 bg-[color:var(--background-highlight)]/80 [&_[data-slot=progress-indicator]]:bg-[color:var(--text-secondary)]"
+                                className="h-2.5 bg-[color:var(--background-highlight)] [&_[data-slot=progress-indicator]]:bg-[color:var(--status-success)]"
                               />
                             </div>
                           );
@@ -642,7 +645,7 @@ export function SettingsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="!bg-[color:var(--background-inverse)] !text-[color:var(--text-inverse)] hover:!bg-[color:var(--background-inverse)]/90"
+                        className="border-[color:var(--border-subtle)] bg-[color:var(--background-panel)] text-[color:var(--text-primary)] hover:bg-[color:var(--background-muted)]"
                         onClick={handleOpenPortal}
                         disabled={!canOpenPortal}
                       >
@@ -658,7 +661,7 @@ export function SettingsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="!bg-[color:var(--background-inverse)] !text-[color:var(--text-inverse)] hover:!bg-[color:var(--background-inverse)]/90"
+                        className="border-[color:var(--border-subtle)] bg-[color:var(--background-panel)] text-[color:var(--text-primary)] hover:bg-[color:var(--background-muted)]"
                         onClick={handleOpenPortal}
                         disabled={!canOpenPortal}
                       >
@@ -676,7 +679,7 @@ export function SettingsPage() {
                           variant="outline"
                           onClick={handleResumeCancellation}
                           disabled={!canResumeCancellation}
-                          className="w-auto self-end !bg-[color:var(--background-inverse)] !text-[color:var(--text-inverse)] hover:!bg-[color:var(--background-inverse)]/90"
+                          className="w-auto self-end border-[color:var(--border-subtle)] bg-[color:var(--background-panel)] text-[color:var(--text-primary)] hover:bg-[color:var(--background-muted)]"
                         >
                           {resumeCancellationMutation.isPending
                             ? 'Resuming...'
@@ -736,7 +739,7 @@ export function SettingsPage() {
                                   maxLength={DEFAULT_FORM_MAX_CHARS}
                                   rows={4}
                                 />
-                                <p className="text-right text-xs text-muted-foreground">
+                                <p className="text-right text-xs text-[color:var(--text-secondary)]">
                                   {cancelDetails.length}/{DEFAULT_FORM_MAX_CHARS}
                                 </p>
                               </div>

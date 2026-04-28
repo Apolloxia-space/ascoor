@@ -38,6 +38,7 @@ const formatWorkspaceListName = (name: string) => {
 };
 
 type AppHeaderProps = {
+  className?: string;
   projectMenuOpen: boolean;
   onProjectMenuChange: (open: boolean) => void;
   projectName?: string | null;
@@ -63,6 +64,7 @@ type AppHeaderProps = {
 };
 
 export function AppHeader({
+  className,
   projectMenuOpen,
   onProjectMenuChange,
   projectName,
@@ -121,7 +123,12 @@ export function AppHeader({
   };
 
   return (
-    <header className="flex items-center justify-between border-b border-white/10 bg-background/70 px-4 py-3 backdrop-blur md:px-6">
+    <header
+      className={cn(
+        'flex items-center justify-between border-b border-white/10 bg-background/70 px-4 py-3 backdrop-blur md:px-6',
+        className,
+      )}
+    >
       <div className="flex min-w-0 items-center gap-3">
         {showBrand ? (
           <div className="flex items-center gap-2">

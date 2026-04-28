@@ -10,8 +10,10 @@ import { PromptCompilerRepositoryError } from '../../repositories/ai/prompt-comp
 import { buildDesignObjectPath, buildDesignPartObjectPath } from '../../entities/design';
 import type { IGcsRepository, IDesignRepository } from '../../repositories/interfaces';
 import type { DesignJobRepositoryPostgres } from '../../repositories/postgres/design-job.repository';
+import type { BillingRepository } from '../../repositories/postgres/billing.repository';
 import { inferDesignErrorCode } from './design-error-code.policy';
 import { logger } from '../../utils/logger';
+import { getUtcMonthWindow } from '../../utils/date';
 import { buildPartPrompt, type GeneratedAssetPart } from './asset-pack-code';
 import {
   type AiInvokeOutput,
@@ -191,6 +193,7 @@ export class GenerateAssetPartsStep {
     private readonly aiRepository: AiDesignRepository,
     private readonly designRepository: IDesignRepository,
     private readonly gcsRepository: IGcsRepository,
+    private readonly billingRepository?: BillingRepository,
   ) {}
 
   async run(params: {
@@ -251,6 +254,26 @@ export class GenerateAssetPartsStep {
             part_slug: part.slug,
           },
         });
+        if (this.billingRepository) {
+          const { start: periodStart, end: periodEnd } = getUtcMonthWindow(new Date());
+          const consumed = await this.billingRepository.consumeCreditsIfAvailable({
+            userId: params.userId,
+            amount: 1,
+            reason: 'asset_generation',
+            periodStart,
+            periodEnd,
+            relatedDesignId: params.designId,
+            relatedPartId: part.slug,
+            idempotencyKey: `asset_generation:${params.userId}:${params.designId}:${part.slug}`,
+          });
+          if (!consumed) {
+            throw new DesignPipelineError(
+              'PART_GENERATION',
+              'CREDIT_BALANCE_INSUFFICIENT',
+              `Not enough credits remaining to complete part ${part.slug}.`,
+            );
+          }
+        }
         await this.designRepository.updatePart({
           designId: params.designId,
           slug: part.slug,

@@ -48,6 +48,7 @@ const ERROR_STAGE_MESSAGES: Record<string, string> = {
   API_GET_DESIGN: DEFAULT_USER_FACING_FAILURE_MESSAGE,
   PROMPT_COMPILE: DEFAULT_USER_FACING_FAILURE_MESSAGE,
 };
+const ASSET_COUNT_PROMPT_PATTERN = /^Asset count:\s*generate\s+(\d+)\s+separate reusable assets\./m;
 
 type DesignJobListItem = {
   designJobId: string;
@@ -159,6 +160,15 @@ function buildUserFacingErrorMessage(input: {
   return DEFAULT_USER_FACING_FAILURE_MESSAGE;
 }
 
+function estimateRequiredCredits(userPrompt: string): number {
+  const match = userPrompt.match(ASSET_COUNT_PROMPT_PATTERN);
+  const parsed = match ? Number.parseInt(match[1] ?? '', 10) : 1;
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+  return Math.floor(parsed);
+}
+
 export class DesignJobsUsecase {
   private readonly billingCache = new BillingCache();
   private readonly pipelineService: DesignPipelineService;
@@ -184,6 +194,7 @@ export class DesignJobsUsecase {
         projectRepository: this.projectRepository,
         gcsRepository,
         designJobRepository: this.designJobRepository,
+        billingRepository: this.billingRepository,
         promptCompilerRepository,
       });
   }
@@ -248,13 +259,9 @@ export class DesignJobsUsecase {
       throw new NotFoundError('project not found');
     }
 
-    const usage = await this.resolveUsageWindow(input.userId);
-    const used = await this.designJobRepository.countSucceededByUserInPeriod({
-      userId: input.userId,
-      periodStart: usage.periodStart,
-      periodEnd: usage.periodEnd,
-    });
-    if (used >= usage.limit) {
+    const usage = await this.resolveCreditUsage(input.userId);
+    const requiredCredits = estimateRequiredCredits(userPrompt);
+    if (usage.balance < requiredCredits) {
       throw new DesignQuotaExceededError();
     }
     const concurrentLimit = await this.resolveConcurrentLimit(usage.planKey);
@@ -341,6 +348,7 @@ export class DesignJobsUsecase {
     };
 
     try {
+      await this.resolveCreditUsage(job.userId);
       const result = await this.pipelineService.run(
         {
           designId: job.id,
@@ -521,10 +529,11 @@ export class DesignJobsUsecase {
     }
   }
 
-  private async resolveUsageWindow(userId: string): Promise<{
+  private async resolveCreditUsage(userId: string): Promise<{
     periodStart: Date;
     periodEnd: Date;
-    limit: number;
+    balance: number;
+    monthlyCredits: number;
     planKey: PlanKey;
   }> {
     const subscription = await this.billingCache.getSubscription(userId, () =>
@@ -534,11 +543,23 @@ export class DesignJobsUsecase {
 
     const now = new Date();
     const { start: periodStart, end: periodEnd } = getUtcMonthWindow(now);
-    const limit = await this.resolveMonthlyLimit(planKey);
+    const allowance = await this.resolveCreditAllowance(planKey);
+    await this.ensureMonthlyCreditGrant({
+      userId,
+      periodStart,
+      periodEnd,
+      monthlyCredits: allowance.monthlyCredits,
+    });
+    const balance = await this.billingRepository.sumCreditAmountByUserInPeriod({
+      userId,
+      periodStart,
+      periodEnd,
+    });
     return {
       periodStart,
       periodEnd,
-      limit,
+      balance,
+      monthlyCredits: allowance.monthlyCredits,
       planKey,
     };
   }
@@ -557,30 +578,63 @@ export class DesignJobsUsecase {
     return plan?.key ?? 'free';
   }
 
-  private async resolveMonthlyLimit(planKey: PlanKey): Promise<number> {
+  private async resolveCreditAllowance(planKey: PlanKey): Promise<{
+    monthlyCredits: number;
+    concurrentDesignLimit: number;
+  }> {
     try {
-      const record = await this.billingCache.getPlanDesignLimit(planKey, () =>
-        this.billingRepository.findPlanDesignLimit(planKey),
+      const record = await this.billingCache.getPlanCreditAllowance(planKey, () =>
+        this.billingRepository.findPlanCreditAllowance(planKey),
       );
-      const limit = record?.monthlyDesignLimit ?? null;
-      if (limit && Number.isFinite(limit) && limit > 0) {
-        return limit;
+      const monthlyCredits = record?.monthlyCredits ?? null;
+      const concurrentDesignLimit = record?.concurrentDesignLimit ?? null;
+      if (
+        monthlyCredits &&
+        Number.isFinite(monthlyCredits) &&
+        monthlyCredits > 0 &&
+        concurrentDesignLimit &&
+        Number.isFinite(concurrentDesignLimit) &&
+        concurrentDesignLimit > 0
+      ) {
+        return {
+          monthlyCredits,
+          concurrentDesignLimit,
+        };
       }
     } catch {}
-    throw new Error(`design_plan_limit_missing:${planKey}`);
+    throw new Error(`plan_credit_allowance_missing:${planKey}`);
   }
 
   private async resolveConcurrentLimit(planKey: PlanKey): Promise<number> {
-    try {
-      const record = await this.billingCache.getPlanDesignLimit(planKey, () =>
-        this.billingRepository.findPlanDesignLimit(planKey),
-      );
-      const limit = record?.concurrentDesignLimit ?? null;
-      if (limit && Number.isFinite(limit) && limit > 0) {
-        return limit;
-      }
-    } catch {}
-    throw new Error(`design_plan_limit_missing:${planKey}`);
+    return (await this.resolveCreditAllowance(planKey)).concurrentDesignLimit;
+  }
+
+  private async ensureMonthlyCreditGrant(params: {
+    userId: string;
+    periodStart: Date;
+    periodEnd: Date;
+    monthlyCredits: number;
+  }): Promise<void> {
+    const granted = await this.billingRepository.sumCreditAmountByUserInPeriod({
+      userId: params.userId,
+      periodStart: params.periodStart,
+      periodEnd: params.periodEnd,
+      reason: 'monthly_grant',
+    });
+    const grantDelta = params.monthlyCredits - granted;
+    if (grantDelta <= 0) {
+      return;
+    }
+
+    const periodKey = params.periodStart.toISOString().slice(0, 10);
+    await this.billingRepository.createCreditLedgerEntryIfFirst({
+      userId: params.userId,
+      amount: grantDelta,
+      reason: 'monthly_grant',
+      periodStart: params.periodStart,
+      periodEnd: params.periodEnd,
+      idempotencyKey: `monthly_grant:${params.userId}:${periodKey}:${params.monthlyCredits}`,
+    });
   }
 
   private toResponse(job: {

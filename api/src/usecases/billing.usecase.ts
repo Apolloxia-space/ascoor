@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { BillingStatus, BillingUsage } from '../entities/billing';
-import type { PlanDesignLimit, PlanKey } from '../generated/prisma/client';
+import type { PlanCreditAllowance, PlanKey } from '../generated/prisma/client';
 import type {
   CancelSubscriptionReason,
   Plan,
@@ -8,7 +8,6 @@ import type {
   SubscriptionStatus,
 } from '../entities/subscription';
 import type { BillingRepository } from '../repositories/postgres/billing.repository';
-import type { DesignJobRepositoryPostgres } from '../repositories/postgres/design-job.repository';
 import type {
   StripeRepository,
   StripeWebhookEvent,
@@ -54,7 +53,6 @@ export class BillingUsecase {
   constructor(
     private readonly billingRepository: BillingRepository,
     private readonly stripeRepository: StripeRepository,
-    private readonly designJobRepository: DesignJobRepositoryPostgres,
     private readonly webAppBaseUrl: string | null,
   ) {}
 
@@ -95,21 +93,29 @@ export class BillingUsecase {
     const periodStart = window.start;
     const periodEnd = window.end;
 
-    const limitRecord = await this.getCachedPlanDesignLimit(planKey);
-    if (!limitRecord) {
-      logger.error('billing_plan_limit_missing', { planKey });
-      throw new Error(`plan_design_limit_missing:${planKey}`);
+    const allowance = await this.getCachedPlanCreditAllowance(planKey);
+    if (!allowance) {
+      logger.error('billing_plan_credit_allowance_missing', { planKey });
+      throw new Error(`plan_credit_allowance_missing:${planKey}`);
     }
 
-    const used = await this.designJobRepository.countSucceededByUserInPeriod({
+    await this.ensureMonthlyCreditGrant({
+      userId,
+      periodStart,
+      periodEnd,
+      monthlyCredits: allowance.monthlyCredits,
+    });
+
+    const balance = await this.billingRepository.sumCreditAmountByUserInPeriod({
       userId,
       periodStart,
       periodEnd,
     });
 
     return {
-      used,
-      limit: limitRecord.monthlyDesignLimit,
+      balance,
+      monthlyCredits: allowance.monthlyCredits,
+      usedCredits: Math.max(0, allowance.monthlyCredits - balance),
       periodStart,
       periodEnd,
     };
@@ -371,10 +377,6 @@ export class BillingUsecase {
     return this.billingCache.getPlanById(planId, () => this.billingRepository.findPlanById(planId));
   }
 
-  private getCachedDefaultPlan(): Promise<Plan | null> {
-    return this.billingCache.getDefaultPlan(() => this.billingRepository.findDefaultPlan());
-  }
-
   private getCachedPlanByKey(planKey: PlanKey): Promise<Plan | null> {
     return this.billingCache.getPlanByKey(planKey, () =>
       this.billingRepository.findPlanByKey(planKey),
@@ -392,10 +394,38 @@ export class BillingUsecase {
     return plan?.key ?? 'free';
   }
 
-  private getCachedPlanDesignLimit(planKey: PlanKey): Promise<PlanDesignLimit | null> {
-    return this.billingCache.getPlanDesignLimit(planKey, () =>
-      this.billingRepository.findPlanDesignLimit(planKey),
+  private getCachedPlanCreditAllowance(planKey: PlanKey): Promise<PlanCreditAllowance | null> {
+    return this.billingCache.getPlanCreditAllowance(planKey, () =>
+      this.billingRepository.findPlanCreditAllowance(planKey),
     );
+  }
+
+  private async ensureMonthlyCreditGrant(params: {
+    userId: string;
+    periodStart: Date;
+    periodEnd: Date;
+    monthlyCredits: number;
+  }): Promise<void> {
+    const granted = await this.billingRepository.sumCreditAmountByUserInPeriod({
+      userId: params.userId,
+      periodStart: params.periodStart,
+      periodEnd: params.periodEnd,
+      reason: 'monthly_grant',
+    });
+    const grantDelta = params.monthlyCredits - granted;
+    if (grantDelta <= 0) {
+      return;
+    }
+
+    const periodKey = params.periodStart.toISOString().slice(0, 10);
+    await this.billingRepository.createCreditLedgerEntryIfFirst({
+      userId: params.userId,
+      amount: grantDelta,
+      reason: 'monthly_grant',
+      periodStart: params.periodStart,
+      periodEnd: params.periodEnd,
+      idempotencyKey: `monthly_grant:${params.userId}:${periodKey}:${params.monthlyCredits}`,
+    });
   }
 
   private invalidateSubscriptionCache(userId: string) {

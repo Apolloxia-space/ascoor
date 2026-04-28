@@ -18,7 +18,7 @@ type PlanSeed = {
 
 type PlanLimitSeed = {
   planKey: 'free' | 'hobby' | 'pro';
-  monthlyDesignLimit: number;
+  monthlyCredits: number;
   concurrentDesignLimit: number;
 };
 
@@ -88,12 +88,12 @@ function assertPlanLimitSeed(value: unknown, index: number): asserts value is Pl
     );
   }
   if (
-    typeof planLimit.monthlyDesignLimit !== 'number' ||
-    !Number.isFinite(planLimit.monthlyDesignLimit) ||
-    planLimit.monthlyDesignLimit <= 0
+    typeof planLimit.monthlyCredits !== 'number' ||
+    !Number.isFinite(planLimit.monthlyCredits) ||
+    planLimit.monthlyCredits <= 0
   ) {
     throw new Error(
-      `Invalid plan limit seed at index ${index}: monthlyDesignLimit must be a positive number.`,
+      `Invalid plan limit seed at index ${index}: monthlyCredits must be a positive number.`,
     );
   }
   if (
@@ -169,15 +169,15 @@ async function main(): Promise<void> {
 
   await prisma.$transaction(
     planLimits.map((planLimit) =>
-      prisma.planDesignLimit.upsert({
+      prisma.planCreditAllowance.upsert({
         where: { planKey: planLimit.planKey },
         update: {
-          monthlyDesignLimit: planLimit.monthlyDesignLimit,
+          monthlyCredits: planLimit.monthlyCredits,
           concurrentDesignLimit: planLimit.concurrentDesignLimit,
         },
         create: {
           planKey: planLimit.planKey,
-          monthlyDesignLimit: planLimit.monthlyDesignLimit,
+          monthlyCredits: planLimit.monthlyCredits,
           concurrentDesignLimit: planLimit.concurrentDesignLimit,
         },
       }),

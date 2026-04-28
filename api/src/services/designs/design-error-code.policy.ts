@@ -4,7 +4,11 @@ export function inferDesignErrorCode(error: unknown, fallback: string): string {
   const text = typeof error === 'string' ? error : ((error as Error)?.message ?? String(error));
   const normalized = text.toLowerCase();
 
-  if (error instanceof DesignQuotaExceededError || normalized.includes('design limit')) {
+  if (
+    error instanceof DesignQuotaExceededError ||
+    normalized.includes('not enough credits') ||
+    normalized.includes('credit balance')
+  ) {
     return 'QUOTA_EXCEEDED';
   }
   if (

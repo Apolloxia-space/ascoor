@@ -834,7 +834,7 @@ paths:
       operationId: getBillingUsage
       tags:
         - billing
-      summary: Get usage and limits for the authenticated user.
+      summary: Get credit usage for the authenticated user.
       responses:
         '200':
           description: Billing usage retrieved
@@ -1185,15 +1185,19 @@ components:
     BillingUsage:
       type: object
       required:
-        - used
-        - limit
+        - balance
+        - monthlyCredits
+        - usedCredits
         - periodStart
         - periodEnd
       properties:
-        used:
+        balance:
           type: integer
           format: int32
-        limit:
+        monthlyCredits:
+          type: integer
+          format: int32
+        usedCredits:
           type: integer
           format: int32
         periodStart:

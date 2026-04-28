@@ -18,8 +18,9 @@ export function NewPackPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[color:var(--background-base)]">
+    <div className="flex min-h-screen flex-col bg-[color:var(--background-base)] text-[color:var(--text-primary)]">
       <AppHeader
+        className="border-[color:var(--border-subtle)] bg-[color:var(--background-base)]"
         projectMenuOpen={false}
         onProjectMenuChange={() => {}}
         projects={[]}
@@ -48,10 +49,10 @@ export function NewPackPage() {
         onSignOut={signOutUser}
       />
       <main className="flex min-h-0 flex-1 justify-center overflow-y-auto px-4 py-6 md:px-6 md:py-8">
-        <div className="flex w-full max-w-6xl min-h-0 flex-col gap-6 md:gap-8">
+        <div className="flex min-h-0 w-full max-w-6xl flex-col gap-6 md:gap-8">
           <section className="px-1 py-1">
             <div className="max-w-3xl">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              <h1 className="text-3xl font-semibold tracking-tight text-[color:var(--text-primary)] md:text-4xl">
                 Create asset pack
               </h1>
             </div>

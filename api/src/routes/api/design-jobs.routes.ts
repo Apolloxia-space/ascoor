@@ -13,7 +13,6 @@ import {
   DesignQuotaExceededError,
   DesignValidationError,
   NotFoundError,
-  ProSubscriptionRequiredError,
 } from '../../usecases/errors';
 import { createDesignJobBodySchema } from './request-schemas';
 
@@ -38,9 +37,6 @@ export function createDesignJobsRoutes() {
         });
         return c.json(data, 202);
       } catch (error: unknown) {
-        if (error instanceof ProSubscriptionRequiredError) {
-          return c.json({ error: error.message, code: error.code }, 402);
-        }
         if (error instanceof DesignConcurrencyLimitExceededError) {
           return c.json({ error: error.message, code: error.code }, 409);
         }

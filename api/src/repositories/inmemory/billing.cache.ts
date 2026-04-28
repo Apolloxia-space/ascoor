@@ -1,4 +1,4 @@
-import type { Plan, PlanDesignLimit, PlanKey, Subscription } from '../../generated/prisma/client';
+import type { Plan, PlanCreditAllowance, PlanKey, Subscription } from '../../generated/prisma/client';
 import { InMemoryAsyncCache } from './inmemory';
 
 const DEFAULT_SUBSCRIPTION_CACHE_TTL_MS = 30 * 1000;
@@ -47,10 +47,10 @@ export class BillingCache {
     return this.cache.loadThrough(`billing:plan:key:${planKey}`, this.planCacheTtlMs, loader);
   }
 
-  getPlanDesignLimit(
+  getPlanCreditAllowance(
     planKey: PlanKey,
-    loader: () => Promise<PlanDesignLimit | null>,
-  ): Promise<PlanDesignLimit | null> {
+    loader: () => Promise<PlanCreditAllowance | null>,
+  ): Promise<PlanCreditAllowance | null> {
     return this.cache.loadThrough(`billing:limit:${planKey}`, this.planLimitCacheTtlMs, loader);
   }
 

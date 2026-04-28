@@ -135,6 +135,7 @@ export function StudioPage() {
   const shortcutHudTimerRef = useRef<number | null>(null);
   const workspaceTitleSyncProjectIdsRef = useRef<Set<string>>(new Set());
   const workspaceTitleSyncInFlightRef = useRef<Set<string>>(new Set());
+
   const assemblyControlsRef = useRef<{
     focusFullModel: () => void;
     previewPart: (id: string) => void;
