@@ -52,9 +52,8 @@ export function ChatPanel({
     <StudioSidePanel
       open={open}
       variant={variant}
-      resizeAriaLabel="Resize activity panel"
-      title="Activity"
-      description="Track pack generation."
+      resizeAriaLabel="Resize pack status panel"
+      title="Pack status"
       showHeader={false}
       onToggle={onToggle}
     >
@@ -108,11 +107,11 @@ const getPartStatusClassName = (status: PendingDesignPartStatus) => {
     case 'completed':
       return 'text-emerald-300';
     case 'failed':
-      return 'text-[color:var(--status-danger)]';
+      return 'text-destructive';
     case 'generating':
-      return 'text-[color:var(--text-primary)]';
+      return 'text-foreground';
     case 'pending':
-      return 'text-[color:var(--text-muted)]';
+      return 'text-muted-foreground';
   }
 };
 
@@ -196,16 +195,16 @@ function GenerationLog({
 }) {
   if (pendingDesigns.length === 0) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-white/10 px-4 py-8 text-center text-sm text-[color:var(--text-muted)]">
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
         <p>No generation activity yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-white/10 bg-black/10 p-3">
+    <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="space-y-4">
-        {pendingDesigns.map((pendingDesign) => {
+        {[...pendingDesigns].reverse().map((pendingDesign) => {
           const structuredPrompt = parseStructuredPackPrompt(
             pendingDesign.userPrompt ?? pendingDesign.promptPreview,
           );
@@ -227,81 +226,36 @@ function GenerationLog({
                   : pendingDesign.assetDesignId
                     ? 'Preparing parts...'
                     : 'Planning the pack...';
+          const statusTone = isFailed
+            ? 'border-destructive/30 bg-destructive/10'
+            : isSucceeded
+              ? 'border-emerald-500/30 bg-emerald-500/10'
+              : 'border-border bg-muted/40';
+          const statusTitle = isFailed
+            ? 'Pack needs attention'
+            : isSucceeded
+              ? 'Pack completed'
+              : 'Creating asset pack';
 
           return (
-            <div className="space-y-4" key={pendingDesign.designId}>
-              <div className="ml-auto max-w-[88%] rounded-md bg-[color:var(--accent)] px-3 py-3 text-[color:var(--accent-foreground)]">
-                {structuredPrompt ? (
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium">Create asset pack</p>
-                    <div className="space-y-2 text-xs">
-                      <div className="space-y-0.5">
-                        <p className="text-[color:var(--accent-foreground)]/70">Theme</p>
-                        <p>{structuredPrompt.themeLabel}</p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[color:var(--accent-foreground)]/70">
-                          What are you making?
-                        </p>
-                        <p>{structuredPrompt.packTypeLabel}</p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[color:var(--accent-foreground)]/70">Style</p>
-                        <p>{structuredPrompt.styleLabel}</p>
-                      </div>
-                      {structuredPrompt.assetCount !== null ? (
-                        <div className="space-y-0.5">
-                          <p className="text-[color:var(--accent-foreground)]/70">Asset count</p>
-                          <p>{structuredPrompt.assetCount}</p>
-                        </div>
-                      ) : null}
-                      {structuredPrompt.additionalDirection ? (
-                        <div className="space-y-0.5">
-                          <p className="text-[color:var(--accent-foreground)]/70">Additional</p>
-                          <p>{structuredPrompt.additionalDirection}</p>
-                        </div>
-                      ) : null}
-                    </div>
-                    {pendingDesign.userPrompt ? (
-                      <details className="rounded-md border border-white/15 bg-black/10 px-2 py-2">
-                        <summary className="cursor-pointer list-none text-xs text-[color:var(--accent-foreground)]/80">
-                          Show prompt
-                        </summary>
-                        <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] leading-5 text-[color:var(--accent-foreground)]/85">
-                          {pendingDesign.userPrompt}
-                        </pre>
-                      </details>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="whitespace-pre-wrap break-words text-sm">
-                    {pendingDesign.userPrompt ?? pendingDesign.promptPreview}
-                  </div>
-                )}
-              </div>
-              <div className="max-w-[92%] rounded-md border border-white/10 bg-white/[0.03] px-3 py-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
+            <section className="space-y-3" key={pendingDesign.designId}>
+              <div className={cn('rounded-lg border px-3 py-3 shadow-sm', statusTone)}>
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   {isFailed ? (
-                    <AlertTriangle className="size-4 text-[color:var(--status-danger)]" />
+                    <AlertTriangle className="size-4 text-destructive" />
                   ) : isSucceeded ? (
-                    <Check className="size-4 text-emerald-300" />
+                    <Check className="size-4 text-emerald-600" />
                   ) : (
-                    <Loader2 className="size-4 animate-spin text-[color:var(--text-muted)]" />
+                    <Loader2 className="size-4 animate-spin text-foreground" />
                   )}
-                  <span>
-                    {isFailed
-                      ? 'Pack needs attention'
-                      : isSucceeded
-                        ? 'Pack completed'
-                        : 'Creating asset pack'}
-                  </span>
+                  <span>{statusTitle}</span>
                 </div>
-                <p className="mt-1 text-xs text-[color:var(--text-muted)]">{summaryText}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{summaryText}</p>
                 {isSucceeded ? (
                   <Button
                     type="button"
                     size="sm"
-                    className="mt-3 w-full justify-start rounded-lg"
+                    className="mt-3 w-full justify-start rounded-md"
                     onClick={onDownloadZip}
                     disabled={!onDownloadZip}
                   >
@@ -309,8 +263,14 @@ function GenerationLog({
                     Download ZIP
                   </Button>
                 ) : null}
-                {parts.length > 0 ? (
-                  <div className="mt-3 space-y-2">
+              </div>
+
+              {parts.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Parts
+                  </div>
+                  <div className="space-y-2">
                     {parts.map((part) => {
                       const loadedPart = findLoadedPart(part, loadedParts);
                       const canPreview =
@@ -323,15 +283,17 @@ function GenerationLog({
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center justify-between gap-2">
-                              <span className="truncate text-xs font-medium text-[color:var(--text-primary)]">
+                              <span className="truncate text-xs font-medium text-foreground">
                                 {part.displayName}
                               </span>
-                              <span className="shrink-0 text-[11px] text-[color:var(--text-muted)]">
-                                {canPreview ? 'Preview' : partStatusLabel[part.status]}
-                              </span>
+                              {!canPreview ? (
+                                <span className="shrink-0 text-[11px] text-muted-foreground">
+                                  {partStatusLabel[part.status]}
+                                </span>
+                              ) : null}
                             </div>
                             {part.status === 'failed' && part.errorMessage ? (
-                              <p className="mt-1 line-clamp-2 text-[11px] text-[color:var(--status-danger)]">
+                              <p className="mt-1 line-clamp-2 text-[11px] text-destructive">
                                 {part.errorMessage}
                               </p>
                             ) : null}
@@ -340,9 +302,9 @@ function GenerationLog({
                       );
 
                       const className = cn(
-                        'flex min-w-0 items-start gap-2 rounded-md bg-white/[0.03] px-2 py-2',
-                        canPreview && 'w-full text-left transition-colors hover:bg-white/[0.07]',
-                        isActive && 'bg-primary/10 ring-1 ring-primary/40',
+                        'flex min-w-0 items-start gap-2 rounded-md border border-border/70 bg-card/70 px-2 py-2',
+                        canPreview && 'w-full text-left transition-colors hover:bg-muted',
+                        isActive && 'border-primary/50 bg-primary/10',
                       );
 
                       return canPreview && loadedPart ? (
@@ -361,9 +323,72 @@ function GenerationLog({
                       );
                     })}
                   </div>
-                ) : null}
-              </div>
-            </div>
+                </div>
+              ) : null}
+
+              {structuredPrompt ? (
+                <details className="rounded-lg border border-border/70 bg-card/60 px-3 py-3">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
+                    Pack setup
+                  </summary>
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Theme
+                      </p>
+                      <p>{structuredPrompt.themeLabel}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        What are you making?
+                      </p>
+                      <p>{structuredPrompt.packTypeLabel}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Style
+                      </p>
+                      <p>{structuredPrompt.styleLabel}</p>
+                    </div>
+                    {structuredPrompt.assetCount !== null ? (
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Asset count
+                        </p>
+                        <p>{structuredPrompt.assetCount}</p>
+                      </div>
+                    ) : null}
+                    {structuredPrompt.additionalDirection ? (
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Additional
+                        </p>
+                        <p>{structuredPrompt.additionalDirection}</p>
+                      </div>
+                    ) : null}
+                    {pendingDesign.userPrompt ? (
+                      <details className="rounded-md border border-border/70 bg-background px-2 py-2">
+                        <summary className="cursor-pointer list-none text-xs text-muted-foreground">
+                          Show prompt
+                        </summary>
+                        <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground">
+                          {pendingDesign.userPrompt}
+                        </pre>
+                      </details>
+                    ) : null}
+                  </div>
+                </details>
+              ) : pendingDesign.userPrompt || pendingDesign.promptPreview ? (
+                <details className="rounded-lg border border-border/70 bg-card/60 px-3 py-3">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
+                    Prompt
+                  </summary>
+                  <pre className="mt-3 whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground">
+                    {pendingDesign.userPrompt ?? pendingDesign.promptPreview}
+                  </pre>
+                </details>
+              ) : null}
+            </section>
           );
         })}
       </div>
@@ -486,7 +511,7 @@ export function CreatePanelContent({
         onPreviewPart={onPreviewPart}
       />
       {showJavaScriptDownload ? (
-        <div className="border-t border-white/10 pt-3">
+        <div className="border-t border-border/70 pt-3">
           <Button
             type="button"
             variant="ghost"

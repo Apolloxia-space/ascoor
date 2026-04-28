@@ -30,10 +30,9 @@ export function RightPanel({
   return (
     <StudioSidePanel
       open={open}
-      title="Activity"
-      description="Track pack generation."
+      title="Pack status"
       showHeader={false}
-      resizeAriaLabel="Resize activity panel"
+      resizeAriaLabel="Resize pack status panel"
       onToggle={onToggle}
       bodyClassName="relative overflow-hidden p-0"
     >

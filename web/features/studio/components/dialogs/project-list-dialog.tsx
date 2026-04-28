@@ -229,12 +229,9 @@ export function ProjectListDialog({
           <DialogTitle>Select a workspace</DialogTitle>
           <DialogDescription>Select a workspace to get started.</DialogDescription>
         </div>
-        <div
-          className="flex min-h-[520px] flex-col bg-[color:var(--background-panel)] text-[color:var(--text-primary)]"
-          style={{ height: 'min(90vh, 900px)' }}
-        >
-          <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-5 sm:px-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
+        <div className="flex min-h-[520px] flex-col" style={{ height: 'min(90vh, 900px)' }}>
+          <div className="flex flex-col gap-3 border-b px-4 py-5 sm:px-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Workspaces
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -270,7 +267,7 @@ export function ProjectListDialog({
                 ))}
               </div>
             ) : projectPagesQuery.isError ? (
-              <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-[color:var(--text-muted)]">
+              <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-muted-foreground">
                 <p>Could not load workspaces.</p>
                 <Button
                   variant="outline"
@@ -284,7 +281,7 @@ export function ProjectListDialog({
                 </Button>
               </div>
             ) : pagedProjects.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-[color:var(--text-muted)]">
+              <div className="rounded-lg border border-dashed border-white/10 px-6 py-10 text-center text-sm text-muted-foreground">
                 {normalizedQuery.length === 0 ? (
                   <p>No workspaces yet. Create an asset pack to get started.</p>
                 ) : (
@@ -305,7 +302,7 @@ export function ProjectListDialog({
                         }}
                       >
                         <span className="min-w-0 flex-1 text-left" title={project.name}>
-                          <span className="block truncate text-sm font-semibold text-[color:var(--text-primary)]">
+                          <span className="block truncate text-sm font-semibold text-foreground">
                             {formatWorkspaceListName(project.name)}
                           </span>
                         </span>
@@ -346,7 +343,7 @@ export function ProjectListDialog({
                 ))}
                 <div
                   ref={loadMoreRef}
-                  className="py-2 text-center text-xs text-[color:var(--text-muted)]"
+                  className="py-2 text-center text-xs text-muted-foreground"
                 >
                   {projectPagesQuery.isFetchingNextPage ? (
                     <div className="flex items-center justify-center">

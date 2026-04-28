@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[color:var(--background-base)]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <PlanPage />
     </Suspense>
   );

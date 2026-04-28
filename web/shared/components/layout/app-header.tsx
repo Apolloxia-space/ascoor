@@ -103,6 +103,7 @@ export function AppHeader({
     if (!status) return null;
     const isFailed = status.kind === 'failed';
     const isGenerating = status.kind === 'queued' || status.kind === 'running';
+    if (!isFailed && !isGenerating) return null;
 
     return (
       <Badge
@@ -125,7 +126,7 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        'flex items-center justify-between border-b border-white/10 bg-background/70 px-4 py-3 backdrop-blur md:px-6',
+        'flex items-center justify-between border-b border-border bg-background/70 px-4 py-3 backdrop-blur md:px-6',
         className,
       )}
     >
@@ -146,11 +147,11 @@ export function AppHeader({
             <DropdownMenu open={projectMenuOpen} onOpenChange={onProjectMenuChange}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="max-w-[200px] gap-2 md:max-w-none">
-                  <FolderOpen className="size-4 text-[color:var(--text-secondary)]" />
+                  <FolderOpen className="size-4 text-muted-foreground" />
                   <span className="truncate font-medium">{projectLabel}</span>
                   <ChevronDown
                     className={cn(
-                      'size-4 text-[color:var(--text-secondary)] transition-transform',
+                      'size-4 text-muted-foreground transition-transform',
                       projectMenuOpen && 'rotate-180',
                     )}
                   />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
-import { Home } from 'lucide-react';
+import { Home, Sparkles } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -43,7 +43,6 @@ import {
 } from '@shared/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { Textarea } from '@shared/components/ui/textarea';
-import { AppHeader } from '@shared/components/layout/app-header';
 import { DEFAULT_FORM_MAX_CHARS } from '@shared/constants/form-limits';
 import { paths } from '@shared/constants/paths';
 import {
@@ -62,6 +61,9 @@ import { firebaseAuth } from '@/shared/firebase/client';
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signOutUser } from '@/features/auth/use-auth-init';
 import { useStudioStore } from '@/features/studio/stores/use-studio-store';
+import { StudioHeader } from '@/features/studio/components/studio-header';
+import { ProjectListDialog } from '@/features/studio/components/dialogs/project-list-dialog';
+import { buildStudioNewPath, buildStudioPath } from '@/features/studio/lib/paths';
 
 const settingsTabs = [
   { value: 'account', label: 'Account' },
@@ -134,9 +136,6 @@ export function SettingsPage() {
   const setUser = useAuthStore((state) => state.setUser);
   const projectMenuOpen = useStudioStore((state) => state.projectMenuOpen);
   const setProjectMenuOpen = useStudioStore((state) => state.setProjectMenuOpen);
-  const projectId = useStudioStore((state) => state.projectId);
-  const projectName = useStudioStore((state) => state.projectName);
-  const projects = useStudioStore((state) => state.projects);
   const setProject = useStudioStore((state) => state.setProject);
   const clearProject = useStudioStore((state) => state.clearProject);
   const usernameInputId = useId();
@@ -155,6 +154,7 @@ export function SettingsPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [projectListDialogOpen, setProjectListDialogOpen] = useState(false);
   const billingQuery = useGetBillingStatus({ query: { enabled: !!user } });
   const usageQuery = useGetBillingUsage({ query: { enabled: !!user } });
   const portalSessionMutation = useCreateBillingPortalSession({
@@ -386,33 +386,67 @@ export function SettingsPage() {
   const usageResetDate = usageData?.periodEnd ? formatBillingDate(usageData.periodEnd) : null;
   const isUsageLoading = usageQuery.isLoading;
 
+  const handleSelectProject = (id: string, name: string) => {
+    setProject(id, name);
+    router.push(buildStudioPath(id));
+  };
+
+  const handleCloseProject = () => {
+    clearProject();
+    router.push(paths.studio);
+  };
+
+  const handleOpenNewPackPage = () => {
+    router.push(buildStudioNewPath());
+  };
+
   if (authStatus !== 'authenticated') {
-    return <div className="min-h-screen bg-[color:var(--background-base)]" />;
+    return <div className="min-h-screen" />;
   }
 
   return (
-    <div className="min-h-screen bg-[color:var(--background-base)] text-[color:var(--text-primary)]">
-      <AppHeader
-        className="border-[color:var(--border-subtle)] bg-[color:var(--background-base)]"
+    <div className="min-h-screen">
+      <ProjectListDialog
+        open={projectListDialogOpen}
+        onOpenChange={setProjectListDialogOpen}
+        onSelectProject={handleSelectProject}
+        onDeleteCurrentProject={handleCloseProject}
+      />
+      <StudioHeader
         projectMenuOpen={projectMenuOpen}
         onProjectMenuChange={setProjectMenuOpen}
-        projectName={projectName}
-        projectId={projectId}
-        projects={projects}
-        onSelectProject={setProject}
-        onCloseProject={clearProject}
-        showProjectMenu={false}
+        onSelectProject={handleSelectProject}
+        onCloseProject={handleCloseProject}
+        onOpenProjectManager={() => setProjectListDialogOpen(true)}
+        showBrand
         projectMenuRightSlot={
-          <Button asChild type="button" variant="ghost" size="icon">
-            <a href={paths.studio} aria-label="Studio home">
-              <Home className="size-5" />
-            </a>
-          </Button>
+          <>
+            <Button asChild type="button" variant="ghost" size="icon">
+              <a href={paths.studio} aria-label="Studio home">
+                <Home className="size-5" />
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              aria-label="Create new pack"
+              onClick={handleOpenNewPackPage}
+            >
+              <Sparkles className="size-5" />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="hidden rounded-lg md:inline-flex"
+              onClick={handleOpenNewPackPage}
+            >
+              <Sparkles className="size-4" />
+              New Pack
+            </Button>
+          </>
         }
-        user={user}
-        authStatus={authStatus}
-        showSignIn={false}
-        onSignOut={signOutUser}
       />
 
       <main className="min-h-[calc(100vh-72px)] px-6 py-8">
@@ -431,7 +465,7 @@ export function SettingsPage() {
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="flex h-10 !w-auto flex-none justify-start gap-2 rounded-md border-0 px-3 py-2 font-medium !text-[color:var(--text-primary)] opacity-100 hover:bg-[color:var(--background-highlight)] hover:!text-[color:var(--text-primary)] data-[state=active]:bg-[color:var(--background-highlight)] data-[state=active]:!text-[color:var(--text-primary)] data-[state=active]:shadow-none lg:!w-full"
+                  className="flex h-10 !w-auto flex-none justify-start gap-2 px-3 py-2 lg:!w-full"
                 >
                   {label}
                 </TabsTrigger>
@@ -447,7 +481,7 @@ export function SettingsPage() {
                       <div className="space-y-2">
                         <Label
                           htmlFor={usernameInputId}
-                          className="text-[color:var(--text-secondary)]"
+                          className="text-muted-foreground"
                         >
                           Username
                         </Label>
@@ -460,14 +494,14 @@ export function SettingsPage() {
                           disabled={isSaving}
                           maxLength={DEFAULT_FORM_MAX_CHARS}
                         />
-                        <p className="text-right text-xs text-[color:var(--text-secondary)]">
+                        <p className="text-right text-xs text-muted-foreground">
                           {username.length}/{DEFAULT_FORM_MAX_CHARS}
                         </p>
                       </div>
                       <div className="space-y-2">
                         <Label
                           htmlFor={emailInputId}
-                          className="text-[color:var(--text-secondary)]"
+                          className="text-muted-foreground"
                         >
                           Email
                         </Label>
@@ -487,10 +521,9 @@ export function SettingsPage() {
                       Cancel
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="default"
                       onClick={handleSave}
                       disabled={isSaving || !normalizedUsername}
-                      className="border-[color:var(--border-subtle)] bg-[color:var(--brand-500)] text-[color:var(--text-primary)] hover:bg-[color:var(--brand-600)]"
                     >
                       {isSaving ? 'Saving...' : 'Save'}
                     </Button>
@@ -561,18 +594,18 @@ export function SettingsPage() {
                         ) : (
                           <>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium text-[color:var(--text-primary)]">{planSummary}</p>
+                              <p className="text-sm font-medium text-foreground">{planSummary}</p>
                               {billingStatus?.cancelAtPeriodEnd && (
-                                <Badge variant="secondary" className="text-[color:var(--text-primary)]">
+                                <Badge variant="secondary" className="text-foreground">
                                   Cancellation scheduled
                                 </Badge>
                               )}
                             </div>
                             {periodLabelText && (
-                              <p className="text-sm text-[color:var(--text-secondary)]">{periodLabelText}</p>
+                              <p className="text-sm text-muted-foreground">{periodLabelText}</p>
                             )}
                             {hasActiveSubscription && !activePlan && (
-                              <p className="text-sm text-[color:var(--text-secondary)]">
+                              <p className="text-sm text-muted-foreground">
                                 Your subscription is active, but the plan details are not mapped
                                 yet.
                               </p>
@@ -597,7 +630,7 @@ export function SettingsPage() {
                         <Skeleton className="h-4 w-40 max-w-full" />
                       ) : (
                         usageResetDate && (
-                          <p className="text-sm text-[color:var(--text-secondary)]">
+                          <p className="text-sm text-muted-foreground">
                             Usage resets on {usageResetDate}.
                           </p>
                         )
@@ -611,7 +644,7 @@ export function SettingsPage() {
                           <Skeleton className="h-2.5 w-full" />
                         </div>
                       ) : usageItems.length === 0 ? (
-                        <p className="text-sm text-[color:var(--text-secondary)]">
+                        <p className="text-sm text-muted-foreground">
                           Choose a plan to unlock more credits.
                         </p>
                       ) : (
@@ -620,16 +653,16 @@ export function SettingsPage() {
                           return (
                             <div key={item.id} className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-[color:var(--text-secondary)]">
+                                <span className="text-muted-foreground">
                                   {item.label}
                                 </span>
-                                <span className="text-[color:var(--text-secondary)]">
+                                <span className="text-muted-foreground">
                                   {formatUsageValue(item.used)} / {formatUsageValue(item.limit)}
                                 </span>
                               </div>
                               <Progress
                                 value={percentage}
-                                className="h-2.5 bg-[color:var(--background-highlight)] [&_[data-slot=progress-indicator]]:bg-[color:var(--status-success)]"
+                                className="h-2.5 bg-muted [&_[data-slot=progress-indicator]]:bg-primary"
                               />
                             </div>
                           );
@@ -645,7 +678,6 @@ export function SettingsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-[color:var(--border-subtle)] bg-[color:var(--background-panel)] text-[color:var(--text-primary)] hover:bg-[color:var(--background-muted)]"
                         onClick={handleOpenPortal}
                         disabled={!canOpenPortal}
                       >
@@ -661,7 +693,6 @@ export function SettingsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-[color:var(--border-subtle)] bg-[color:var(--background-panel)] text-[color:var(--text-primary)] hover:bg-[color:var(--background-muted)]"
                         onClick={handleOpenPortal}
                         disabled={!canOpenPortal}
                       >
@@ -679,7 +710,7 @@ export function SettingsPage() {
                           variant="outline"
                           onClick={handleResumeCancellation}
                           disabled={!canResumeCancellation}
-                          className="w-auto self-end border-[color:var(--border-subtle)] bg-[color:var(--background-panel)] text-[color:var(--text-primary)] hover:bg-[color:var(--background-muted)]"
+                          className="w-auto self-end"
                         >
                           {resumeCancellationMutation.isPending
                             ? 'Resuming...'
@@ -739,7 +770,7 @@ export function SettingsPage() {
                                   maxLength={DEFAULT_FORM_MAX_CHARS}
                                   rows={4}
                                 />
-                                <p className="text-right text-xs text-[color:var(--text-secondary)]">
+                                <p className="text-right text-xs text-muted-foreground">
                                   {cancelDetails.length}/{DEFAULT_FORM_MAX_CHARS}
                                 </p>
                               </div>

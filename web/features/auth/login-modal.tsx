@@ -17,14 +17,14 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-md border border-[color:var(--border-strong)] bg-[color:var(--background-popover)] px-8 py-7 shadow-[0_16px_60px_rgba(0,0,0,0.55)]"
+        className="max-w-md border border-border bg-popover px-8 py-7 shadow-[0_16px_60px_rgba(0,0,0,0.55)]"
       >
         <div className="sr-only">
           <DialogTitle>Create an account</DialogTitle>
           <DialogDescription>Sign in with Google to continue to Ascoor Studio.</DialogDescription>
         </div>
         <div className="space-y-4 text-center">
-          <h2 className="text-xl font-semibold text-[color:var(--text-primary)]">
+          <h2 className="text-xl font-semibold text-foreground">
             Create an account
           </h2>
           <Button variant="default" onClick={() => signInWithGoogle()}>

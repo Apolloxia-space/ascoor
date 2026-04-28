@@ -26,16 +26,16 @@ export function CodeDialog({ open, onOpenChange, generatedCode }: CodeDialogProp
           <DialogTitle>Generated JavaScript Code</DialogTitle>
           <DialogDescription>Copy-ready three.js snippet.</DialogDescription>
         </DialogHeader>
-        <div className="relative m-4 rounded-lg bg-[color:var(--background-panel)] p-4 text-xs text-[color:var(--text-primary)]">
+        <div className="relative m-4 rounded-lg bg-card p-4 text-xs text-foreground">
           <Button
             variant="ghost"
             size="sm"
-            className="absolute right-3 top-3 h-8 px-2 text-xs text-[color:var(--text-secondary)]"
+            className="absolute right-3 top-3 h-8 px-2 text-xs text-muted-foreground"
             onClick={() => navigator.clipboard?.writeText(generatedCode)}
           >
             <Copy className="size-3.5" /> Copy
           </Button>
-          <pre className="whitespace-pre-wrap font-mono leading-5 text-[color:var(--text-primary)]">
+          <pre className="whitespace-pre-wrap font-mono leading-5 text-foreground">
             {generatedCode}
           </pre>
         </div>

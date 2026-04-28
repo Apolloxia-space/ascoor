@@ -650,7 +650,7 @@ export function StudioPage() {
     'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground';
 
   if (status !== 'authenticated') {
-    return <div className="min-h-screen bg-[color:var(--background-base)]" />;
+    return <div className="min-h-screen" />;
   }
 
   return (
@@ -909,7 +909,7 @@ export function StudioPage() {
             onSelectProject={handleSelectProject}
           />
         ) : (
-          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible bg-[color:var(--background-panel)]/80 md:flex-row">
+          <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible md:flex-row">
             <section className="flex min-h-0 flex-1 min-w-0 overflow-hidden">
               <div
                 className="relative flex min-h-0 flex-1 min-w-0"
@@ -949,7 +949,7 @@ export function StudioPage() {
                 {!chatPanelOpen ? (
                   <button
                     type="button"
-                    className="absolute right-0 top-24 z-30 hidden h-12 w-7 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/86 text-muted-foreground shadow-lg backdrop-blur transition-all hover:w-9 hover:bg-background hover:text-foreground md:flex"
+                    className="absolute right-0 top-24 z-30 hidden h-12 w-7 items-center justify-center rounded-l-lg border border-r-0 shadow-lg backdrop-blur transition-all hover:w-9 md:flex"
                     onClick={toggleChatPanel}
                     aria-label="Show activity panel"
                     aria-expanded={chatPanelOpen}
@@ -960,7 +960,7 @@ export function StudioPage() {
                 {!mobileChatOpen ? (
                   <button
                     type="button"
-                    className="absolute right-0 top-24 z-30 flex h-12 w-8 items-center justify-center rounded-l-lg border border-r-0 border-border/80 bg-background/88 text-muted-foreground shadow-lg backdrop-blur md:hidden"
+                    className="absolute right-0 top-24 z-30 flex h-12 w-8 items-center justify-center rounded-l-lg border border-r-0 shadow-lg backdrop-blur md:hidden"
                     onClick={() => {
                       setRightPanelMode('create');
                       setMobileChatOpen(true);

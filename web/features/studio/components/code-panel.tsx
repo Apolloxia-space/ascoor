@@ -48,11 +48,11 @@ export function CodePanel({
   const displayLines = hasFile ? codeLines : [];
 
   return (
-    <div className="flex w-1/2 min-h-0 min-w-[420px] flex-col bg-[color:var(--background-panel)]/80 text-[color:var(--text-primary)]">
+    <div className="flex w-1/2 min-h-0 min-w-[420px] flex-col bg-card/80 text-foreground">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <div className="flex items-center gap-2">
           <SquareMenu className="size-4 text-[color:var(--accent-emphasis)]" />
-          <span className="text-sm font-medium text-[color:var(--text-primary)]">
+          <span className="text-sm font-medium text-foreground">
             {fileName ?? 'No pack selected'}
           </span>
         </div>
@@ -77,7 +77,7 @@ export function CodePanel({
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-h-0 flex-1 overflow-auto p-4">
           {hasFile ? (
-            <pre className="space-y-1.5 font-mono text-sm text-[color:var(--text-secondary)]">
+            <pre className="space-y-1.5 font-mono text-sm text-muted-foreground">
               {displayLines.map((line) => (
                 <div
                   key={line.number}
@@ -89,8 +89,8 @@ export function CodePanel({
                   className={cn(
                     'grid grid-cols-[40px_1fr] items-start gap-3 rounded-md px-2 py-1 transition-colors',
                     highlightedLine === line.number
-                      ? 'bg-[color:var(--status-danger)]/15'
-                      : 'hover:bg-[color:var(--background-highlight)]/50',
+                      ? 'bg-destructive/15'
+                      : 'hover:bg-muted/50',
                   )}
                   onClick={() => onSelectLine(line.number)}
                   onKeyDown={(event) => {
@@ -102,7 +102,7 @@ export function CodePanel({
                 >
                   <span
                     className={cn(
-                      'text-right text-xs text-[color:var(--text-muted)]',
+                      'text-right text-xs text-muted-foreground',
                       highlightedLine === line.number && 'text-primary font-semibold',
                     )}
                   >
@@ -111,7 +111,7 @@ export function CodePanel({
                   <code
                     className={cn(
                       'block whitespace-pre text-left',
-                      line.isError && 'text-[color:var(--text-primary)]',
+                      line.isError && 'text-foreground',
                     )}
                     style={line.indent ? { paddingLeft: `${line.indent * 1.25}rem` } : undefined}
                   >
@@ -129,11 +129,11 @@ export function CodePanel({
       </div>
 
       {errorConsoleOpen ? (
-        <div className="border-t border-white/10 bg-[color:var(--status-danger)]/15">
+        <div className="border-t border-white/10 bg-destructive/15">
           <div className="flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="size-4 text-[color:var(--status-danger)]" />
-              <span className="text-sm font-medium text-[color:var(--text-primary)]">
+              <AlertTriangle className="size-4 text-destructive" />
+              <span className="text-sm font-medium text-foreground">
                 Error Console
               </span>
             </div>
@@ -141,7 +141,7 @@ export function CodePanel({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2 text-xs text-[color:var(--text-secondary)]"
+                className="h-8 px-2 text-xs text-muted-foreground"
                 onClick={onClearHighlight}
               >
                 Clear
@@ -160,7 +160,7 @@ export function CodePanel({
             <div
               role="button"
               tabIndex={0}
-              className="cursor-pointer rounded-lg bg-[color:var(--status-danger)]/15 px-3 py-2 font-mono text-xs text-[color:var(--status-danger)] hover:bg-[color:var(--status-danger)]/20"
+              className="cursor-pointer rounded-lg bg-destructive/15 px-3 py-2 font-mono text-xs text-destructive hover:bg-destructive/20"
               onClick={() => onSelectLine(errorSummary.line)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -182,11 +182,11 @@ export function CodePanel({
       ) : (
         <button
           type="button"
-          className="flex items-center justify-between border-t border-white/10 px-3 py-2 text-left text-sm text-[color:var(--text-secondary)] hover:bg-white/5"
+          className="flex items-center justify-between border-t border-white/10 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-white/5"
           onClick={() => onErrorConsoleChange(true)}
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="size-4 text-[color:var(--status-danger)]" />
+            <AlertTriangle className="size-4 text-destructive" />
             <span>Error Console</span>
           </div>
           <ChevronsUpDown className="size-4 text-muted-foreground" />
@@ -194,7 +194,7 @@ export function CodePanel({
       )}
 
       <div className="flex items-center justify-end gap-2 border-t border-white/10 px-3 py-3">
-        <Button variant="ghost" className="gap-2 text-[color:var(--text-secondary)]">
+        <Button variant="ghost" className="gap-2 text-muted-foreground">
           <Save className="size-4" /> Save
         </Button>
         <Button className="gap-2" onClick={onRun}>

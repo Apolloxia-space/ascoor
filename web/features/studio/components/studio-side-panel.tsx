@@ -139,7 +139,7 @@ export function StudioSidePanel({
             className="absolute left-0 top-24 z-30 h-12 w-8 rounded-r-lg border border-l-0 border-border/80 bg-background/88 text-muted-foreground shadow-lg backdrop-blur hover:bg-background hover:text-foreground"
             onClick={onToggle}
           >
-            <span className="sr-only">Hide activity panel</span>
+            <span className="sr-only">Hide panel</span>
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"

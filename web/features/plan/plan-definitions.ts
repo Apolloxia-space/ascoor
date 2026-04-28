@@ -16,7 +16,7 @@ export const planDefinitions = {
     billing: 'per month',
     priceNote: 'No card required',
     features: [
-      '5 monthly credits',
+      '10 monthly credits',
       '1 concurrent pack generation',
     ],
     limitResetNote: '* Credits reset monthly (UTC). 1 completed asset uses 1 credit.',

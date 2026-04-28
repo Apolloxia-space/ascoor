@@ -137,7 +137,7 @@ const WorkspaceSection = ({
               <button
                 type="button"
                 key={project.id}
-                className="flex w-full items-start gap-3 rounded-lg border border-border/70 bg-background/70 px-4 py-3 text-left transition-colors hover:bg-accent/40"
+                className="flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors hover:bg-accent/40"
                 onClick={() => onSelectProject(project.id, project.name)}
               >
                 <div className="mt-0.5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/70 bg-muted text-muted-foreground">
@@ -298,7 +298,7 @@ export function StudioHome({
 
   if (!projectsLoading && sortedProjects.length === 0) {
     return (
-      <main className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto bg-[color:var(--background-panel)]/80 px-4 py-8 md:px-6">
+      <main className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-8 md:px-6">
         <div className="flex w-full max-w-3xl flex-col items-start gap-5">
           <div className="space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
@@ -330,7 +330,7 @@ export function StudioHome({
   }
 
   return (
-    <main className="flex min-h-0 flex-1 justify-center overflow-y-auto bg-[color:var(--background-panel)]/80 px-4 py-6 md:px-6 md:py-8">
+    <main className="flex min-h-0 flex-1 justify-center overflow-y-auto px-4 py-6 md:px-6 md:py-8">
       <div className="flex w-full max-w-6xl min-h-0 flex-col gap-8">
         <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">

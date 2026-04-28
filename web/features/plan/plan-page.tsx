@@ -169,7 +169,7 @@ export function PlanPage() {
   };
 
   if (authStatus !== 'authenticated') {
-    return <div className="min-h-screen bg-[color:var(--background-base)]" />;
+    return <div className="min-h-screen bg-background" />;
   }
 
   return (

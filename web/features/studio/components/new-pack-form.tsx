@@ -511,7 +511,7 @@ export function NewPackForm({
         {!isPageLayout ? (
           <div className="shrink-0 border-b border-border/70 px-6 py-5">
             <h2 className="text-lg font-semibold text-foreground">New Pack</h2>
-            <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+            <p className="mt-1 text-sm text-muted-foreground">
               Start from a proven pack shape, then add optional direction.
             </p>
           </div>
@@ -525,7 +525,7 @@ export function NewPackForm({
             <section className={cn('space-y-2', isPageLayout && 'px-1')}>
               <div className="space-y-1">
                 <p className="text-base font-medium text-foreground">Start from an example</p>
-                <p className="text-xs text-[color:var(--text-secondary)]">
+                <p className="text-xs text-muted-foreground">
                   Pick a preset, then adjust the pack settings if needed.
                 </p>
               </div>
@@ -553,7 +553,7 @@ export function NewPackForm({
                     <p className="truncate text-sm font-medium text-foreground">
                       {selectedPresetOption?.label ?? 'Select an example'}
                     </p>
-                    <p className="truncate text-xs text-[color:var(--text-secondary)]">
+                    <p className="truncate text-xs text-muted-foreground">
                       {selectedPresetOption?.group}
                       {selectedPresetOption?.description
                         ? ` • ${selectedPresetOption.description}`
@@ -561,14 +561,14 @@ export function NewPackForm({
                     </p>
                   </div>
                 </div>
-                <span className="shrink-0 text-xs text-[color:var(--text-secondary)]">Browse all</span>
+                <span className="shrink-0 text-xs text-muted-foreground">Browse all</span>
               </button>
             </section>
 
             <section className={cn('space-y-2', isPageLayout && 'px-1')}>
               <div className="space-y-1">
                 <p className="text-base font-medium text-foreground">Theme</p>
-                <p className="text-xs text-[color:var(--text-secondary)]">
+                <p className="text-xs text-muted-foreground">
                   Choose a base world style, then add your own details below.
                 </p>
               </div>
@@ -596,7 +596,7 @@ export function NewPackForm({
                     <p className="truncate text-sm font-medium text-foreground">
                       {selectedThemeOption?.label ?? 'Select a theme'}
                     </p>
-                    <p className="truncate text-xs text-[color:var(--text-secondary)]">
+                    <p className="truncate text-xs text-muted-foreground">
                       {selectedThemeOption?.group}
                       {selectedThemeOption?.description
                         ? ` • ${selectedThemeOption.description}`
@@ -604,14 +604,14 @@ export function NewPackForm({
                     </p>
                   </div>
                 </div>
-                <span className="shrink-0 text-xs text-[color:var(--text-secondary)]">Browse all</span>
+                <span className="shrink-0 text-xs text-muted-foreground">Browse all</span>
               </button>
             </section>
 
             <section className={cn('space-y-2', isPageLayout && 'px-1')}>
               <div className="space-y-1">
                 <p className="text-base font-medium text-foreground">What are you making?</p>
-                <p className="text-xs text-[color:var(--text-secondary)]">
+                <p className="text-xs text-muted-foreground">
                   Choose the kind of asset set you want to generate.
                 </p>
               </div>
@@ -625,14 +625,14 @@ export function NewPackForm({
                 disabled={isBusy}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-[color:var(--background-highlight)] text-[color:var(--text-secondary)]">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-muted text-muted-foreground">
                     {selectedPackTypeOption?.icon}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
                       {selectedPackTypeOption?.label ?? 'Select a category'}
                     </p>
-                    <p className="truncate text-xs text-[color:var(--text-secondary)]">
+                    <p className="truncate text-xs text-muted-foreground">
                       {selectedPackTypeOption?.group}
                       {selectedPackTypeOption?.description
                         ? ` • ${selectedPackTypeOption.description}`
@@ -640,7 +640,7 @@ export function NewPackForm({
                     </p>
                   </div>
                 </div>
-                <span className="shrink-0 text-xs text-[color:var(--text-secondary)]">Browse all</span>
+                <span className="shrink-0 text-xs text-muted-foreground">Browse all</span>
               </button>
             </section>
 
@@ -661,7 +661,7 @@ export function NewPackForm({
                     disabled={isBusy}
                   >
                     <p className="text-sm font-medium text-foreground">{option.label}</p>
-                    <p className="mt-1 text-xs text-[color:var(--text-secondary)]">{option.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
                   </button>
                 ))}
               </div>
@@ -672,7 +672,7 @@ export function NewPackForm({
               <div className="flex h-11 w-full max-w-xs items-center rounded-md border border-border/70 bg-background">
                 <button
                   type="button"
-                  className="flex h-full w-12 items-center justify-center text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--background-highlight)] hover:text-[color:var(--text-primary)] disabled:opacity-50"
+                  className="flex h-full w-12 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
                   onClick={() =>
                     handleChangeAssetCount(
                       Math.max(
@@ -691,7 +691,7 @@ export function NewPackForm({
                 </div>
                 <button
                   type="button"
-                  className="flex h-full w-12 items-center justify-center text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--background-highlight)] hover:text-[color:var(--text-primary)] disabled:opacity-50"
+                  className="flex h-full w-12 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
                   onClick={() =>
                     handleChangeAssetCount(
                       Math.min(
@@ -710,7 +710,7 @@ export function NewPackForm({
                   <Plus className="size-4" />
                 </button>
               </div>
-              <p className="text-xs text-[color:var(--text-secondary)]">
+              <p className="text-xs text-muted-foreground">
                 This pack will use {requiredCredits} credits.
                 {remainingCredits !== undefined
                   ? ` ${remainingCredits} credits remaining this month.`
@@ -721,7 +721,7 @@ export function NewPackForm({
             <section className={cn('space-y-2', isPageLayout && 'px-1')}>
               <div className="space-y-1">
                 <p className="text-base font-medium text-foreground">Additional direction</p>
-                <p className="text-xs text-[color:var(--text-secondary)]">
+                <p className="text-xs text-muted-foreground">
                   Optional. Add specific props, materials, or mood notes.
                 </p>
               </div>
@@ -737,7 +737,7 @@ export function NewPackForm({
                   maxLength={ADDITIONAL_DIRECTION_MAX_CHARS}
                 />
                 <div className="mt-2 flex items-center justify-between gap-3">
-                  <p className="text-xs text-[color:var(--text-secondary)]">
+                  <p className="text-xs text-muted-foreground">
                     {notesInput.length}/{ADDITIONAL_DIRECTION_MAX_CHARS}
                   </p>
                 </div>
@@ -748,7 +748,7 @@ export function NewPackForm({
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-base font-medium text-foreground">Generated prompt</p>
-                  <p className="text-xs text-[color:var(--text-secondary)]">
+                  <p className="text-xs text-muted-foreground">
                     This is the exact prompt that will be sent for generation.
                   </p>
                 </div>
@@ -763,7 +763,7 @@ export function NewPackForm({
                   {promptCopied ? 'Copied' : 'Copy'}
                 </Button>
               </div>
-              <div className="max-h-56 overflow-y-auto rounded-md border border-border/70 bg-[color:var(--background-highlight)] px-3 py-3">
+              <div className="max-h-56 overflow-y-auto rounded-md border border-border/70 bg-muted px-3 py-3">
                 <pre className="whitespace-pre-wrap break-words text-xs leading-5 text-foreground">
                   {generatedPrompt}
                 </pre>
@@ -813,8 +813,8 @@ export function NewPackForm({
                       className={cn(
                         'shrink-0 rounded-md px-3 py-2 text-left text-sm transition-colors',
                         !normalizedPresetSearch && group === activePresetGroup
-                          ? 'bg-[color:var(--background-highlight)] text-[color:var(--text-primary)]'
-                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--background-highlight)] hover:text-[color:var(--text-primary)]',
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                       )}
                       onClick={() => {
                         setActivePresetGroup(group);
@@ -840,7 +840,7 @@ export function NewPackForm({
                     return (
                       <div key={option.id} className="md:col-span-1">
                         {showGroupLabel ? (
-                          <div className="pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--text-secondary)] md:col-span-2">
+                          <div className="pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground md:col-span-2">
                             {option.group}
                           </div>
                         ) : null}
@@ -873,10 +873,10 @@ export function NewPackForm({
                           ) : null}
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-foreground">{option.label}</div>
-                            <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                            <div className="mt-1 text-xs text-muted-foreground">
                               {option.description}
                             </div>
-                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-secondary)]">
+                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                               {option.group}
                             </div>
                           </div>
@@ -889,7 +889,7 @@ export function NewPackForm({
                   })}
                 </div>
                 {(normalizedPresetSearch ? filteredPresetOptions.length === 0 : false) ? (
-                  <div className="py-10 text-center text-sm text-[color:var(--text-secondary)]">
+                  <div className="py-10 text-center text-sm text-muted-foreground">
                     No matching example packs found.
                   </div>
                 ) : null}
@@ -925,8 +925,8 @@ export function NewPackForm({
                       className={cn(
                         'shrink-0 rounded-md px-3 py-2 text-left text-sm transition-colors',
                         !normalizedThemeSearch && group === activeThemeGroup
-                          ? 'bg-[color:var(--background-highlight)] text-[color:var(--text-primary)]'
-                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--background-highlight)] hover:text-[color:var(--text-primary)]',
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                       )}
                       onClick={() => {
                         setActiveThemeGroup(group);
@@ -952,7 +952,7 @@ export function NewPackForm({
                     return (
                       <div key={option.id} className="md:col-span-1">
                         {showGroupLabel ? (
-                          <div className="pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--text-secondary)] md:col-span-2">
+                          <div className="pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground md:col-span-2">
                             {option.group}
                           </div>
                         ) : null}
@@ -982,10 +982,10 @@ export function NewPackForm({
                           ) : null}
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-foreground">{option.label}</div>
-                            <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                            <div className="mt-1 text-xs text-muted-foreground">
                               {option.description}
                             </div>
-                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-secondary)]">
+                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                               {option.group}
                             </div>
                           </div>
@@ -998,7 +998,7 @@ export function NewPackForm({
                   })}
                 </div>
                 {(normalizedThemeSearch ? filteredThemeOptions.length === 0 : false) ? (
-                  <div className="py-10 text-center text-sm text-[color:var(--text-secondary)]">
+                  <div className="py-10 text-center text-sm text-muted-foreground">
                     No matching themes found.
                   </div>
                 ) : null}
@@ -1034,8 +1034,8 @@ export function NewPackForm({
                       className={cn(
                         'shrink-0 rounded-md px-3 py-2 text-left text-sm transition-colors',
                         !normalizedPackTypeSearch && group === activePackTypeGroup
-                          ? 'bg-[color:var(--background-highlight)] text-[color:var(--text-primary)]'
-                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--background-highlight)] hover:text-[color:var(--text-primary)]',
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                       )}
                       onClick={() => {
                         setActivePackTypeGroup(group);
@@ -1061,7 +1061,7 @@ export function NewPackForm({
                     return (
                       <div key={option.id} className="md:col-span-1">
                         {showGroupLabel ? (
-                          <div className="pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--text-secondary)] md:col-span-2">
+                          <div className="pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground md:col-span-2">
                             {option.group}
                           </div>
                         ) : null}
@@ -1079,15 +1079,15 @@ export function NewPackForm({
                             setPackTypePickerOpen(false);
                           }}
                         >
-                          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-[color:var(--background-highlight)] text-[color:var(--text-secondary)]">
+                          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-muted text-muted-foreground">
                             {option.icon}
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-foreground">{option.label}</div>
-                            <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                            <div className="mt-1 text-xs text-muted-foreground">
                               {option.description}
                             </div>
-                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-secondary)]">
+                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                               {option.group}
                             </div>
                           </div>
@@ -1100,7 +1100,7 @@ export function NewPackForm({
                   })}
                 </div>
                 {(normalizedPackTypeSearch ? filteredPackTypeOptions.length === 0 : false) ? (
-                  <div className="py-10 text-center text-sm text-[color:var(--text-secondary)]">
+                  <div className="py-10 text-center text-sm text-muted-foreground">
                     No matching categories found.
                   </div>
                 ) : null}

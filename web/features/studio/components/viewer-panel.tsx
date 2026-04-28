@@ -374,11 +374,9 @@ export function ViewerPanel({
       loadError ||
       parseError ||
       isLoading ||
-      projectThumbnailAssetUri
+      projectThumbnailAssetUri ||
+      !firstPartId
     ) {
-      return;
-    }
-    if (!firstPartId || activePartId !== firstPartId) {
       return;
     }
 
@@ -391,14 +389,25 @@ export function ViewerPanel({
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void (async () => {
+        const previousPartId = activePartId;
         try {
+          viewerRef.current?.previewPart(firstPartId);
+          await new Promise<void>((resolve) => {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => resolve());
+            });
+          });
+          if (cancelled) return;
           const blob = await viewerRef.current?.captureThumbnail();
           if (!blob || cancelled) return;
           await uploadThumbnailMutation.mutateAsync({ projectId, data: blob });
-          if (cancelled) return;
         } catch {
           if (!cancelled) {
             uploadedThumbnailRef.current = null;
+          }
+        } finally {
+          if (!cancelled && previousPartId && previousPartId !== firstPartId) {
+            viewerRef.current?.previewPart(previousPartId);
           }
         }
       })();
@@ -416,10 +425,9 @@ export function ViewerPanel({
     loadError,
     parseError,
     projectThumbnailAssetUri,
-    parts.length,
+    parts,
     renderSucceeded,
     uploadThumbnailMutation,
-    activePartId,
   ]);
 
   const buildDownloadBaseName = (name: string | null | undefined) => {
