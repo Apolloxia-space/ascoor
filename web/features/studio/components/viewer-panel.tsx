@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Keyboard,
+  Loader2,
 } from 'lucide-react';
 
 import { viewModes } from '@/mock/studio';
@@ -183,6 +184,57 @@ export function ViewerPanel({
       loadError ||
       (previewStatus === 'failed' && !isLoading && !modelCode && !modelData),
   );
+  const canGenerateThumbnail = Boolean(
+    designId &&
+      designData?.projectId &&
+      renderSucceeded &&
+      !loadError &&
+      !parseError &&
+      !isLoading &&
+      parts[0]?.id,
+  );
+
+  const captureAndUploadThumbnail = useCallback(async () => {
+    const projectId = designData?.projectId ?? null;
+    const firstPartId = parts[0]?.id ?? null;
+    if (!designId || !projectId || !firstPartId) return false;
+    if (uploadThumbnailMutation.isPending) return false;
+
+    const previousPartId = activePartId;
+    try {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        viewerRef.current?.previewPart(firstPartId);
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve());
+          });
+        });
+
+        const blob = await viewerRef.current?.captureThumbnail();
+        if (blob) {
+          await uploadThumbnailMutation.mutateAsync({ projectId, data: blob });
+          return true;
+        }
+
+        await new Promise<void>((resolve) => {
+          window.setTimeout(() => resolve(), 180);
+        });
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      if (previousPartId && previousPartId !== firstPartId) {
+        viewerRef.current?.previewPart(previousPartId);
+      }
+    }
+  }, [
+    activePartId,
+    designData?.projectId,
+    designId,
+    parts,
+    uploadThumbnailMutation,
+  ]);
 
   const promptContent = useMemo(() => {
     if (!designId) {
@@ -365,17 +417,9 @@ export function ViewerPanel({
   ]);
 
   useEffect(() => {
-    const projectId = designData?.projectId ?? null;
-    const firstPartId = parts[0]?.id ?? null;
     if (
-      !designId ||
-      !projectId ||
-      !renderSucceeded ||
-      loadError ||
-      parseError ||
-      isLoading ||
-      projectThumbnailAssetUri ||
-      !firstPartId
+      !canGenerateThumbnail ||
+      projectThumbnailAssetUri
     ) {
       return;
     }
@@ -387,48 +431,45 @@ export function ViewerPanel({
     uploadedThumbnailRef.current = uploadKey;
 
     let cancelled = false;
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        const previousPartId = activePartId;
-        try {
-          viewerRef.current?.previewPart(firstPartId);
-          await new Promise<void>((resolve) => {
-            window.requestAnimationFrame(() => {
-              window.requestAnimationFrame(() => resolve());
-            });
-          });
-          if (cancelled) return;
-          const blob = await viewerRef.current?.captureThumbnail();
-          if (!blob || cancelled) return;
-          await uploadThumbnailMutation.mutateAsync({ projectId, data: blob });
-        } catch {
-          if (!cancelled) {
+    let frameOne = 0;
+    let frameTwo = 0;
+
+    frameOne = window.requestAnimationFrame(() => {
+      frameTwo = window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        void captureAndUploadThumbnail().then((success) => {
+          if (!success) {
             uploadedThumbnailRef.current = null;
           }
-        } finally {
-          if (!cancelled && previousPartId && previousPartId !== firstPartId) {
-            viewerRef.current?.previewPart(previousPartId);
-          }
-        }
-      })();
-    }, 220);
+        });
+      });
+    });
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      if (frameOne) window.cancelAnimationFrame(frameOne);
+      if (frameTwo) window.cancelAnimationFrame(frameTwo);
     };
   }, [
-    activePartId,
-    designData?.projectId,
+    canGenerateThumbnail,
+    captureAndUploadThumbnail,
     designId,
-    isLoading,
-    loadError,
-    parseError,
     projectThumbnailAssetUri,
-    parts,
-    renderSucceeded,
-    uploadThumbnailMutation,
   ]);
+
+  const handleRetryThumbnail = useCallback(async () => {
+    if (!canGenerateThumbnail) {
+      toast.warning('3D preview is not ready yet.');
+      return;
+    }
+    uploadedThumbnailRef.current = null;
+    const success = await captureAndUploadThumbnail();
+    if (success) {
+      toast.success('Thumbnail updated.');
+      return;
+    }
+    toast.error('Failed to create thumbnail.');
+  }, [canGenerateThumbnail, captureAndUploadThumbnail]);
 
   const buildDownloadBaseName = (name: string | null | undefined) => {
     const trimmed = name?.trim();
@@ -586,7 +627,25 @@ export function ViewerPanel({
       </div>
 
       <div className="absolute right-4 top-4 z-10">
-        <div className="flex divide-x divide-border/60 overflow-hidden rounded-lg border border-border/70 bg-background/70 backdrop-blur">
+        <div className="flex items-center gap-2">
+          {!projectThumbnailAssetUri && canGenerateThumbnail ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="rounded-lg border border-border/70 bg-background/70 backdrop-blur"
+              onClick={() => {
+                void handleRetryThumbnail();
+              }}
+              disabled={uploadThumbnailMutation.isPending}
+            >
+              {uploadThumbnailMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              Retry thumbnail
+            </Button>
+          ) : null}
+          <div className="flex divide-x divide-border/60 overflow-hidden rounded-lg border border-border/70 bg-background/70 backdrop-blur">
           <IconButton
             label="Keyboard shortcuts"
             onClick={() => onShortcutHelpOpenChange?.(!shortcutHelpOpen)}
@@ -605,6 +664,7 @@ export function ViewerPanel({
             <BoxSelect className="size-4" />
           </IconButton>
           */}
+          </div>
         </div>
       </div>
 
