@@ -118,3 +118,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes studio-cta-shine {
+  0%,
+  35% {
+    transform: translateX(0) skewX(-18deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  80%,
+  100% {
+    transform: translateX(520%) skewX(-18deg);
+    opacity: 0;
+  }
+}

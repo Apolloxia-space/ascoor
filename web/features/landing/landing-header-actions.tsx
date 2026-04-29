@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { useAuthStore } from '@/features/auth/use-auth-store';
 import { signInWithGoogle } from '@/features/auth/use-auth-init';
+import { cn } from '@/shared/lib/utils';
 import { paths } from '@shared/constants/paths';
 import { Button } from '@shared/components/ui/button';
 
@@ -15,10 +16,12 @@ export function LandingHeaderActions() {
 
 type LandingHeaderActionButtonProps = {
   syncLabelWithAuth?: boolean;
+  shine?: boolean;
 };
 
 export function LandingHeaderActionButton({
   syncLabelWithAuth = false,
+  shine = false,
 }: LandingHeaderActionButtonProps) {
   const router = useRouter();
   const { status, user } = useAuthStore();
@@ -43,18 +46,27 @@ export function LandingHeaderActionButton({
 
   return (
     <Button
-      className="h-auto min-w-[104px] rounded-md bg-[#e7a8b0] px-4 py-1.5 font-medium text-[#233226] shadow-[0_12px_24px_rgba(35,50,38,0.08)] hover:bg-[#de959f]"
+      className={cn(
+        'h-auto min-w-[104px] rounded-md bg-[#e7a8b0] px-4 py-1.5 font-medium text-[#233226] shadow-[0_12px_24px_rgba(35,50,38,0.08)] hover:bg-[#de959f]',
+        shine && !isBusy && 'relative overflow-hidden',
+      )}
       type="button"
       onClick={handleCTA}
       disabled={isBusy}
       aria-busy={isBusy}
     >
+      {shine && !isBusy ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 -left-2/3 z-0 w-1/2 animate-[studio-cta-shine_2.2s_ease-in-out_infinite] skew-x-[-18deg] bg-white/80"
+        />
+      ) : null}
       {syncLabelWithAuth && isResolvingAuth ? (
-        <Loader2 className="size-4 animate-spin" />
+        <Loader2 className="relative z-10 size-4 animate-spin" />
       ) : user ? (
-        syncLabelWithAuth ? 'Home' : 'Try Ascoor'
+        <span className="relative z-10">{syncLabelWithAuth ? 'Home' : 'Try Ascoor'}</span>
       ) : (
-        'Try Ascoor'
+        <span className="relative z-10">Try Ascoor</span>
       )}
     </Button>
   );

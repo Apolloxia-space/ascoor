@@ -111,9 +111,9 @@ test('list asset packs throws not found when workspace is not owned', async () =
   );
 });
 
-test('ensureDefaultWorkspace creates default workspace for first login user', async () => {
+test('ensureUser creates user without default workspace for first login user', async () => {
   const gcsRepository = {} as IGcsRepository;
-  let createdWorkspaceName: string | null = null;
+  let workspaceCreateCalled = false;
 
   const workspaceRepository = {
     get: async () => null,
@@ -123,7 +123,7 @@ test('ensureDefaultWorkspace creates default workspace for first login user', as
     updateName: async () => ({ id: 'proj-1', ownerId: 'user-1', name: 'n' }),
     delete: async () => ({ id: 'proj-1', ownerId: 'user-1', name: 'n' }),
     create: async ({ ownerId, name }: { ownerId: string; name: string }) => {
-      createdWorkspaceName = name;
+      workspaceCreateCalled = true;
       return { id: 'proj-default', ownerId, name };
     },
   } as unknown as WorkspaceRepository;
@@ -159,17 +159,17 @@ test('ensureDefaultWorkspace creates default workspace for first login user', as
   } as unknown as UsersUsecase;
 
   const usecase = new WorkspacesUsecase(workspaceRepository, fileRepository, gcsRepository, usersUsecase);
-  await usecase.ensureDefaultWorkspace({
+  await usecase.ensureUser({
     ownerId: 'user-1',
     ownerEmail: 'user-1@example.com',
     ownerName: 'user-1',
   });
 
   assert.equal(userCreated, true);
-  assert.equal(createdWorkspaceName, 'default');
+  assert.equal(workspaceCreateCalled, false);
 });
 
-test('ensureDefaultWorkspace does nothing for existing user', async () => {
+test('ensureUser does nothing for existing user', async () => {
   const gcsRepository = {} as IGcsRepository;
   let createCalled = false;
   let userCreateCalled = false;
@@ -216,7 +216,7 @@ test('ensureDefaultWorkspace does nothing for existing user', async () => {
   } as unknown as UsersUsecase;
 
   const usecase = new WorkspacesUsecase(workspaceRepository, fileRepository, gcsRepository, usersUsecase);
-  await usecase.ensureDefaultWorkspace({ ownerId: 'user-1' });
+  await usecase.ensureUser({ ownerId: 'user-1' });
 
   assert.equal(createCalled, false);
   assert.equal(userCreateCalled, false);

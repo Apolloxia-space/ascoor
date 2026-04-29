@@ -483,7 +483,7 @@ export const useDeleteUser = <TError = ErrorResponse,
     }
     
 /**
- * @summary Bootstrap the authenticated user and create the default workspace.
+ * @summary Bootstrap the authenticated user.
  */
 export type bootstrapUserResponse204 = {
   data: void
@@ -558,7 +558,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type BootstrapUserMutationError = ErrorResponse
 
     /**
- * @summary Bootstrap the authenticated user and create the default workspace.
+ * @summary Bootstrap the authenticated user.
  */
 export const useBootstrapUser = <TError = ErrorResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bootstrapUser>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetcher>}

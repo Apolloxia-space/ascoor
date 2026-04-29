@@ -80,7 +80,14 @@ const WorkspaceSection = ({
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+        <p
+          className={cn(
+            'text-sm text-muted-foreground',
+            variant === 'cards' && 'py-12 text-center',
+          )}
+        >
+          {emptyLabel}
+        </p>
       ) : variant === 'cards' ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map(({ workspace }) => {
@@ -212,13 +219,16 @@ export function StudioHome({
   const thumbnailWorkspaces = useMemo(
     () =>
       sortedWorkspaces.filter(
-        (workspace) => typeof workspace.thumbnailAssetUri === 'string' && workspace.thumbnailAssetUri,
+        (workspace) =>
+          typeof workspace.thumbnailAssetUri === 'string' && workspace.thumbnailAssetUri,
       ),
     [sortedWorkspaces],
   );
   const thumbnailWorkspacesKey = useMemo(
     () =>
-      thumbnailWorkspaces.map((workspace) => `${workspace.id}:${workspace.thumbnailAssetUri ?? ''}`).join('|'),
+      thumbnailWorkspaces
+        .map((workspace) => `${workspace.id}:${workspace.thumbnailAssetUri ?? ''}`)
+        .join('|'),
     [thumbnailWorkspaces],
   );
   const thumbnailWorkspacesSnapshot = useMemo(() => thumbnailWorkspaces, [thumbnailWorkspacesKey]);
@@ -288,45 +298,13 @@ export function StudioHome({
   const continueWorking = sortedWorkspaces
     .filter((workspace) => !excludedWorkspaceIds.has(workspace.id))
     .slice(0, 10);
+  const showAssetPackOnboarding = sortedWorkspaces.length === 0;
 
   const mapSectionItems = (items: Array<WorkspaceResponseData>) =>
     items.map((workspace) => ({
       workspace,
       generationStatus: workspaceGenerationStatuses[workspace.id],
     }));
-
-  if (!workspacesLoading && sortedWorkspaces.length === 0) {
-    return (
-      <main className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-8 md:px-6">
-        <div className="flex w-full max-w-3xl flex-col items-start gap-5">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              Studio
-            </h1>
-            <p className="text-sm text-muted-foreground md:text-base">
-              Create your first asset pack and it will appear here.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" size="lg" className="rounded-lg" onClick={onCreateNewPack}>
-              <Sparkles className="size-4" />
-              Create asset pack
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="rounded-lg"
-              onClick={onOpenWorkspaceManager}
-            >
-              <FolderOpen className="size-4" />
-              Manage workspaces
-            </Button>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="flex min-h-0 flex-1 justify-center overflow-y-auto px-4 py-6 md:px-6 md:py-8">
@@ -338,9 +316,19 @@ export function StudioHome({
             </h1>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" className="rounded-lg" onClick={onCreateNewPack}>
-              <Sparkles className="size-4" />
-              Create asset pack
+            <Button
+              type="button"
+              className={cn('rounded-lg', showAssetPackOnboarding && 'relative overflow-hidden')}
+              onClick={onCreateNewPack}
+            >
+              {showAssetPackOnboarding ? (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 -left-2/3 z-0 w-1/2 animate-[studio-cta-shine_2.2s_ease-in-out_infinite] skew-x-[-18deg] bg-white/80"
+                />
+              ) : null}
+              <Sparkles className="relative z-10 size-4" />
+              <span className="relative z-10">Create asset pack</span>
             </Button>
             <Button
               type="button"
@@ -364,7 +352,11 @@ export function StudioHome({
         <WorkspaceSection
           title="Continue working"
           items={mapSectionItems(continueWorking)}
-          emptyLabel="No completed workspaces yet."
+          emptyLabel={
+            showAssetPackOnboarding
+              ? 'Create your first asset pack.'
+              : 'No completed workspaces yet.'
+          }
           onSelectWorkspace={onSelectWorkspace}
           thumbnailUrls={thumbnailUrls}
           variant="cards"

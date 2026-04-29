@@ -16,13 +16,13 @@ const heroStudioPreviewPath = '/landing/studio-cyberpunk-pack-preview-main-v2026
 const studioPreviewVideoPath = '/landing/video/studio-preview-v20260424-194713.mp4';
 const themeExamplePickerPath =
   '/landing/screenshots/example-picker-sci-fi-futuristic-v20260427-111531.webp';
-const themePickerPath = '/landing/screenshots/theme-picker-fantasy-historical-v20260427-160212.webp';
+const themePickerPath =
+  '/landing/screenshots/theme-picker-fantasy-historical-v20260427-160212.webp';
 const studioHomeGalleryPath =
   '/landing/screenshots/studio-home-continue-working-v20260427-160132.webp';
 const assetCategoryPickerPath =
   '/landing/screenshots/asset-category-picker-transport-transit-v20260427-152254.webp';
-const packCompletedPath =
-  '/landing/screenshots/pack-completed-download-zip-v20260427-152127.webp';
+const packCompletedPath = '/landing/screenshots/pack-completed-download-zip-v20260427-152127.webp';
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -48,16 +48,14 @@ const visualFrames = [
   {
     eyebrow: 'Studio preview',
     title: 'Live pack preview',
-    description:
-      'Preview each asset before export.',
+    description: 'Preview each asset before export.',
     mediaType: 'video',
     src: studioPreviewVideoPath,
   },
   {
     eyebrow: 'Start from an example',
     title: 'Preset picker',
-    description:
-      'Start from a ready-made pack.',
+    description: 'Start from a ready-made pack.',
     mediaType: 'image',
     src: themeExamplePickerPath,
     alt: 'Ascoor example picker showing fantasy and historical pack presets',
@@ -65,8 +63,7 @@ const visualFrames = [
   {
     eyebrow: 'Theme',
     title: 'Theme picker',
-    description:
-      'Choose the right theme from a wide range of styles.',
+    description: 'Choose the right theme from a wide range of styles.',
     mediaType: 'image',
     src: themePickerPath,
     alt: 'Ascoor theme picker showing fantasy and historical themes',
@@ -74,8 +71,7 @@ const visualFrames = [
   {
     eyebrow: 'Asset category',
     title: 'Category picker',
-    description:
-      'Choose the kind of asset pack you want to make.',
+    description: 'Choose the kind of asset pack you want to make.',
     mediaType: 'image',
     src: assetCategoryPickerPath,
     alt: 'Ascoor asset category picker showing transport and transit options',
@@ -83,8 +79,7 @@ const visualFrames = [
   {
     eyebrow: 'Pack completed',
     title: 'Download ZIP',
-    description:
-      'Download the full pack when it is ready.',
+    description: 'Download the full pack when it is ready.',
     mediaType: 'image',
     src: packCompletedPath,
     alt: 'Ascoor completed pack panel showing download ZIP and part list',
@@ -92,8 +87,7 @@ const visualFrames = [
   {
     eyebrow: 'Studio home',
     title: 'Workspace gallery',
-    description:
-      'Save finished packs and come back anytime.',
+    description: 'Save finished packs and come back anytime.',
     mediaType: 'image',
     src: studioHomeGalleryPath,
     alt: 'Ascoor studio home showing recent workspace cards',
@@ -113,7 +107,7 @@ export default function HomePage() {
             </h1>
 
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <LandingHeaderActionButton />
+              <LandingHeaderActionButton shine />
               <a
                 className="inline-flex items-center justify-center rounded-md border border-[#cfe0cf] bg-white px-4 py-2 text-sm font-medium text-[#233226] transition hover:bg-[#f0f6f0]"
                 href={paths.pricing}
@@ -164,9 +158,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-center md:text-left">
-                <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                  Start today
-                </h2>
+                <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Start today</h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-[#5c6f61] md:text-base">
                   Choose a plan and streamline your game workflow. No credit card is required for
                   the free trial.
@@ -189,7 +181,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
         </div>
       </section>
 

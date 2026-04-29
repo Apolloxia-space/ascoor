@@ -105,7 +105,7 @@ paths:
       operationId: bootstrapUser
       tags:
         - users
-      summary: Bootstrap the authenticated user and create the default workspace.
+      summary: Bootstrap the authenticated user.
       responses:
         '204':
           description: User bootstrap completed

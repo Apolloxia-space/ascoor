@@ -44,7 +44,7 @@ export interface ListWorkspacesPaginatedOutput {
   nextCursor: string | null;
 }
 
-export interface EnsureDefaultWorkspaceInput {
+export interface EnsureUserInput {
   ownerId: string;
   ownerEmail?: string | null;
   ownerName?: string | null;
@@ -53,7 +53,6 @@ export interface EnsureDefaultWorkspaceInput {
 const PROJECTS_PAGE_LIMIT_DEFAULT = 20;
 const PROJECTS_PAGE_LIMIT_MAX = 50;
 const PROJECTS_CURSOR_SEPARATOR = '|';
-const DEFAULT_PROJECT_NAME = 'default';
 const MAX_PROJECT_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 
 const encodeWorkspacesCursor = (cursor: WorkspaceListCursor): string =>
@@ -105,7 +104,7 @@ export class WorkspacesUsecase {
     });
   }
 
-  async ensureDefaultWorkspace(input: EnsureDefaultWorkspaceInput): Promise<void> {
+  async ensureUser(input: EnsureUserInput): Promise<void> {
     const existingUser = await this.usersUsecase.get(input.ownerId);
     if (existingUser) {
       return;
@@ -115,11 +114,6 @@ export class WorkspacesUsecase {
       id: input.ownerId,
       email: input.ownerEmail,
       displayName: input.ownerName,
-    });
-
-    await this.workspaceRepository.create({
-      ownerId: input.ownerId,
-      name: DEFAULT_PROJECT_NAME,
     });
   }
 
@@ -245,7 +239,7 @@ export class WorkspacesUsecase {
     };
   }
 
-  private async ensureOwnerExists(input: EnsureDefaultWorkspaceInput): Promise<void> {
+  private async ensureOwnerExists(input: EnsureUserInput): Promise<void> {
     const existingUser = await this.usersUsecase.get(input.ownerId);
     if (existingUser) {
       return;
