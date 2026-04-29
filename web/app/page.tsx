@@ -11,7 +11,7 @@ import { paths } from '@shared/constants/paths';
 
 const pageTitle = 'Generate Game Asset Packs in the Browser';
 const pageDescription =
-  'Ascoor helps you generate prototype game asset packs in the browser, review the result, and export what you need.';
+  'Ascoor helps you generate cohesive prototype game asset packs in the browser, preview each part, and download reusable GLB assets as a ZIP.';
 const heroStudioPreviewPath = '/landing/studio-cyberpunk-pack-preview-main-v20260427-180120.webp';
 const studioPreviewVideoPath = '/landing/video/studio-preview-v20260424-194713.mp4';
 const themeExamplePickerPath =
