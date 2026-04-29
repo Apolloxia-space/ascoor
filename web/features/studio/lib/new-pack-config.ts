@@ -101,7 +101,10 @@ export type PackTypeOption = {
   description: string;
   prompt: string;
   group: string;
+  thumbnailSrc: string;
 };
+
+const buildPackTypeThumbnailSrc = (id: PackType) => `/studio/pack-type-thumbnails/${id}.svg`;
 
 export type PackStyleOption = {
   id: PackStyle;
@@ -363,7 +366,7 @@ export const PACK_THEME_OPTIONS: Array<PackThemeOption> = [
   },
 ];
 
-export const PACK_TYPE_OPTIONS: Array<PackTypeOption> = [
+const PACK_TYPE_OPTION_BASES: Array<Omit<PackTypeOption, 'thumbnailSrc'>> = [
   {
     id: 'street_props',
     label: 'Street items',
@@ -764,6 +767,11 @@ export const PACK_TYPE_OPTIONS: Array<PackTypeOption> = [
       'airfield and hangar assets such as service carts, ladders, cones, fuel drums, maintenance stands, and practical aviation support props',
   },
 ];
+
+export const PACK_TYPE_OPTIONS: Array<PackTypeOption> = PACK_TYPE_OPTION_BASES.map((option) => ({
+  ...option,
+  thumbnailSrc: buildPackTypeThumbnailSrc(option.id),
+}));
 
 export const PACK_STYLE_OPTIONS: Array<PackStyleOption> = [
   {

@@ -81,6 +81,7 @@ type SearchableSelectOption = {
 };
 
 const ADDITIONAL_DIRECTION_MAX_CHARS = 300;
+const isDevelopmentEnvironment = process.env.NODE_ENV === 'development';
 const PACK_TYPE_ICON_BY_ID: Record<PackType, ReactNode> = {
   street_props: <Building2 className="size-4" />,
   interior_props: <Home className="size-4" />,
@@ -625,9 +626,20 @@ export function NewPackForm({
                 disabled={isBusy}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-muted text-muted-foreground">
-                    {selectedPackTypeOption?.icon}
-                  </span>
+                  {selectedPackTypeOption?.thumbnailSrc ? (
+                    <Image
+                      src={selectedPackTypeOption.thumbnailSrc}
+                      alt=""
+                      width={48}
+                      height={48}
+                      sizes="48px"
+                      className="size-12 shrink-0 rounded-sm border border-border/70 bg-muted/40 object-contain"
+                    />
+                  ) : (
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-muted text-muted-foreground">
+                      {selectedPackTypeOption?.icon}
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
                       {selectedPackTypeOption?.label ?? 'Select a category'}
@@ -744,31 +756,33 @@ export function NewPackForm({
               </div>
             </section>
 
-            <section className={cn('space-y-2', isPageLayout && 'px-1')}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-base font-medium text-foreground">Generated prompt</p>
-                  <p className="text-xs text-muted-foreground">
-                    This is the exact prompt that will be sent for generation.
-                  </p>
+            {isDevelopmentEnvironment ? (
+              <section className={cn('space-y-2', isPageLayout && 'px-1')}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-base font-medium text-foreground">Generated prompt</p>
+                    <p className="text-xs text-muted-foreground">
+                      This is the exact prompt that will be sent for generation.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 rounded-lg"
+                    onClick={handleCopyPrompt}
+                  >
+                    {promptCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                    {promptCopied ? 'Copied' : 'Copy'}
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 rounded-lg"
-                  onClick={handleCopyPrompt}
-                >
-                  {promptCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  {promptCopied ? 'Copied' : 'Copy'}
-                </Button>
-              </div>
-              <div className="max-h-56 overflow-y-auto rounded-md border border-border/70 bg-muted px-3 py-3">
-                <pre className="whitespace-pre-wrap break-words text-xs leading-5 text-foreground">
-                  {generatedPrompt}
-                </pre>
-              </div>
-            </section>
+                <div className="max-h-56 overflow-y-auto rounded-md border border-border/70 bg-muted px-3 py-3">
+                  <pre className="whitespace-pre-wrap break-words text-xs leading-5 text-foreground">
+                    {generatedPrompt}
+                  </pre>
+                </div>
+              </section>
+            ) : null}
 
             <div className={cn('flex items-center justify-end', isPageLayout && 'px-1')}>
               <Button
@@ -876,9 +890,6 @@ export function NewPackForm({
                             <div className="mt-1 text-xs text-muted-foreground">
                               {option.description}
                             </div>
-                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                              {option.group}
-                            </div>
                           </div>
                           {option.id === selectedPresetId ? (
                             <Check className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -985,9 +996,6 @@ export function NewPackForm({
                             <div className="mt-1 text-xs text-muted-foreground">
                               {option.description}
                             </div>
-                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                              {option.group}
-                            </div>
                           </div>
                           {option.id === selectedTheme ? (
                             <Check className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -1079,16 +1087,24 @@ export function NewPackForm({
                             setPackTypePickerOpen(false);
                           }}
                         >
-                          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-muted text-muted-foreground">
-                            {option.icon}
-                          </span>
+                          {option.thumbnailSrc ? (
+                            <Image
+                              src={option.thumbnailSrc}
+                              alt=""
+                              width={48}
+                              height={48}
+                              sizes="48px"
+                              className="mt-0.5 size-12 shrink-0 rounded-sm border border-border/70 bg-muted/40 object-contain"
+                            />
+                          ) : (
+                            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-muted text-muted-foreground">
+                              {option.icon}
+                            </span>
+                          )}
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-foreground">{option.label}</div>
                             <div className="mt-1 text-xs text-muted-foreground">
                               {option.description}
-                            </div>
-                            <div className="mt-2 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                              {option.group}
                             </div>
                           </div>
                           {option.id === selectedPackType ? (

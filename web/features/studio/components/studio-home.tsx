@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRight, FolderOpen, Loader2, Sparkles } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { WorkspaceThumbnailPlaceholder } from '@/shared/components/ui/workspace-thumbnail-placeholder';
 import { cn } from '@/shared/lib/utils';
 import { getWorkspaceThumbnailContent } from '@/shared/api/generated/client';
 import type { WorkspaceResponseData } from '@/shared/api/generated/schemas';
@@ -104,9 +105,7 @@ const WorkspaceSection = ({
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                      <FolderOpen className="size-5" />
-                    </div>
+                    <WorkspaceThumbnailPlaceholder />
                   )}
                 </div>
                 <div className="pt-2">
@@ -151,7 +150,7 @@ const WorkspaceSection = ({
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <FolderOpen className="size-4" />
+                    <WorkspaceThumbnailPlaceholder iconClassName="h-4 w-4" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">

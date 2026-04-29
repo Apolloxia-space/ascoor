@@ -170,10 +170,6 @@ export function StudioPage() {
     workspacesQuery.data?.status === 200 ? workspacesQuery.data.data.items : [];
   const assetPacks = assetPacksQuery.data?.status === 200 ? assetPacksQuery.data.data.assetPacks : [];
   const latestAssetPack = useMemo(() => getLatestAssetPack(assetPacks), [assetPacks]);
-  const currentWorkspace = useMemo(
-    () => workspaceItems.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
-    [activeWorkspaceId, workspaceItems],
-  );
   const workspaceGenerationStatuses = useMemo(
     () => getWorkspaceGenerationStatuses(pendingPackGenerations),
     [pendingPackGenerations],
@@ -929,7 +925,10 @@ export function StudioPage() {
                   }}
                   assetPackId={selectedAssetPackId}
                   assetPackName={selectedAssetPackName}
-                  workspaceThumbnailAssetUri={currentWorkspace?.thumbnailAssetUri ?? null}
+                  workspaceThumbnailAssetUri={
+                    workspaceItems.find((workspace) => workspace.id === activeWorkspaceId)
+                      ?.thumbnailAssetUri ?? null
+                  }
                   traceId={selectedAssetPackTraceId}
                   shortcutHelpOpen={shortcutHelpOpen}
                   onShortcutHelpOpenChange={setShortcutHelpOpen}

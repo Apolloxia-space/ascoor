@@ -23,6 +23,8 @@ import { parseStructuredPackPrompt } from '../lib/new-pack-config';
 import { cn } from '@shared/lib/utils';
 export { NewPackDialog } from './new-pack-dialog';
 
+const isDevelopmentEnvironment = process.env.NODE_ENV === 'development';
+
 type ChatPanelProps = {
   open: boolean;
   variant?: 'desktop' | 'mobile';
@@ -366,7 +368,7 @@ function GenerationLog({
                         <p>{structuredPrompt.additionalDirection}</p>
                       </div>
                     ) : null}
-                    {pendingPackGeneration.userPrompt ? (
+                    {isDevelopmentEnvironment && pendingPackGeneration.userPrompt ? (
                       <details className="rounded-md border border-border/70 bg-background px-2 py-2">
                         <summary className="cursor-pointer list-none text-xs text-muted-foreground">
                           Show prompt
@@ -378,7 +380,8 @@ function GenerationLog({
                     ) : null}
                   </div>
                 </details>
-              ) : pendingPackGeneration.userPrompt || pendingPackGeneration.promptPreview ? (
+              ) : isDevelopmentEnvironment &&
+                (pendingPackGeneration.userPrompt || pendingPackGeneration.promptPreview) ? (
                 <details className="rounded-lg border border-border/70 bg-card/60 px-3 py-3">
                   <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
                     Prompt

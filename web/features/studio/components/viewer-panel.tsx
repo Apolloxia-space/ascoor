@@ -111,7 +111,6 @@ export function ViewerPanel({
   const [viewerErrorDialogOpen, setViewerErrorDialogOpen] = useState(false);
   const viewerRef = useRef<ThreeViewerHandle | null>(null);
   const reportedPreviewResultRef = useRef<string | null>(null);
-  const uploadedThumbnailRef = useRef<string | null>(null);
   const [renderSucceeded, setRenderSucceeded] = useState(false);
   const uploadThumbnailMutation = useUpdateWorkspaceThumbnailContent({
     mutation: {
@@ -268,7 +267,6 @@ export function ViewerPanel({
     setRenderSucceeded(false);
     setIsLoading(Boolean(assetPackId));
     reportedPreviewResultRef.current = null;
-    uploadedThumbnailRef.current = null;
   }, [assetPackId]);
 
   useEffect(() => {
@@ -416,59 +414,17 @@ export function ViewerPanel({
     traceId,
   ]);
 
-  useEffect(() => {
-    if (
-      !canGenerateThumbnail ||
-      workspaceThumbnailAssetUri
-    ) {
-      return;
-    }
-
-    const uploadKey = `${assetPackId}:initial-thumbnail`;
-    if (uploadedThumbnailRef.current === uploadKey) {
-      return;
-    }
-    uploadedThumbnailRef.current = uploadKey;
-
-    let cancelled = false;
-    let frameOne = 0;
-    let frameTwo = 0;
-
-    frameOne = window.requestAnimationFrame(() => {
-      frameTwo = window.requestAnimationFrame(() => {
-        if (cancelled) return;
-        void captureAndUploadThumbnail().then((success) => {
-          if (!success) {
-            uploadedThumbnailRef.current = null;
-          }
-        });
-      });
-    });
-
-    return () => {
-      cancelled = true;
-      if (frameOne) window.cancelAnimationFrame(frameOne);
-      if (frameTwo) window.cancelAnimationFrame(frameTwo);
-    };
-  }, [
-    canGenerateThumbnail,
-    captureAndUploadThumbnail,
-    assetPackId,
-    workspaceThumbnailAssetUri,
-  ]);
-
-  const handleRetryThumbnail = useCallback(async () => {
+  const handleSetThumbnail = useCallback(async () => {
     if (!canGenerateThumbnail) {
       toast.warning('3D preview is not ready yet.');
       return;
     }
-    uploadedThumbnailRef.current = null;
     const success = await captureAndUploadThumbnail();
     if (success) {
-      toast.success('Thumbnail updated.');
+      toast.success('Thumbnail saved.');
       return;
     }
-    toast.error('Failed to create thumbnail.');
+    toast.error('Failed to save thumbnail.');
   }, [canGenerateThumbnail, captureAndUploadThumbnail]);
 
   const buildDownloadBaseName = (name: string | null | undefined) => {
@@ -628,21 +584,21 @@ export function ViewerPanel({
 
       <div className="absolute right-4 top-4 z-10">
         <div className="flex items-center gap-2">
-          {!workspaceThumbnailAssetUri && canGenerateThumbnail ? (
+          {canGenerateThumbnail && !workspaceThumbnailAssetUri ? (
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="rounded-lg border border-border/70 bg-background/70 backdrop-blur"
               onClick={() => {
-                void handleRetryThumbnail();
+                void handleSetThumbnail();
               }}
               disabled={uploadThumbnailMutation.isPending}
             >
               {uploadThumbnailMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
-              Retry thumbnail
+              Set thumbnail
             </Button>
           ) : null}
           <div className="flex divide-x divide-border/60 overflow-hidden rounded-lg border border-border/70 bg-background/70 backdrop-blur">

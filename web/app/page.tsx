@@ -49,7 +49,7 @@ const visualFrames = [
     eyebrow: 'Studio preview',
     title: 'Live pack preview',
     description:
-      'Preview one asset at a time and check shape, color, and readability before export.',
+      'Preview each asset before export.',
     mediaType: 'video',
     src: studioPreviewVideoPath,
   },
@@ -57,7 +57,7 @@ const visualFrames = [
     eyebrow: 'Start from an example',
     title: 'Preset picker',
     description:
-      'Start from a ready-made pack direction instead of writing the whole structure from scratch.',
+      'Start from a ready-made pack.',
     mediaType: 'image',
     src: themeExamplePickerPath,
     alt: 'Ascoor example picker showing fantasy and historical pack presets',
@@ -66,7 +66,7 @@ const visualFrames = [
     eyebrow: 'Theme',
     title: 'Theme picker',
     description:
-      'Browse grouped themes and choose a world style before you fine-tune the pack.',
+      'Choose the right theme from a wide range of styles.',
     mediaType: 'image',
     src: themePickerPath,
     alt: 'Ascoor theme picker showing fantasy and historical themes',
@@ -75,7 +75,7 @@ const visualFrames = [
     eyebrow: 'Asset category',
     title: 'Category picker',
     description:
-      'Narrow the pack toward vehicles, transit, props, or other production needs.',
+      'Choose the kind of asset pack you want to make.',
     mediaType: 'image',
     src: assetCategoryPickerPath,
     alt: 'Ascoor asset category picker showing transport and transit options',
@@ -84,7 +84,7 @@ const visualFrames = [
     eyebrow: 'Pack completed',
     title: 'Download ZIP',
     description:
-      'When the pack is ready, every part stays visible and the full set can be exported from one place.',
+      'Download the full pack when it is ready.',
     mediaType: 'image',
     src: packCompletedPath,
     alt: 'Ascoor completed pack panel showing download ZIP and part list',
@@ -93,7 +93,7 @@ const visualFrames = [
     eyebrow: 'Studio home',
     title: 'Workspace gallery',
     description:
-      'Keep completed packs visible from the home screen and reopen them when needed.',
+      'Save finished packs and come back anytime.',
     mediaType: 'image',
     src: studioHomeGalleryPath,
     alt: 'Ascoor studio home showing recent workspace cards',
