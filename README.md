@@ -2,6 +2,10 @@
 
 Web-based 3D Design Studio.
 
+<img width="400" alt="FireShot Capture 001 - Generate Game Asset Packs in the Browser -  localhost" src="https://github.com/user-attachments/assets/cb39da8e-e44f-4e32-ab02-ffba18de8b86" />
+
+<img width="500"  alt="studio-cyberpunk-pack-preview-main-v20260427-180120" src="https://github.com/user-attachments/assets/58156544-0f0f-4bc9-9bdc-d96c400a730d" />
+
 ## Repo at a glance
 - `web/` – Next.js front-end 3D design studio
 - `api/` – Hono + Prisma backend
